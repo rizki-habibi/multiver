@@ -81,6 +81,17 @@ function copyRecursive(src, dest) {
   }
 }
 
+// Next.js 15 silently ignores NEXT_DIST_DIR (that env var only exists in Next 16+),
+// so the build always lands in the default ".next" directory. Detect the real output
+// dir instead of trusting the env var we pass to `next build`.
+function resolveBuildDistDir(appDir, buildDistDirName) {
+  const configured = path.join(appDir, buildDistDirName);
+  const standard = path.join(appDir, ".next");
+  if (fs.existsSync(path.join(configured, "standalone"))) return configured;
+  if (fs.existsSync(path.join(standard, "standalone"))) return standard;
+  return configured;
+}
+
 function resolveStandaloneBuild(appDir, buildDistDir) {
   const legacyStandaloneRoot = path.join(appDir, ".next", "standalone");
   const resolvedStandaloneRoot = path.join(buildDistDir, "standalone");
@@ -123,7 +134,9 @@ function copyStandaloneBuild(appDir, buildDistDir, cliAppDir) {
 
 function mergeServerArtifacts(buildDistDir, cliAppDir) {
   const serverSrc = path.join(buildDistDir, "server");
-  const serverDest = path.join(cliAppDir, buildDistDirName, "server");
+  // Runtime resolves the standalone server relative to cli/app via ./server.js /
+  // ./.next/standalone/server.js, so merged artifacts must land under cli/app/.next.
+  const serverDest = path.join(cliAppDir, ".next", "server");
   if (!fs.existsSync(serverSrc)) {
     throw new Error(`Complete Next.js server build not found: ${serverSrc}`);
   }
@@ -135,7 +148,7 @@ function assertRequiredApiArtifacts(cliAppDir) {
     "app/api/v1/chat/completions/route.js",
     "app/api/v1/messages/route.js",
   ];
-  const serverDir = path.join(cliAppDir, buildDistDirName, "server");
+  const serverDir = path.join(cliAppDir, ".next", "server");
   const missingArtifacts = requiredArtifacts
     .map((artifact) => path.join(serverDir, artifact))
     .filter((artifact) => !fs.existsSync(artifact));
@@ -155,6 +168,11 @@ function buildCliPackage() {
   fs.mkdirSync(path.join(buildHomeDir, "AppData", "Roaming"), { recursive: true });
   fs.mkdirSync(path.join(buildHomeDir, "AppData", "Local"), { recursive: true });
 
+  // Next 15 ignores NEXT_DIST_DIR; resolve the real output dir after the build.
+  const actualBuildDistDir = resolveBuildDistDir(appDir, buildDistDirName);
+  if (actualBuildDistDir !== buildDistDir) {
+    console.log(`ℹ️  Next.js ignored NEXT_DIST_DIR — using ${path.basename(actualBuildDistDir)}/\n`);
+  }
   // Step 0: Sync version from app/cli/package.json to app/package.json
   console.log("0️⃣  Syncing version to app/package.json...");
   const cliPkg = JSON.parse(fs.readFileSync(path.join(cliDir, "package.json"), "utf8"));
@@ -202,7 +220,7 @@ function buildCliPackage() {
   // node_modules/ directly under .next/standalone. Older builds may still use a nested app/.
   console.log("3️⃣  Copying Next.js standalone build to app/cli/app...");
   try {
-    copyStandaloneBuild(appDir, buildDistDir, cliAppDir);
+    copyStandaloneBuild(appDir, actualBuildDistDir, cliAppDir);
   } catch (error) {
     console.error("❌ Next.js standalone build not found under .next/standalone");
     console.error("Expected either .next/standalone/server.js or .next/standalone/app/");
@@ -260,8 +278,8 @@ function buildCliPackage() {
   // Step 4: Copy static files
   console.log("4️⃣  Copying static files...");
   const staticSrc = path.join(appDir, ".next", "static");
-  const staticSrcResolved = path.join(buildDistDir, "static");
-  const staticDest = path.join(cliAppDir, buildDistDirName, "static");
+  const staticSrcResolved = path.join(actualBuildDistDir, "static");
+  const staticDest = path.join(cliAppDir, ".next", "static");
   if (fs.existsSync(staticSrcResolved) || fs.existsSync(staticSrc)) {
     copyRecursive(fs.existsSync(staticSrcResolved) ? staticSrcResolved : staticSrc, staticDest);
     console.log("✅ Copied static files\n");
@@ -283,8 +301,8 @@ function buildCliPackage() {
   // Step 6: Copy vendor-chunks (required for production)
   console.log("6️⃣  Copying vendor-chunks...");
   const vendorChunksSrc = path.join(appDir, ".next", "server", "vendor-chunks");
-  const vendorChunksSrcResolved = path.join(buildDistDir, "server", "vendor-chunks");
-  const vendorChunksDest = path.join(cliAppDir, buildDistDirName, "server", "vendor-chunks");
+  const vendorChunksSrcResolved = path.join(actualBuildDistDir, "server", "vendor-chunks");
+  const vendorChunksDest = path.join(cliAppDir, ".next", "server", "vendor-chunks");
   if (fs.existsSync(vendorChunksSrcResolved) || fs.existsSync(vendorChunksSrc)) {
     copyRecursive(fs.existsSync(vendorChunksSrcResolved) ? vendorChunksSrcResolved : vendorChunksSrc, vendorChunksDest);
     console.log("✅ Copied vendor-chunks\n");
@@ -295,7 +313,7 @@ function buildCliPackage() {
   // Step 6b: Merge the complete generated server tree. Next.js standalone output
   // is trace-pruned and can omit route modules or chunks loaded dynamically.
   console.log("6️⃣ b Copying complete server artifacts...");
-  mergeServerArtifacts(buildDistDir, cliAppDir);
+  mergeServerArtifacts(actualBuildDistDir, cliAppDir);
   assertRequiredApiArtifacts(cliAppDir);
   console.log("✅ Copied complete server artifacts\n");
 

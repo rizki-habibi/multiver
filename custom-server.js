@@ -111,10 +111,11 @@ http.createServer = function (options, listener) {
 };
 
 // Load the generated Next.js standalone server. It calls http.createServer() above.
+// Layout under cli/app: server.js + .next/standalone (runtime cwd is cli/app).
 try {
   require("./.next/standalone/server.js");
 } catch (err) {
-  // In the packaged CLI the standalone output lives under app/, not .next/.
+  // Development layout: the standalone output sits next to the project root.
   try {
     require("./server.js");
   } catch (err2) {
