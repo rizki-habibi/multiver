@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+cli/node_modules/
+gitbook/node_modules/
+tests/node_modules/
+open-sse/node_modules/
+
+# Build Outputs & Cache
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+.cache/
+
+# Runtime Data & Secrets (CRITICAL: Never commit these)
+.env
+.env.local
+*.log
+logs/
+data/
+db.json
+kiro_accounts_*.json
+9router-backup-*.json
+multiver_accounts_*.json
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+
+# Temporary files
+tmp/
+temp/
+*.swp
+*.swo
