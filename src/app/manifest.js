@@ -1,7 +1,7 @@
-export default function manifest() {
+﻿export default function manifest() {
   return {
-    name: '9Router - AI Infrastructure Management',
-    short_name: '9Router',
+    name: 'Multiver - AI Infrastructure Management',
+    short_name: 'Multiver',
     description: 'Multiver: Advanced Multi-AI Fusion Router',
     start_url: '/',
     display: 'standalone',

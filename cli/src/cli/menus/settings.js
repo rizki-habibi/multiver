@@ -32,7 +32,7 @@ async function showSettingsMenu(breadcrumb = []) {
         lines.push(`  Endpoint: ${COLORS.green}${tunnel.publicUrl}/v1${COLORS.reset}`);
         lines.push(`  Tunnel:   ${COLORS.green}ON${COLORS.reset} ${COLORS.dim}(${tunnel.shortId})${COLORS.reset}`);
       } else {
-        lines.push(`  Endpoint: http://localhost:20128/v1`);
+        lines.push(`  Endpoint: http://localhost:20222/v1`);
         lines.push(`  Tunnel:   ${COLORS.red}OFF${COLORS.reset} ${COLORS.dim}(local only)${COLORS.reset}`);
       }
 
@@ -99,7 +99,7 @@ async function showSettingsMenu(breadcrumb = []) {
 
 /**
  * Reset authMode to "password" via API. Used when OIDC is misconfigured
- * and user is locked out of dashboard. CLI bypasses auth via x-9r-cli-token.
+ * and user is locked out of dashboard. CLI bypasses auth via x-mv-cli-token.
  */
 async function resetAuthMode() {
   const ok = await confirm("Reset auth mode to PASSWORD (disable OIDC)?");

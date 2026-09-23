@@ -1,4 +1,4 @@
-import { UPDATER_CONFIG } from "@/shared/constants/config";
+﻿import { UPDATER_CONFIG } from "@/shared/constants/config";
 
 // Browser-local preset stores (endpoints, API keys) shared by every CLI tool card
 function createStore({ storageKey, changeEvent, itemField, normalize = (v) => v, defaultName = (v) => v }) {
@@ -50,8 +50,8 @@ function createStore({ storageKey, changeEvent, itemField, normalize = (v) => v,
 const stripSlash = (url) => (url || "").replace(/\/+$/, "");
 
 const endpoints = createStore({
-  storageKey: "9router.cliToolEndpointPresets",
-  changeEvent: "9router:endpoint-presets-changed",
+  storageKey: "Multiver.cliToolEndpointPresets",
+  changeEvent: "Multiver:endpoint-presets-changed",
   itemField: "baseUrl",
   normalize: stripSlash,
   defaultName: (url) => {
@@ -60,8 +60,8 @@ const endpoints = createStore({
 });
 
 const apiKeys = createStore({
-  storageKey: "9router.cliToolApiKeyPresets",
-  changeEvent: "9router:api-key-presets-changed",
+  storageKey: "Multiver.cliToolApiKeyPresets",
+  changeEvent: "Multiver:api-key-presets-changed",
   itemField: "key",
 });
 

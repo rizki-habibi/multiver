@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
@@ -37,9 +37,9 @@ const checkPiInstalled = async () => {
   }
 };
 
-const has9RouterConfig = (settings) => {
+const hasMultiverConfig = (settings) => {
   if (!settings || !settings.providers) return false;
-  const p = settings.providers["9router"];
+  const p = settings.providers["Multiver"];
   if (p && p.baseUrl) return true;
   for (const prov of Object.values(settings.providers)) {
     if (prov.baseUrl && prov.baseUrl.includes("20128")) return true;
@@ -90,7 +90,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasMultiver: hasMultiverConfig(config),
       configPath,
     });
   } catch (err) {
@@ -144,9 +144,9 @@ export async function POST(request) {
       modelList = [{ id: modelId, name: modelId, contextWindow: 128000, maxTokens: 16384 }];
     }
 
-    existing.providers["9router"] = {
+    existing.providers["Multiver"] = {
       baseUrl: normalizedBaseUrl,
-      apiKey: apiKey || "sk_9router",
+      apiKey: apiKey || "sk_Multiver",
       api: "openai-completions",
       models: modelList,
     };
@@ -155,7 +155,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "Pi settings applied! Use /model in Pi to select the 9Router model.",
+      message: "Pi settings applied! Use /model in Pi to select the Multiver model.",
       configPath,
     });
   } catch (err) {
@@ -174,13 +174,13 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: "No config file to reset" });
     }
 
-    if (existing.providers && existing.providers["9router"]) {
-      delete existing.providers["9router"];
+    if (existing.providers && existing.providers["Multiver"]) {
+      delete existing.providers["Multiver"];
       if (Object.keys(existing.providers).length === 0) delete existing.providers;
       await fs.writeFile(configPath, JSON.stringify(existing, null, 2), "utf-8");
     }
 
-    return NextResponse.json({ success: true, message: "9Router removed from Pi" });
+    return NextResponse.json({ success: true, message: "Multiver removed from Pi" });
   } catch (err) {
     return NextResponse.json({ error: { message: err.message } }, { status: 500 });
   }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSettings } from "@/lib/localDb";
 import { formatX509Certificate } from "@/lib/auth/saml.js";
@@ -23,7 +23,7 @@ export async function POST(request) {
     const settings = await getSettings();
 
     const samlEntryPoint = String(body.samlEntryPoint || settings.samlEntryPoint || "").trim();
-    const samlIssuer = String(body.samlIssuer || settings.samlIssuer || "urn:9router:sp").trim();
+    const samlIssuer = String(body.samlIssuer || settings.samlIssuer || "urn:Multiver:sp").trim();
     const samlCert = String(
       Object.prototype.hasOwnProperty.call(body, "samlCert")
         ? body.samlCert

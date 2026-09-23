@@ -1,4 +1,4 @@
-import os from "os";
+﻿import os from "os";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync } from "fs";
@@ -143,7 +143,7 @@ async function autoStartMitm(settings) {
     const activeKey = keys.find(k => k.isActive !== false);
 
     console.log("[InitApp] MITM was enabled, auto-starting...");
-    await startMitm(activeKey?.key || "sk_9router", password);
+    await startMitm(activeKey?.key || "sk_Multiver", password);
     console.log("[InitApp] MITM auto-started");
     try {
       await restoreToolDNS(password);

@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, Button, Input, Modal, Toggle, ConfirmModal } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
-import { getCurrentLocale, onLocaleChange } from "@/i18n/runtime";
 import {
-  WENYAN_LOCALES,
   CAVEMAN_LEVELS,
   PONYTAIL_LEVELS,
 } from "../endpoint/endpointConstants";
@@ -62,23 +60,8 @@ export default function TokenSaverClient() {
 
   const { copied, copy } = useCopyToClipboard();
 
-  useEffect(() => {
-    setLocale(getCurrentLocale());
-    return onLocaleChange(() => setLocale(getCurrentLocale()));
-  }, []);
-
-  const isWenyanLocale = WENYAN_LOCALES.includes(locale);
-  const visibleCavemanLevels = isWenyanLocale
-    ? CAVEMAN_LEVELS
-    : CAVEMAN_LEVELS.filter((lvl) => !lvl.wenyan);
-
-  useEffect(() => {
-    const current = CAVEMAN_LEVELS.find((lvl) => lvl.id === cavemanLevel);
-    if (current?.wenyan && !isWenyanLocale) {
-      setCavemanLevel("ultra");
-      patchSetting({ cavemanLevel: "ultra" });
-    }
-  }, [isWenyanLocale, cavemanLevel]);
+  const isWenyanLocale = false;
+  const visibleCavemanLevels = CAVEMAN_LEVELS;
 
   const patchSetting = async (patch) => {
     try {
@@ -436,7 +419,7 @@ export default function TokenSaverClient() {
           // PRD: run the PXPIPE health check automatically when the page opens
           refreshPxpipeStatus().then(runPxpipeHealth);
         }
-      } catch {}
+      } catch { }
     };
     loadSettings();
   }, [refreshHeadroomStatus, refreshPxpipeStatus, runPxpipeHealth]);
@@ -588,11 +571,10 @@ export default function TokenSaverClient() {
                 return (
                   <label
                     key={extra}
-                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer transition-colors ${
-                      pending
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-text-muted hover:bg-surface-2"
-                    }`}
+                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer transition-colors ${pending
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-text-muted hover:bg-surface-2"
+                      }`}
                     title={extraTitle}
                   >
                     <input
@@ -665,11 +647,10 @@ export default function TokenSaverClient() {
                     <button
                       key={lvl.id}
                       onClick={() => handleCavemanLevel(lvl.id)}
-                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                        cavemanLevel === lvl.id
-                          ? "bg-primary text-white border-primary"
-                          : "bg-transparent border-border text-text-muted hover:bg-surface-2"
-                      }`}
+                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${cavemanLevel === lvl.id
+                        ? "bg-primary text-white border-primary"
+                        : "bg-transparent border-border text-text-muted hover:bg-surface-2"
+                        }`}
                       title={lvl.desc}
                     >
                       {lvl.label}
@@ -716,11 +697,10 @@ export default function TokenSaverClient() {
                     <button
                       key={lvl.id}
                       onClick={() => handlePonytailLevel(lvl.id)}
-                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                        ponytailLevel === lvl.id
-                          ? "bg-primary text-white border-primary"
-                          : "bg-transparent border-border text-text-muted hover:bg-surface-2"
-                      }`}
+                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${ponytailLevel === lvl.id
+                        ? "bg-primary text-white border-primary"
+                        : "bg-transparent border-border text-text-muted hover:bg-surface-2"
+                        }`}
                       title={lvl.desc}
                     >
                       {lvl.label}
@@ -743,49 +723,49 @@ export default function TokenSaverClient() {
         </div>
         {/* PXPIPE hidden from UI — experimental, not exposed to users yet */}
         {false && (
-        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border gap-4 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <p className="font-medium">
-                Compress prompts as images{" "}
-                <a
-                  href="https://github.com/teamchong/pxpipe"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-normal text-primary underline hover:opacity-80"
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-border gap-4 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <p className="font-medium">
+                  Compress prompts as images{" "}
+                  <a
+                    href="https://github.com/teamchong/pxpipe"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-normal text-primary underline hover:opacity-80"
+                  >
+                    (PXPIPE)
+                  </a>
+                </p>
+                <span className={`text-xs px-2 py-0.5 rounded ${pxpipeChipClass}`}>
+                  {pxpipeStatusLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPxpipeModal(true)}
+                  className="text-xs text-primary underline hover:opacity-80"
                 >
-                  (PXPIPE)
+                  {pxpipeStatus.installed ? "Manage" : "Setup"}
+                </button>
+                <a
+                  href="/dashboard/pxpipe"
+                  className="text-xs text-primary underline hover:opacity-80"
+                >
+                  Dashboard
                 </a>
+              </div>
+              <p className="text-sm text-text-muted mt-1">
+                Transforms large textual context into optimized images before
+                sending to the LLM. Ideal for huge prompts, tool outputs and long
+                conversations.
               </p>
-              <span className={`text-xs px-2 py-0.5 rounded ${pxpipeChipClass}`}>
-                {pxpipeStatusLabel}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowPxpipeModal(true)}
-                className="text-xs text-primary underline hover:opacity-80"
-              >
-                {pxpipeStatus.installed ? "Manage" : "Setup"}
-              </button>
-              <a
-                href="/dashboard/pxpipe"
-                className="text-xs text-primary underline hover:opacity-80"
-              >
-                Dashboard
-              </a>
             </div>
-            <p className="text-sm text-text-muted mt-1">
-              Transforms large textual context into optimized images before
-              sending to the LLM. Ideal for huge prompts, tool outputs and long
-              conversations.
-            </p>
+            <Toggle
+              checked={pxpipeEnabled}
+              disabled={!pxpipeStatus.installed}
+              onChange={() => handlePxpipeEnabled(!pxpipeEnabled)}
+            />
           </div>
-          <Toggle
-            checked={pxpipeEnabled}
-            disabled={!pxpipeStatus.installed}
-            onChange={() => handlePxpipeEnabled(!pxpipeEnabled)}
-          />
-        </div>
         )}
       </Card>
 
@@ -957,7 +937,7 @@ export default function TokenSaverClient() {
               </Button>
               <p className="text-xs text-text-muted">
                 Installs the npm package <code className="font-mono">pxpipe-proxy</code> into
-                the 9Router data directory. May take a few minutes.
+                the Multiver data directory. May take a few minutes.
               </p>
             </div>
           ) : (

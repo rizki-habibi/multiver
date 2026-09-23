@@ -1,4 +1,4 @@
-import crypto from "crypto";
+﻿import crypto from "crypto";
 import { TRAE_CONFIG } from "../constants/oauth.js";
 import { extractJsonPath } from "./_shared.js";
 
@@ -6,7 +6,7 @@ import { extractJsonPath } from "./_shared.js";
 // Trae (ByteDance marscode) OAuth helpers
 // ───────────────────────────────────────────────────────────────────────────
 
-// Per-login device context. No IDE access in 9router, so use stable defaults.
+// Per-login device context. No IDE access in Multiver, so use stable defaults.
 function buildTraeDeviceContext() {
   return {
     plugin_version: TRAE_CONFIG.defaultPluginVersion,

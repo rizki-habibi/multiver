@@ -1,4 +1,4 @@
-/**
+﻿/**
  * xAI (Grok) OAuth Configuration
  *
  * Source of truth: router-for-me/CLIProxyAPI internal/auth/xai/types.go
@@ -33,7 +33,7 @@ export const XAI_PKCE_VERIFIER_BYTES = 96;
 export const XAI_REFRESH_LEAD_SECONDS = 5 * 60;
 
 // User-Agent — mirror Go grok-cli UA. Version is best-effort; xAI does not pin a specific version.
-export const XAI_USER_AGENT = "grok-cli/9router";
+export const XAI_USER_AGENT = "grok-cli/Multiver";
 
 /**
  * Aggregated config object — mirrors the shape of CLAUDE_CONFIG/CODEX_CONFIG in oauth.js.

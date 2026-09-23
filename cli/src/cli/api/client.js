@@ -9,13 +9,13 @@ const { machineIdSync } = require("node-machine-id");
 // Default configuration
 const DEFAULT_CONFIG = {
   host: "localhost",
-  port: 20128,
+  port: 20222,
   protocol: "http:",
 };
 
-const CLI_TOKEN_HEADER = "x-9r-cli-token";
-const CLI_TOKEN_SALT = "9r-cli-auth";
-const APP_NAME = "9router";
+const CLI_TOKEN_HEADER = "x-mv-cli-token";
+const CLI_TOKEN_SALT = "mv-cli-auth";
+const APP_NAME = "multiver";
 
 function getDataDir() {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
@@ -38,7 +38,7 @@ function loadRawMachineId() {
   try {
     const raw = fs.readFileSync(MACHINE_ID_FILE, "utf8").trim();
     if (raw) return raw;
-  } catch {}
+  } catch { }
   try { return machineIdSync(); } catch { return ""; }
 }
 
@@ -48,12 +48,12 @@ function loadCliSecret() {
   try {
     cachedCliSecret = fs.readFileSync(CLI_SECRET_FILE, "utf8").trim();
     if (cachedCliSecret) return cachedCliSecret;
-  } catch {}
+  } catch { }
   cachedCliSecret = crypto.randomBytes(32).toString("hex");
   try {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
     fs.writeFileSync(CLI_SECRET_FILE, cachedCliSecret, { mode: 0o600 });
-  } catch {}
+  } catch { }
   return cachedCliSecret;
 }
 
@@ -86,7 +86,7 @@ function configure(options = {}) {
 function makeRequest(method, path, body = null) {
   return new Promise((resolve) => {
     const httpModule = config.protocol === "https:" ? https : http;
-    
+
     const options = {
       hostname: config.host,
       port: config.port,
@@ -114,7 +114,7 @@ function makeRequest(method, path, body = null) {
       res.on("end", () => {
         try {
           const parsed = data ? JSON.parse(data) : {};
-          
+
           // Check if response indicates error
           if (res.statusCode >= 400 || parsed.error) {
             resolve({
@@ -224,9 +224,9 @@ async function getProviderModels(id) {
  */
 async function getOAuthAuthUrl(provider) {
   // Codex requires fixed port 1455 and path /auth/callback
-  const redirectUri = provider === "codex" 
+  const redirectUri = provider === "codex"
     ? "http://localhost:1455/auth/callback"
-    : "http://localhost:20128/callback";
+    : "http://localhost:20222/callback";
   return makeRequest("GET", `/api/oauth/${provider}/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`);
 }
 
@@ -364,7 +364,7 @@ async function deleteCombo(id) {
 /**
  * Get CLI tool settings
  * @param {string} tool - Tool name: claude | codex | droid | openclaw
- * @returns {Promise<Object>} { success, data: { installed, has9Router, ... } }
+ * @returns {Promise<Object>} { success, data: { installed, hasMultiver, ... } }
  */
 async function getCliToolSettings(tool) {
   return makeRequest("GET", `/api/cli-tools/${tool}-settings`);
@@ -496,38 +496,38 @@ async function disableTunnel() {
 
 module.exports = {
   configure,
-  
+
   // Providers
   getProviders,
   getProviderById,
   testProvider,
   deleteProvider,
   getProviderModels,
-  
+
   // Connection aliases
   testConnection: testProvider,
   deleteConnection: deleteProvider,
   updateConnection,
-  
+
   // OAuth
   getOAuthAuthUrl,
   exchangeOAuthCode,
   getOAuthDeviceCode,
   pollOAuthToken,
   createApiKeyProvider,
-  
+
   // API Keys
   getApiKeys,
   createApiKey,
   deleteApiKey,
-  
+
   // Combos
   getCombos,
   getComboById,
   createCombo,
   updateCombo,
   deleteCombo,
-  
+
   // CLI Tools
   getCliToolSettings,
   applyCliToolSettings,
@@ -537,12 +537,12 @@ module.exports = {
   getSettings,
   updateSettings,
   resetPassword,
-  
+
   // Tunnel
   getTunnelStatus,
   enableTunnel,
   disableTunnel,
-  
+
   // Models
   getModels,
   getAvailableModels,

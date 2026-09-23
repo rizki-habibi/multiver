@@ -22,7 +22,7 @@ async function loadTranslations(locale) {
     translationMap = {};
     return;
   }
-  
+
   try {
     const response = await fetch(`/i18n/literals/${locale}.json`);
     translationMap = await response.json();
@@ -107,22 +107,22 @@ function processTextNode(node) {
 // Process all text nodes in element
 function processElement(element) {
   if (!element) return;
-  
+
   const walker = document.createTreeWalker(
     element,
     NodeFilter.SHOW_TEXT,
     null,
     false
   );
-  
+
   let node;
   const nodesToProcess = [];
-  
+
   // Collect all nodes first to avoid live collection issues
   while ((node = walker.nextNode())) {
     nodesToProcess.push(node);
   }
-  
+
   // Process collected nodes
   nodesToProcess.forEach(processTextNode);
 }
@@ -130,13 +130,13 @@ function processElement(element) {
 // Initialize runtime i18n
 export async function initRuntimeI18n() {
   if (typeof window === "undefined") return;
-  
+
   currentLocale = getLocaleFromCookie();
   await loadTranslations(currentLocale);
-  
+
   // Process existing DOM
   processElement(document.body);
-  
+
   // Watch for new nodes AND in-place text rewrites. React reuses text nodes on
   // re-render (only nodeValue changes → a characterData mutation with no
   // childList event), so observing childList alone leaves later-updated labels
@@ -156,7 +156,7 @@ export async function initRuntimeI18n() {
       });
     });
   });
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true,
@@ -168,10 +168,16 @@ export async function initRuntimeI18n() {
 export async function reloadTranslations() {
   currentLocale = getLocaleFromCookie();
   await loadTranslations(currentLocale);
-  
+
   // Notify all registered callbacks
   reloadCallbacks.forEach(callback => callback());
-  
+
   // Re-process entire DOM (will use stored original text)
   processElement(document.body);
+}
+
+// Locale is fixed to Indonesian, so translations load as soon as this module is
+// first imported in the browser — no provider/mount hook needed.
+if (typeof window !== "undefined") {
+  initRuntimeI18n();
 }
