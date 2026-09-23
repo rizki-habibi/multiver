@@ -67,6 +67,9 @@ export const DEFAULT_MIN_TOKENS = 32000;
 
 export const TOKEN_SAVER_HEADER = "x-9router-token-saver";
 
+export const PEER_TOKEN_ENV = "MULTIVER_PEER_TOKEN";
+export const LEGACY_PEER_TOKEN_ENV = "NINEROUTER_PEER_TOKEN";
+
 // Retry config for 429 responses (legacy - kept for backward compatibility)
 export const RETRY_CONFIG = {
   maxAttempts: 2,
