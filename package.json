@@ -1,0 +1,32 @@
+{
+  "name": "multiver-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multiver: Advanced Multi-AI Fusion Router (Formerly 9Router)",
+  "scripts": {
+    "dev": "next dev -p 20222",
+    "build": "next build",
+    "start": "next start -p 20222",
+    "lint": "next lint",
+    "cli:dev": "npm --prefix cli run dev",
+    "cli:build": "npm --prefix cli run build",
+    "test": "npm --prefix tests run test"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rizki-habibi/multiver.git"
+  },
+  "homepage": "https://github.com/rizki-habibi/multiver#readme",
+  "bugs": {
+    "url": "https://github.com/rizki-habibi/multiver/issues"
+  }
+}
