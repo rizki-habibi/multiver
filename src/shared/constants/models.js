@@ -1,5 +1,5 @@
 // Import directly from file to avoid pulling in server-side dependencies via index.js
-export {
+import {
   PROVIDER_MODELS,
   getProviderModels,
   getDefaultModel,
@@ -12,6 +12,22 @@ export {
   getModelUpstreamId,
   getModelQuotaFamily
 } from "open-sse/config/providerModels.js";
+
+// Re-export as concrete local bindings (avoids Turbopack "export not found" warning
+// on `export {} from` re-exports when the source module has registry side-effect imports)
+export {
+  PROVIDER_MODELS,
+  getProviderModels,
+  getDefaultModel,
+  isValidModelCore,
+  findModelName,
+  getModelTargetFormat,
+  getModelStrip,
+  PROVIDER_ID_TO_ALIAS,
+  getModelsByProviderId,
+  getModelUpstreamId,
+  getModelQuotaFamily,
+};
 
 import { AI_PROVIDERS, isOpenAICompatibleProvider } from "./providers.js";
 import { PROVIDER_MODELS as MODELS } from "open-sse/config/providerModels.js";
