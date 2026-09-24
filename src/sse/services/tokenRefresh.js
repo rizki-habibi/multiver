@@ -8,6 +8,7 @@ import {
 } from "open-sse/services/projectId.js";
 import {
   TOKEN_EXPIRY_BUFFER_MS as BUFFER_MS,
+  isUnrecoverableRefreshError,
   refreshAccessToken as _refreshAccessToken,
   refreshClaudeOAuthToken as _refreshClaudeOAuthToken,
   refreshGoogleToken as _refreshGoogleToken,
@@ -164,11 +165,11 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
   try {
     const updates = {};
 
-    if (newCredentials.accessToken)         updates.accessToken  = newCredentials.accessToken;
-    if (newCredentials.refreshToken)        updates.refreshToken = newCredentials.refreshToken;
-    if (newCredentials.idToken)             updates.idToken = newCredentials.idToken;
-    if (newCredentials.lastRefreshAt)       updates.lastRefreshAt = newCredentials.lastRefreshAt;
-    if (newCredentials.expiresAt)           updates.expiresAt = newCredentials.expiresAt;
+    if (newCredentials.accessToken) updates.accessToken = newCredentials.accessToken;
+    if (newCredentials.refreshToken) updates.refreshToken = newCredentials.refreshToken;
+    if (newCredentials.idToken) updates.idToken = newCredentials.idToken;
+    if (newCredentials.lastRefreshAt) updates.lastRefreshAt = newCredentials.lastRefreshAt;
+    if (newCredentials.expiresAt) updates.expiresAt = newCredentials.expiresAt;
     if (newCredentials.expiresIn) {
       updates.expiresAt = toExpiresAt(newCredentials.expiresIn);
       updates.expiresIn = newCredentials.expiresIn;
@@ -192,7 +193,7 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
         ...(newCredentials.copilotTokenExpiresAt ? { copilotTokenExpiresAt: newCredentials.copilotTokenExpiresAt } : {}),
       };
     }
-    if (newCredentials.projectId)            updates.projectId = newCredentials.projectId;
+    if (newCredentials.projectId) updates.projectId = newCredentials.projectId;
 
     const result = await updateProviderConnection(connectionId, updates);
     log.info("TOKEN_REFRESH", "Credentials updated in localDb", {
@@ -265,6 +266,25 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
 
       // Non-blocking: refresh projectId with the new access token
       _refreshProjectId(provider, creds.connectionId, creds.accessToken);
+    } else if (creds.connectionId) {
+      // ponytail: refresh failed (expired/revoked refresh token). Without this the
+      // dashboard keeps rendering a green "active" badge on a dead account and the
+      // background scheduler retries forever. Stamp an error state the UI can show.
+      const unrecoverable = isUnrecoverableRefreshError(newCreds);
+      if (unrecoverable || creds.expiresAt) {
+        const now = new Date();
+        const expired = !unrecoverable && creds.expiresAt && new Date(creds.expiresAt).getTime() < now.getTime();
+        if (unrecoverable || expired) {
+          await updateProviderCredentials(creds.connectionId, {
+            testStatus: "expired",
+            lastError: unrecoverable
+              ? `Token refresh rejected (${newCreds?.code || "invalid_grant"}) — re-authenticate this account`
+              : "Access token expired and refresh failed — re-authenticate this account",
+            lastErrorAt: now.toISOString(),
+            errorCode: String(newCreds?.code || (expired ? "token_expired" : "refresh_failed")),
+          });
+        }
+      }
     }
   }
 
@@ -274,8 +294,8 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
     const copilotExpiresAt = creds.providerSpecificData?.copilotTokenExpiresAt
       ? creds.providerSpecificData.copilotTokenExpiresAt * 1000
       : 0;
-    const now              = Date.now();
-    const remaining        = copilotExpiresAt - now;
+    const now = Date.now();
+    const remaining = copilotExpiresAt - now;
 
     if (!copilotToken || remaining < TOKEN_EXPIRY_BUFFER_MS) {
       log.info("TOKEN_REFRESH", "Copilot token expiring soon or missing, refreshing proactively", {
@@ -287,7 +307,7 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       if (copilotTokenResult) {
         const updatedSpecific = {
           ...creds.providerSpecificData,
-          copilotToken:          copilotTokenResult.token,
+          copilotToken: copilotTokenResult.token,
           copilotTokenExpiresAt: copilotTokenResult.expiresAt,
         };
 
@@ -323,7 +343,7 @@ export async function refreshGitHubAndCopilotTokens(credentials) {
   return {
     ...newGitHubCreds,
     providerSpecificData: {
-      copilotToken:          copilotToken.token,
+      copilotToken: copilotToken.token,
       copilotTokenExpiresAt: copilotToken.expiresAt,
     },
   };

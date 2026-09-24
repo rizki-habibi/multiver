@@ -100,44 +100,44 @@ export async function refreshAccessToken(provider, refreshToken, credentials, lo
   const dedupKey = profile.dedupKey || provider;
 
   return dedupRefresh(dedupKey, refreshToken, async () => {
-  try {
-    const { format: bodyFormat, body } = buildRefreshBody(profile, config, refreshToken);
-    const headers = {
-      "Content-Type": bodyFormat === "json" ? "application/json" : "application/x-www-form-urlencoded",
-      Accept: "application/json",
-      ...(profile.extraHeaders ? (profile.extraHeaders(credentials, config) || {}) : {}),
-    };
-    const response = await fetch(url, { method: "POST", headers, body });
+    try {
+      const { format: bodyFormat, body } = buildRefreshBody(profile, config, refreshToken);
+      const headers = {
+        "Content-Type": bodyFormat === "json" ? "application/json" : "application/x-www-form-urlencoded",
+        Accept: "application/json",
+        ...(profile.extraHeaders ? (profile.extraHeaders(credentials, config) || {}) : {}),
+      };
+      const response = await fetch(url, { method: "POST", headers, body });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log?.error?.("TOKEN_REFRESH", `Failed to refresh token for ${provider}`, {
-        status: response.status,
-        error: errorText,
+      if (!response.ok) {
+        const errorText = await response.text();
+        log?.error?.("TOKEN_REFRESH", `Failed to refresh token for ${provider}`, {
+          status: response.status,
+          error: errorText,
+        });
+        return null;
+      }
+
+      const tokens = await response.json();
+
+      log?.info?.("TOKEN_REFRESH", `Successfully refreshed token for ${provider}`, {
+        hasNewAccessToken: !!tokens.access_token,
+        hasNewRefreshToken: !!tokens.refresh_token,
+        expiresIn: tokens.expires_in,
+      });
+
+      return {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || refreshToken,
+        expiresIn: tokens.expires_in,
+        ...(profile.parse ? (profile.parse(tokens) || {}) : {}),
+      };
+    } catch (error) {
+      log?.error?.("TOKEN_REFRESH", `Error refreshing token for ${provider}`, {
+        error: error.message,
       });
       return null;
     }
-
-    const tokens = await response.json();
-
-    log?.info?.("TOKEN_REFRESH", `Successfully refreshed token for ${provider}`, {
-      hasNewAccessToken: !!tokens.access_token,
-      hasNewRefreshToken: !!tokens.refresh_token,
-      expiresIn: tokens.expires_in,
-    });
-
-    return {
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || refreshToken,
-      expiresIn: tokens.expires_in,
-      ...(profile.parse ? (profile.parse(tokens) || {}) : {}),
-    };
-  } catch (error) {
-    log?.error?.("TOKEN_REFRESH", `Error refreshing token for ${provider}`, {
-      error: error.message,
-    });
-    return null;
-  }
   }, log);
 }
 
@@ -202,34 +202,46 @@ export async function refreshClaudeOAuthToken(refreshToken, log) {
 export async function refreshGoogleToken(refreshToken, clientId, clientSecret, log) {
   if (!refreshToken) return null;
   return dedupRefresh(`google:${clientId}`, refreshToken, async () => {
-  try {
-    const response = await fetch(OAUTH_ENDPOINTS.google.token, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-    });
+    try {
+      const response = await fetch(OAUTH_ENDPOINTS.google.token, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+          // ponytail: Google gzips error bodies when the client advertises gzip support,
+          // which makes the JSON unreadable in classifyOAuthRefreshError (invalid_grant
+          // stays invisible → no permanent-failure flag → UI keeps showing "active").
+          "Accept-Encoding": "identity",
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log?.error?.("TOKEN_REFRESH", "Failed to refresh Google token", { status: response.status, error: errorText });
+      if (!response.ok) {
+        const errorText = await response.text();
+        const failure = classifyOAuthRefreshError(errorText, response.status);
+        if (failure.permanent) {
+          log?.error?.("TOKEN_REFRESH", "Google refresh token rejected permanently. Re-auth required.", {
+            status: response.status,
+            code: failure.code,
+          });
+          return { error: "unrecoverable_refresh_error", code: failure.code };
+        }
+        log?.error?.("TOKEN_REFRESH", "Failed to refresh Google token", { status: response.status, error: errorText });
+        return null;
+      }
+
+      const tokens = await response.json();
+      log?.info?.("TOKEN_REFRESH", "Successfully refreshed Google token", { hasNewAccessToken: !!tokens.access_token, expiresIn: tokens.expires_in });
+      return { accessToken: tokens.access_token, refreshToken: tokens.refresh_token || refreshToken, expiresIn: tokens.expires_in };
+    } catch (error) {
+      log?.error?.("TOKEN_REFRESH", `Network error refreshing Google token: ${error.message}`);
       return null;
     }
-
-    const tokens = await response.json();
-    log?.info?.("TOKEN_REFRESH", "Successfully refreshed Google token", { hasNewAccessToken: !!tokens.access_token, expiresIn: tokens.expires_in });
-    return { accessToken: tokens.access_token, refreshToken: tokens.refresh_token || refreshToken, expiresIn: tokens.expires_in };
-  } catch (error) {
-    log?.error?.("TOKEN_REFRESH", `Network error refreshing Google token: ${error.message}`);
-    return null;
-  }
   }, log);
 }
 
@@ -326,77 +338,113 @@ async function resolveKiroProfileArnPatch(providerSpecificData, accessToken, ref
 export async function refreshKiroToken(refreshToken, providerSpecificData, log, proxyOptions = null) {
   if (!refreshToken) return null;
   return dedupRefresh("kiro", refreshToken, async () => {
-  const authMethod = providerSpecificData?.authMethod;
-  const clientId = providerSpecificData?.clientId;
-  const clientSecret = providerSpecificData?.clientSecret;
-  const region = providerSpecificData?.region;
+    const authMethod = providerSpecificData?.authMethod;
+    const clientId = providerSpecificData?.clientId;
+    const clientSecret = providerSpecificData?.clientSecret;
+    const region = providerSpecificData?.region;
 
-  if (authMethod === "external_idp") {
-    let refreshRequest;
-    try {
-      refreshRequest = buildExternalIdpRefreshParams(refreshToken, providerSpecificData);
-    } catch (error) {
-      log?.warn?.("TOKEN_REFRESH", `Invalid Kiro external_idp refresh config: ${error.message}`);
-      return null;
-    }
+    if (authMethod === "external_idp") {
+      let refreshRequest;
+      try {
+        refreshRequest = buildExternalIdpRefreshParams(refreshToken, providerSpecificData);
+      } catch (error) {
+        log?.warn?.("TOKEN_REFRESH", `Invalid Kiro external_idp refresh config: ${error.message}`);
+        return null;
+      }
 
-    const response = await proxyAwareFetch(refreshRequest.tokenEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: refreshRequest.body,
-    }, proxyOptions);
+      const response = await proxyAwareFetch(refreshRequest.tokenEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: refreshRequest.body,
+      }, proxyOptions);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro external_idp token", {
-        status: response.status,
-        error: errorText,
+      if (!response.ok) {
+        const errorText = await response.text();
+        log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro external_idp token", {
+          status: response.status,
+          error: errorText,
+        });
+        return null;
+      }
+
+      const tokens = await response.json();
+
+      log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro external_idp token", {
+        hasNewAccessToken: !!tokens.access_token,
+        hasNewRefreshToken: !!tokens.refresh_token,
+        expiresIn: tokens.expires_in,
       });
-      return null;
+
+      return {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || refreshToken,
+        expiresIn: tokens.expires_in,
+        providerSpecificData: refreshRequest.providerSpecificData,
+      };
     }
 
-    const tokens = await response.json();
+    if (clientId && clientSecret) {
+      const isIDC = authMethod === "idc";
+      const endpoint = isIDC && region
+        ? `https://oidc.${region}.amazonaws.com/token`
+        : "https://oidc.us-east-1.amazonaws.com/token";
 
-    log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro external_idp token", {
-      hasNewAccessToken: !!tokens.access_token,
-      hasNewRefreshToken: !!tokens.refresh_token,
-      expiresIn: tokens.expires_in,
-    });
+      const response = await proxyAwareFetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          clientId: clientId,
+          clientSecret: clientSecret,
+          refreshToken: refreshToken,
+          grantType: "refresh_token",
+        }),
+      }, proxyOptions);
 
-    return {
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || refreshToken,
-      expiresIn: tokens.expires_in,
-      providerSpecificData: refreshRequest.providerSpecificData,
-    };
-  }
+      if (!response.ok) {
+        const errorText = await response.text();
+        log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro AWS token", {
+          status: response.status,
+          error: errorText,
+        });
+        return null;
+      }
 
-  if (clientId && clientSecret) {
-    const isIDC = authMethod === "idc";
-    const endpoint = isIDC && region
-      ? `https://oidc.${region}.amazonaws.com/token`
-      : "https://oidc.us-east-1.amazonaws.com/token";
+      const tokens = await response.json();
 
-    const response = await proxyAwareFetch(endpoint, {
+      log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro AWS token", {
+        hasNewAccessToken: !!tokens.accessToken,
+        expiresIn: tokens.expiresIn,
+      });
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken || refreshToken,
+        expiresIn: tokens.expiresIn,
+        ...(await resolveKiroProfileArnPatch(providerSpecificData, tokens.accessToken, tokens.profileArn)),
+      };
+    }
+
+    const response = await proxyAwareFetch(PROVIDERS.kiro.tokenUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        "User-Agent": "kiro-cli/1.0.0",
       },
       body: JSON.stringify({
-        clientId: clientId,
-        clientSecret: clientSecret,
         refreshToken: refreshToken,
-        grantType: "refresh_token",
       }),
     }, proxyOptions);
 
     if (!response.ok) {
       const errorText = await response.text();
-      log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro AWS token", {
+      log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro social token", {
         status: response.status,
         error: errorText,
       });
@@ -405,7 +453,7 @@ export async function refreshKiroToken(refreshToken, providerSpecificData, log, 
 
     const tokens = await response.json();
 
-    log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro AWS token", {
+    log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro social token", {
       hasNewAccessToken: !!tokens.accessToken,
       expiresIn: tokens.expiresIn,
     });
@@ -416,42 +464,6 @@ export async function refreshKiroToken(refreshToken, providerSpecificData, log, 
       expiresIn: tokens.expiresIn,
       ...(await resolveKiroProfileArnPatch(providerSpecificData, tokens.accessToken, tokens.profileArn)),
     };
-  }
-
-  const response = await proxyAwareFetch(PROVIDERS.kiro.tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "kiro-cli/1.0.0",
-    },
-    body: JSON.stringify({
-      refreshToken: refreshToken,
-    }),
-  }, proxyOptions);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    log?.error?.("TOKEN_REFRESH", "Failed to refresh Kiro social token", {
-      status: response.status,
-      error: errorText,
-    });
-    return null;
-  }
-
-  const tokens = await response.json();
-
-  log?.info?.("TOKEN_REFRESH", "Successfully refreshed Kiro social token", {
-    hasNewAccessToken: !!tokens.accessToken,
-    expiresIn: tokens.expiresIn,
-  });
-
-  return {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken || refreshToken,
-    expiresIn: tokens.expiresIn,
-    ...(await resolveKiroProfileArnPatch(providerSpecificData, tokens.accessToken, tokens.profileArn)),
-  };
   }, log);
 }
 
@@ -468,44 +480,44 @@ export async function refreshGitHubToken(refreshToken, log) {
 export async function refreshCopilotToken(githubAccessToken, log) {
   if (!githubAccessToken) return null;
   return dedupRefresh("copilot", githubAccessToken, async () => {
-  try {
-    const response = await fetch(PROVIDER_OAUTH["github"]?.copilotTokenUrl, {
-      headers: {
-        "Authorization": `token ${githubAccessToken}`,
-        "User-Agent": GITHUB_COPILOT.USER_AGENT,
-        "Editor-Version": `vscode/${GITHUB_COPILOT.VSCODE_VERSION}`,
-        "Editor-Plugin-Version": `copilot-chat/${GITHUB_COPILOT.COPILOT_CHAT_VERSION}`,
-        "Accept": "application/json",
-        "x-github-api-version": GITHUB_COPILOT.API_VERSION
-      }
-    });
+    try {
+      const response = await fetch(PROVIDER_OAUTH["github"]?.copilotTokenUrl, {
+        headers: {
+          "Authorization": `token ${githubAccessToken}`,
+          "User-Agent": GITHUB_COPILOT.USER_AGENT,
+          "Editor-Version": `vscode/${GITHUB_COPILOT.VSCODE_VERSION}`,
+          "Editor-Plugin-Version": `copilot-chat/${GITHUB_COPILOT.COPILOT_CHAT_VERSION}`,
+          "Accept": "application/json",
+          "x-github-api-version": GITHUB_COPILOT.API_VERSION
+        }
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log?.error?.("TOKEN_REFRESH", "Failed to refresh Copilot token", {
-        status: response.status,
-        error: errorText
+      if (!response.ok) {
+        const errorText = await response.text();
+        log?.error?.("TOKEN_REFRESH", "Failed to refresh Copilot token", {
+          status: response.status,
+          error: errorText
+        });
+        return null;
+      }
+
+      const data = await response.json();
+
+      log?.info?.("TOKEN_REFRESH", "Successfully refreshed Copilot token", {
+        hasToken: !!data.token,
+        expiresAt: data.expires_at
+      });
+
+      return {
+        token: data.token,
+        expiresAt: data.expires_at
+      };
+    } catch (error) {
+      log?.error?.("TOKEN_REFRESH", "Error refreshing Copilot token", {
+        error: error.message
       });
       return null;
     }
-
-    const data = await response.json();
-
-    log?.info?.("TOKEN_REFRESH", "Successfully refreshed Copilot token", {
-      hasToken: !!data.token,
-      expiresAt: data.expires_at
-    });
-
-    return {
-      token: data.token,
-      expiresAt: data.expires_at
-    };
-  } catch (error) {
-    log?.error?.("TOKEN_REFRESH", "Error refreshing Copilot token", {
-      error: error.message
-    });
-    return null;
-  }
   }, log);
 }
 
