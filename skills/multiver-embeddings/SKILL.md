@@ -1,23 +1,23 @@
-ï»¿---
+---
 name: Multiver-embeddings
 description: Generate vector embeddings via Multiver /v1/embeddings using OpenAI / Gemini / Mistral / Voyage / Nvidia / GitHub embedding models for RAG, semantic search, similarity. Use when the user wants embeddings, vectors, RAG, semantic search, or to embed text.
 ---
 
-# Multiver â€” Embeddings
+# Multiver — Embeddings
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
+Requires `MULTIVER_URL` (and `MULTIVER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
 
 ## Discover
 
 ```bash
-curl $NINEROUTER_URL/v1/models/embedding | jq '.data[].id'
+curl $MULTIVER_URL/v1/models/embedding | jq '.data[].id'
 # Per-model dimensions
-curl "$NINEROUTER_URL/v1/models/info?id=openai/text-embedding-3-small"
+curl "$MULTIVER_URL/v1/models/info?id=openai/text-embedding-3-small"
 ```
 
 ## Endpoint
 
-`POST $NINEROUTER_URL/v1/embeddings`
+`POST $MULTIVER_URL/v1/embeddings`
 
 | Field | Required | Notes |
 |---|---|---|
@@ -29,8 +29,8 @@ curl "$NINEROUTER_URL/v1/models/info?id=openai/text-embedding-3-small"
 ## Examples
 
 ```bash
-curl -X POST $NINEROUTER_URL/v1/embeddings \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl -X POST $MULTIVER_URL/v1/embeddings \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"openai/text-embedding-3-small","input":["hello","world"]}'
 ```
@@ -38,9 +38,9 @@ curl -X POST $NINEROUTER_URL/v1/embeddings \
 JS:
 
 ```js
-const r = await fetch(`${process.env.NINEROUTER_URL}/v1/embeddings`, {
+const r = await fetch(`${process.env.MULTIVER_URL}/v1/embeddings`, {
   method: "POST",
-  headers: { "Authorization": `Bearer ${process.env.NINEROUTER_KEY}`, "Content-Type": "application/json" },
+  headers: { "Authorization": `Bearer ${process.env.MULTIVER_KEY}`, "Content-Type": "application/json" },
   body: JSON.stringify({ model: "gemini/text-embedding-004", input: "RAG chunk text" }),
 });
 const { data } = await r.json();
@@ -62,8 +62,8 @@ console.log(data[0].embedding.length);  // dimension
 
 | Provider | Notes |
 |---|---|
-| `openai`, `openrouter`, `mistral`, `voyage-ai`, `fireworks`, `together`, `nebius`, `github`, `nvidia`, `jina-ai` | Native OpenAI shape â€” `dimensions` works only on OpenAI v3 (`text-embedding-3-*`) |
-| `gemini`, `google_ai_studio` | Server auto-converts to `embedContent`/`batchEmbedContents` â€” send OpenAI shape |
+| `openai`, `openrouter`, `mistral`, `voyage-ai`, `fireworks`, `together`, `nebius`, `github`, `nvidia`, `jina-ai` | Native OpenAI shape — `dimensions` works only on OpenAI v3 (`text-embedding-3-*`) |
+| `gemini`, `google_ai_studio` | Server auto-converts to `embedContent`/`batchEmbedContents` — send OpenAI shape |
 | `openai-compatible-*`, `custom-embedding-*` | Custom `baseUrl` from credentials |
 
 Batch (`input` as array) is faster; some providers cap batch size.

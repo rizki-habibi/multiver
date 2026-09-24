@@ -1,0 +1,225 @@
+﻿   Γû▓ Next.js 15.5.26
+   - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 12.5min
+   Linting and checking validity of types ...
+   Collecting page data ...
+[DB] Driver: node:sqlite | file: C:\Users\rizki\AppData\Roaming\Multiver\db\data.sqlite
+   Generating static pages (0/148) ...
+[DB] Driver: node:sqlite | file: C:\Users\rizki\AppData\Roaming\Multiver\db\data.sqlite
+   Generating static pages (31/148) 
+   Generating static pages (37/148) 
+   Generating static pages (74/148) 
+   Generating static pages (111/148) 
+ Γ£ô Generating static pages (148/148)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                           Size  First Load JS
+Γöî Γùï /                                                509 B         103 kB
+Γö£ Γùï /_not-found                                       1 kB         104 kB
+Γö£ ╞Æ /api/auth/login                                  509 B         103 kB
+Γö£ ╞Æ /api/auth/logout                                 509 B         103 kB
+Γö£ ╞Æ /api/auth/oidc/callback                          509 B         103 kB
+Γö£ ╞Æ /api/auth/oidc/start                             509 B         103 kB
+Γö£ ╞Æ /api/auth/oidc/test                              509 B         103 kB
+Γö£ ╞Æ /api/auth/reset-password                         509 B         103 kB
+Γö£ ╞Æ /api/auth/saml/acs                               509 B         103 kB
+Γö£ ╞Æ /api/auth/saml/metadata                          509 B         103 kB
+Γö£ ╞Æ /api/auth/saml/start                             509 B         103 kB
+Γö£ ╞Æ /api/auth/saml/test                              509 B         103 kB
+Γö£ ╞Æ /api/auth/status                                 509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/all-statuses                      509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/antigravity-mitm                  509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/antigravity-mitm/alias            509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/claude-settings                   509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/cline-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/codewhale-settings                509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/codex-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/copilot-settings                  509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/cowork-mcp-registry               509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/cowork-mcp-tools                  509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/cowork-settings                   509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/crush-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/deepseek-tui-settings             509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/devin-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/droid-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/forge-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/grok-build-settings               509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/hermes-settings                   509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/jcode-settings                    509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/kilo-settings                     509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/omp-settings                      509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/openclaw-settings                 509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/opencode-settings                 509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/pi-settings                       509 B         103 kB
+Γö£ ╞Æ /api/cli-tools/smelt-settings                    509 B         103 kB
+Γö£ ╞Æ /api/combos                                      509 B         103 kB
+Γö£ ╞Æ /api/combos/[id]                                 509 B         103 kB
+Γö£ ╞Æ /api/combos/presets                              509 B         103 kB
+Γö£ ╞Æ /api/headroom/extras                             509 B         103 kB
+Γö£ ╞Æ /api/headroom/proxy/[...path]                    509 B         103 kB
+Γö£ ╞Æ /api/headroom/restart                            509 B         103 kB
+Γö£ ╞Æ /api/headroom/start                              509 B         103 kB
+Γö£ ╞Æ /api/headroom/status                             509 B         103 kB
+Γö£ ╞Æ /api/headroom/stop                               509 B         103 kB
+Γö£ ╞Æ /api/health                                      509 B         103 kB
+Γö£ ╞Æ /api/init                                        509 B         103 kB
+Γö£ ╞Æ /api/keys                                        509 B         103 kB
+Γö£ ╞Æ /api/keys/[id]                                   509 B         103 kB
+Γö£ ╞Æ /api/mcp/[plugin]/message                        509 B         103 kB
+Γö£ ╞Æ /api/mcp/[plugin]/sse                            509 B         103 kB
+Γö£ ╞Æ /api/media-providers/tts/deepgram/voices         509 B         103 kB
+Γö£ ╞Æ /api/media-providers/tts/elevenlabs/voices       509 B         103 kB
+Γö£ ╞Æ /api/media-providers/tts/inworld/voices          509 B         103 kB
+Γö£ ╞Æ /api/media-providers/tts/minimax/voices          509 B         103 kB
+Γö£ ╞Æ /api/media-providers/tts/voices                  509 B         103 kB
+Γö£ ╞Æ /api/models                                      509 B         103 kB
+Γö£ ╞Æ /api/models/alias                                509 B         103 kB
+Γö£ ╞Æ /api/models/availability                         509 B         103 kB
+Γö£ ╞Æ /api/models/catalog-sync                         509 B         103 kB
+Γö£ ╞Æ /api/models/custom                               509 B         103 kB
+Γö£ ╞Æ /api/models/disabled                             509 B         103 kB
+Γö£ ╞Æ /api/models/test                                 509 B         103 kB
+Γö£ ╞Æ /api/oauth/[provider]/[action]                   509 B         103 kB
+Γö£ ╞Æ /api/oauth/codex/bulk-import                     509 B         103 kB
+Γö£ ╞Æ /api/oauth/codex/import-token                    509 B         103 kB
+Γö£ ╞Æ /api/oauth/cursor/auto-import                    509 B         103 kB
+Γö£ ╞Æ /api/oauth/cursor/import                         509 B         103 kB
+Γö£ ╞Æ /api/oauth/gitlab/pat                            509 B         103 kB
+Γö£ ╞Æ /api/oauth/grok-cli/bulk-import                  509 B         103 kB
+Γö£ ╞Æ /api/oauth/iflow/cookie                          509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/api-key                          509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/auto-import                      509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/import                           509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/import-cli-proxy                 509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/social-authorize                 509 B         103 kB
+Γö£ ╞Æ /api/oauth/kiro/social-exchange                  509 B         103 kB
+Γö£ ╞Æ /api/oauth/xiaomi-mimo/api-key                   509 B         103 kB
+Γö£ ╞Æ /api/oauth/xiaomi-mimo/auto-import               509 B         103 kB
+Γö£ ╞Æ /api/oauth/xiaomi-mimo/login/start               509 B         103 kB
+Γö£ ╞Æ /api/oauth/xiaomi-mimo/login/status              509 B         103 kB
+Γö£ ╞Æ /api/pricing                                     509 B         103 kB
+Γö£ ╞Æ /api/provider-nodes                              509 B         103 kB
+Γö£ ╞Æ /api/provider-nodes/[id]                         509 B         103 kB
+Γö£ ╞Æ /api/provider-nodes/validate                     509 B         103 kB
+Γö£ ╞Æ /api/providers                                   509 B         103 kB
+Γö£ ╞Æ /api/providers/[id]                              509 B         103 kB
+Γö£ ╞Æ /api/providers/[id]/models                       509 B         103 kB
+Γö£ ╞Æ /api/providers/[id]/test                         509 B         103 kB
+Γö£ ╞Æ /api/providers/[id]/test-models                  509 B         103 kB
+Γö£ ╞Æ /api/providers/client                            509 B         103 kB
+Γö£ ╞Æ /api/providers/kilo/free-models                  509 B         103 kB
+Γö£ ╞Æ /api/providers/suggested-models                  509 B         103 kB
+Γö£ ╞Æ /api/providers/test-batch                        509 B         103 kB
+Γö£ ╞Æ /api/providers/validate                          509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools                                 509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools/[id]                            509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools/[id]/test                       509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools/cloudflare-deploy               509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools/deno-deploy                     509 B         103 kB
+Γö£ ╞Æ /api/proxy-pools/vercel-deploy                   509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/health                               509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/install                              509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/logs                                 509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/restart                              509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/start                                509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/stats                                509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/status                               509 B         103 kB
+Γö£ ╞Æ /api/pxpipe/stop                                 509 B         103 kB
+Γö£ ╞Æ /api/settings                                    509 B         103 kB
+Γö£ ╞Æ /api/settings/database                           509 B         103 kB
+Γö£ ╞Æ /api/settings/proxy-test                         509 B         103 kB
+Γö£ ╞Æ /api/settings/require-login                      509 B         103 kB
+Γö£ ╞Æ /api/shutdown                                    509 B         103 kB
+Γö£ ╞Æ /api/tags                                        509 B         103 kB
+Γö£ ╞Æ /api/translator/console-logs                     509 B         103 kB
+Γö£ ╞Æ /api/translator/console-logs/stream              509 B         103 kB
+Γö£ ╞Æ /api/translator/load                             509 B         103 kB
+Γö£ ╞Æ /api/translator/save                             509 B         103 kB
+Γö£ ╞Æ /api/translator/send                             509 B         103 kB
+Γö£ ╞Æ /api/translator/translate                        509 B         103 kB
+Γö£ ╞Æ /api/tunnel/disable                              509 B         103 kB
+Γö£ ╞Æ /api/tunnel/enable                               509 B         103 kB
+Γö£ ╞Æ /api/tunnel/status                               509 B         103 kB
+Γö£ ╞Æ /api/tunnel/tailscale-check                      509 B         103 kB
+Γö£ ╞Æ /api/tunnel/tailscale-disable                    509 B         103 kB
+Γö£ ╞Æ /api/tunnel/tailscale-enable                     509 B         103 kB
+Γö£ ╞Æ /api/tunnel/tailscale-install                    509 B         103 kB
+Γö£ ╞Æ /api/usage/[connectionId]                        509 B         103 kB
+Γö£ ╞Æ /api/usage/[connectionId]/codex-reset-credits    509 B         103 kB
+Γö£ ╞Æ /api/usage/chart                                 509 B         103 kB
+Γö£ ╞Æ /api/usage/history                               509 B         103 kB
+Γö£ ╞Æ /api/usage/logs                                  509 B         103 kB
+Γö£ ╞Æ /api/usage/providers                             509 B         103 kB
+Γö£ ╞Æ /api/usage/request-details                       509 B         103 kB
+Γö£ ╞Æ /api/usage/request-logs                          509 B         103 kB
+Γö£ ╞Æ /api/usage/stats                                 509 B         103 kB
+Γö£ ╞Æ /api/usage/stream                                509 B         103 kB
+Γö£ ╞Æ /api/v1                                          509 B         103 kB
+Γö£ ╞Æ /api/v1/api/chat                                 509 B         103 kB
+Γö£ ╞Æ /api/v1/audio/speech                             509 B         103 kB
+Γö£ ╞Æ /api/v1/audio/transcriptions                     509 B         103 kB
+Γö£ ╞Æ /api/v1/audio/voices                             509 B         103 kB
+Γö£ ╞Æ /api/v1/chat/completions                         509 B         103 kB
+Γö£ ╞Æ /api/v1/embeddings                               509 B         103 kB
+Γö£ ╞Æ /api/v1/images/generations                       509 B         103 kB
+Γö£ ╞Æ /api/v1/messages                                 509 B         103 kB
+Γö£ ╞Æ /api/v1/messages/count_tokens                    509 B         103 kB
+Γö£ ╞Æ /api/v1/models                                   509 B         103 kB
+Γö£ ╞Æ /api/v1/models/[...model]                        509 B         103 kB
+Γö£ ╞Æ /api/v1/models/info                              509 B         103 kB
+Γö£ ╞Æ /api/v1/responses                                509 B         103 kB
+Γö£ ╞Æ /api/v1/responses/compact                        509 B         103 kB
+Γö£ ╞Æ /api/v1/search                                   509 B         103 kB
+Γö£ ╞Æ /api/v1/systemone                                509 B         103 kB
+Γö£ ╞Æ /api/v1/videos/[id]                              509 B         103 kB
+Γö£ ╞Æ /api/v1/videos/edits                             509 B         103 kB
+Γö£ ╞Æ /api/v1/videos/extensions                        509 B         103 kB
+Γö£ ╞Æ /api/v1/videos/generations                       509 B         103 kB
+Γö£ ╞Æ /api/v1/web/fetch                                509 B         103 kB
+Γö£ ╞Æ /api/v1beta/models                               509 B         103 kB
+Γö£ ╞Æ /api/v1beta/models/[...path]                     509 B         103 kB
+Γö£ ╞Æ /api/version                                     509 B         103 kB
+Γö£ ╞Æ /api/version/shutdown                            509 B         103 kB
+Γö£ ╞Æ /api/version/update                              509 B         103 kB
+Γö£ Γùï /callback                                      1.34 kB         104 kB
+Γö£ Γùï /dashboard                                       142 B         335 kB
+Γö£ Γùï /dashboard/basic-chat                           6.4 kB         333 kB
+Γö£ Γùï /dashboard/cli-tools                           1.38 kB         369 kB
+Γö£ ╞Æ /dashboard/cli-tools/[toolId]                  1.89 kB         369 kB
+Γö£ Γùï /dashboard/combos                                23 kB         350 kB
+Γö£ ╞Æ /dashboard/console-log                         1.02 kB         328 kB
+Γö£ Γùï /dashboard/endpoint                              142 B         335 kB
+Γö£ ╞Æ /dashboard/media-providers/[kind]              2.66 kB         330 kB
+Γö£ ╞Æ /dashboard/media-providers/[kind]/[id]         18.1 kB         345 kB
+Γö£ ╞Æ /dashboard/media-providers/combo/[id]          4.09 kB         331 kB
+Γö£ Γùï /dashboard/media-providers/web                 2.34 kB         329 kB
+Γö£ Γùï /dashboard/mitm                                1.24 kB         369 kB
+Γö£ Γùï /dashboard/profile                             9.36 kB         336 kB
+Γö£ Γùï /dashboard/providers                           7.91 kB         335 kB
+Γö£ ╞Æ /dashboard/providers/[id]                      21.5 kB         354 kB
+Γö£ Γùï /dashboard/providers/new                        1.9 kB         329 kB
+Γö£ Γùï /dashboard/proxy-pools                         6.96 kB         334 kB
+Γö£ Γùï /dashboard/pxpipe                              3.16 kB         330 kB
+Γö£ Γùï /dashboard/quota                               12.5 kB         339 kB
+Γö£ Γùï /dashboard/settings/pricing                    2.82 kB         108 kB
+Γö£ Γùï /dashboard/skills                              1.99 kB         329 kB
+Γö£ Γùï /dashboard/token-saver                         5.94 kB         333 kB
+Γö£ Γùï /dashboard/translator                          2.69 kB         330 kB
+Γö£ Γùï /dashboard/usage                               4.93 kB         332 kB
+Γö£ Γùï /landing                                       10.2 kB         113 kB
+Γö£ Γùï /login                                         2.21 kB         329 kB
+Γöö Γùï /manifest.webmanifest                            509 B         103 kB
++ First Load JS shared by all                       103 kB
+  Γö£ chunks/1255-0046eeb68b7d2d4d.js                46.1 kB
+  Γö£ chunks/4bd1b696-100b9d70ed4e49c1.js            54.2 kB
+  Γöö other shared chunks (total)                    2.57 kB
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
+D O N E   0  
+ 

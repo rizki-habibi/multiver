@@ -1,23 +1,23 @@
-﻿---
+---
 name: Multiver-image
 description: Generate images via Multiver /v1/images/generations using OpenAI / Gemini Imagen / DALL-E / FLUX / MiniMax / SDWebUI / ComfyUI / Codex models. Use when the user wants to create, generate, draw, or render an image, picture, or text-to-image (txt2img).
 ---
 
-# Multiver — Image Generation
+# Multiver � Image Generation
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
+Requires `MULTIVER_URL` (and `MULTIVER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
 
 ## Discover
 
 ```bash
-curl $NINEROUTER_URL/v1/models/image | jq '.data[].id'
+curl $MULTIVER_URL/v1/models/image | jq '.data[].id'
 # Per-model params/options (size enum, quality enum, capabilities like edit)
-curl "$NINEROUTER_URL/v1/models/info?id=openai/dall-e-3"
+curl "$MULTIVER_URL/v1/models/info?id=openai/dall-e-3"
 ```
 
 ## Endpoint
 
-`POST $NINEROUTER_URL/v1/images/generations`
+`POST $MULTIVER_URL/v1/images/generations`
 
 | Field | Required | Notes |
 |---|---|---|
@@ -35,8 +35,8 @@ Add query `?response_format=binary` to receive raw image bytes (handy for saving
 Save to file (binary):
 
 ```bash
-curl -X POST "$NINEROUTER_URL/v1/images/generations?response_format=binary" \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl -X POST "$MULTIVER_URL/v1/images/generations?response_format=binary" \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"gemini/gemini-3-pro-image-preview","prompt":"watercolor mountains at sunrise","size":"1024x1024"}' \
   --output out.png
@@ -45,9 +45,9 @@ curl -X POST "$NINEROUTER_URL/v1/images/generations?response_format=binary" \
 JS (URL response):
 
 ```js
-const r = await fetch(`${process.env.NINEROUTER_URL}/v1/images/generations`, {
+const r = await fetch(`${process.env.MULTIVER_URL}/v1/images/generations`, {
   method: "POST",
-  headers: { "Authorization": `Bearer ${process.env.NINEROUTER_KEY}`, "Content-Type": "application/json" },
+  headers: { "Authorization": `Bearer ${process.env.MULTIVER_KEY}`, "Content-Type": "application/json" },
   body: JSON.stringify({ model: "gemini/gemini-3-pro-image-preview", prompt: "neon city", size: "1024x1024" }),
 });
 const { data } = await r.json();
@@ -75,12 +75,12 @@ Common fields above work everywhere. These add/override:
 | Provider | Extra/changed fields | Notes |
 |---|---|---|
 | `openai`, `minimax`, `openrouter`, `recraft` | `quality`, `style`, `response_format` | Standard OpenAI shape |
-| `gemini` (nano-banana) | — | Only `prompt`; ignores `size`/`n` |
+| `gemini` (nano-banana) | � | Only `prompt`; ignores `size`/`n` |
 | `codex` (gpt-5.4-image) | `image`, `images[]`, `image_detail`, `output_format`, `background` | SSE stream; **ChatGPT Plus/Pro required** |
-| `huggingface` | — | Only `prompt`; returns single image |
-| `nanobanana` | `image`, `images[]` (edit mode) | `size` → aspect ratio; async polling |
-| `fal-ai` | `image` (img2img) | `n` → `num_images`; `size` → ratio; async |
-| `stability-ai` | `style` (preset), `output_format` | `size` → `aspect_ratio` |
-| `black-forest-labs` (FLUX) | `image` (ref) | `size` → exact `width`/`height`; async |
-| `runwayml` | `image` (ref) | `size` → ratio; async; video models exist |
-| `sdwebui`, `comfyui` | — | Localhost noAuth (`:7860` / `:8188`) |
+| `huggingface` | � | Only `prompt`; returns single image |
+| `nanobanana` | `image`, `images[]` (edit mode) | `size` ? aspect ratio; async polling |
+| `fal-ai` | `image` (img2img) | `n` ? `num_images`; `size` ? ratio; async |
+| `stability-ai` | `style` (preset), `output_format` | `size` ? `aspect_ratio` |
+| `black-forest-labs` (FLUX) | `image` (ref) | `size` ? exact `width`/`height`; async |
+| `runwayml` | `image` (ref) | `size` ? ratio; async; video models exist |
+| `sdwebui`, `comfyui` | � | Localhost noAuth (`:7860` / `:8188`) |

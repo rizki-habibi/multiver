@@ -54,7 +54,7 @@ function stubText({ name, mime, bytes, reason }) {
 }
 
 export function buildMultipartFile(buffer, { fieldName = "file", fileName, mediaType } = {}) {
-  const boundary = `----9routerQoder${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+  const boundary = `----multiverQoder${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
   const filename = fileName || `upload.${mimeExt(mediaType)}`;
   const head = Buffer.from(
     `--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\nContent-Type: ${mediaType || "application/octet-stream"}\r\n\r\n`,
@@ -270,9 +270,11 @@ function stripRemainingDataUris(messages) {
           }
         }
         if (typeof block?.text === "string" && block.text.includes("data:")) {
-          return { ...block, text: block.text.replace(DATA_URI_RE, (m) =>
-            stubText({ bytes: m.length, reason: "payload over Qoder size budget" }),
-          ) };
+          return {
+            ...block, text: block.text.replace(DATA_URI_RE, (m) =>
+              stubText({ bytes: m.length, reason: "payload over Qoder size budget" }),
+            )
+          };
         }
         return block;
       });
@@ -331,7 +333,7 @@ export async function rewriteQoderMessageAttachments(messages, {
 }
 
 /** Test helper kept for callers; upload memo is now per-request. */
-export function clearQoderUploadCache() {}
+export function clearQoderUploadCache() { }
 
 export const __test__ = {
   extractUrlFromUploadResponse,

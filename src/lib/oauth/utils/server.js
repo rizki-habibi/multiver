@@ -825,6 +825,9 @@ function renderXiaomiMimoResultPage(success, message) {
   const color = success ? "#22c55e" : "#ef4444";
   const icon = success ? "&#10003;" : "&#10007;";
   const title = success ? "Authentication Successful" : "Authentication Failed";
+  // ponytail: escapeHtml guard. err.message can carry upstream-controlled text;
+  // without this a hostile decrypt error would inject markup into the callback page.
+  const safeMessage = escapeHtml(message ?? (success ? "You can close this tab and return to Multiver." : "Please try again."));
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>${title}</title>
@@ -840,7 +843,7 @@ function renderXiaomiMimoResultPage(success, message) {
   <div class="container">
     <div class="icon">${icon}</div>
     <h1>${title}</h1>
-    <p>${message || (success ? "You can close this tab and return to Multiver." : "Please try again.")}</p>
+    <p>${safeMessage}</p>
     ${success ? "<script>setTimeout(() => window.close(), 3000);</script>" : ""}
   </div>
 </body>

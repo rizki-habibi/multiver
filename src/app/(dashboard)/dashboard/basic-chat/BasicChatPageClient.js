@@ -635,12 +635,22 @@ export default function BasicChatPageClient() {
         content: message.role === "user" ? buildUserContent(message) : message.content,
       }));
 
+    let apiKey = null;
     try {
-      const response = await fetch("/api/dashboard/chat/completions", {
+      const keysRes = await fetch("/api/keys", { cache: "no-store" });
+      const keysData = await keysRes.json().catch(() => ({}));
+      apiKey = (keysData.keys || []).find((k) => k.isActive !== false)?.key || null;
+    } catch {
+      apiKey = null;
+    }
+
+    try {
+      const response = await fetch("/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify({
           model: model.requestModel || model.id,

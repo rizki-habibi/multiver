@@ -60,7 +60,19 @@ let isFlushing = false;
 
 function sanitizeHeaders(headers) {
   if (!headers || typeof headers !== "object") return {};
-  const sensitiveKeys = ["authorization", "x-api-key", "cookie", "token", "api-key"];
+  const sensitiveKeys = [
+    "authorization",
+    "x-api-key",
+    "cookie",
+    "token",
+    "api-key",
+    // Per-process peer/CLI trust secrets stamped by custom-server.js must never be
+    // persisted — the record is rendered in the dashboard and uploaded by cloud sync.
+    "x-mv-peer-token",
+    "x-mv-cli-token",
+    "x-9r-peer-token",
+    "x-9r-cli-token",
+  ];
   const sanitized = { ...headers };
   for (const key of Object.keys(sanitized)) {
     if (sensitiveKeys.some((s) => key.toLowerCase().includes(s))) delete sanitized[key];
@@ -142,7 +154,7 @@ async function flushToDatabase() {
 
 export async function saveRequestDetail(detail) {
   const config = await getObservabilityConfig();
-  if (!config.enabled) {return;}
+  if (!config.enabled) { return; }
 
   writeBuffer.push(detail);
 
@@ -154,7 +166,7 @@ export async function saveRequestDetail(detail) {
   } else if (!flushTimer) {
     flushTimer = setTimeout(() => {
       flushTimer = null;
-      flushToDatabase().catch(() => {});
+      flushToDatabase().catch(() => { });
     }, config.flushIntervalMs);
   }
 }

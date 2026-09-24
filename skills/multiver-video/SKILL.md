@@ -1,13 +1,13 @@
-ï»¿---
+---
 name: Multiver-video
 description: Generate videos via Multiver /v1/videos/generations using xAI Grok Imagine (grok-imagine-video). Async job flow - submit, poll request_id until done, download MP4. Use when the user wants to create, generate, or render a video, text-to-video (txt2vid), or image-to-video.
 ---
 
-# Multiver â€” Video Generation (xAI Grok Imagine)
+# Multiver — Video Generation (xAI Grok Imagine)
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
+Requires `MULTIVER_URL` (and `MULTIVER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
 
-Requires a connected **xAI account** in the Multiver dashboard â€” either **Grok Build OAuth** (SuperGrok / X Premium+ subscription sign-in) or a direct **xAI API key** from console.x.ai. The two are separate auth types with separate billing; the dashboard shows which one each connection uses.
+Requires a connected **xAI account** in the Multiver dashboard — either **Grok Build OAuth** (SuperGrok / X Premium+ subscription sign-in) or a direct **xAI API key** from console.x.ai. The two are separate auth types with separate billing; the dashboard shows which one each connection uses.
 
 ## Endpoints (async job flow)
 
@@ -20,7 +20,7 @@ Video generation is **asynchronous**: the POST returns a `request_id` immediatel
 | `POST /v1/videos/extensions` | extend an existing video |
 | `GET /v1/videos/{request_id}` | poll job status |
 
-Request fields (passed through to xAI unchanged â€” see https://docs.x.ai/developers/rest-api-reference/inference/videos):
+Request fields (passed through to xAI unchanged — see https://docs.x.ai/developers/rest-api-reference/inference/videos):
 
 | Field | Required | Notes |
 |---|---|---|
@@ -29,30 +29,30 @@ Request fields (passed through to xAI unchanged â€” see https://docs.x.ai/develo
 | `duration` | no | seconds |
 | `aspect_ratio` | no | `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `3:2`, `2:3` |
 | `resolution` | no | `480p`, `720p`, `1080p` |
-| `image` | no | `{ "url": "https://â€¦ or data:image/â€¦;base64,â€¦" }` for image-to-video |
-| `video` | edits/extensions | `{ "url": "â€¦mp4" }` or `{ "file_id": "â€¦" }` |
+| `image` | no | `{ "url": "https://… or data:image/…;base64,…" }` for image-to-video |
+| `video` | edits/extensions | `{ "url": "…mp4" }` or `{ "file_id": "…" }` |
 
 ## Examples
 
 Submit a job:
 
 ```bash
-curl -X POST "$NINEROUTER_URL/v1/videos/generations" \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl -X POST "$MULTIVER_URL/v1/videos/generations" \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"xai/grok-imagine-video","prompt":"A cinematic tracking shot through a neon city at night","duration":8,"aspect_ratio":"16:9","resolution":"720p"}'
-# â†’ {"request_id":"abc123"}   (response header x-Multiver-connection-id: <id>)
+# ? {"request_id":"abc123"}   (response header x-Multiver-connection-id: <id>)
 ```
 
 Poll until done (echo the connection header back so the same account polls the job):
 
 ```bash
-curl "$NINEROUTER_URL/v1/videos/abc123" \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl "$MULTIVER_URL/v1/videos/abc123" \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "x-connection-id: <id from create response>"
-# â†’ {"status":"pending","progress":42}
-# â†’ {"status":"done","video":{"url":"https://â€¦mp4","duration":8},"model":"grok-imagine-video"}
-# â†’ {"status":"failed","error":{"code":"â€¦","message":"â€¦"}}
+# ? {"status":"pending","progress":42}
+# ? {"status":"done","video":{"url":"https://…mp4","duration":8},"model":"grok-imagine-video"}
+# ? {"status":"failed","error":{"code":"…","message":"…"}}
 ```
 
 Download: fetch `video.url` from the `done` response.
@@ -71,6 +71,6 @@ Submits, polls with progress, downloads to `video.mp4.part`, atomically renames 
 ## Notes & limits
 
 - Jobs are **account-bound** upstream: poll with the same connection that created the job (`x-connection-id` header, value from the create response's `x-Multiver-connection-id`).
-- Creation POSTs are **never auto-retried** (a retry could create and bill two videos). Only a 401â†’token-refreshâ†’single-retry is performed, which upstream rejects before job creation.
+- Creation POSTs are **never auto-retried** (a retry could create and bill two videos). Only a 401?token-refresh?single-retry is performed, which upstream rejects before job creation.
 - Video models are tagged `kind: "video"` and are excluded from chat model lists and chat fallback combos.
-- Grok Build **subscription OAuth** tokens are sent to the same `api.x.ai/v1/videos` endpoints as API keys; whether a given subscription tier includes video-generation quota is controlled by xAI and is not verified by Multiver â€” a `403`/`permission_denied` from upstream means the connected account has no video access.
+- Grok Build **subscription OAuth** tokens are sent to the same `api.x.ai/v1/videos` endpoints as API keys; whether a given subscription tier includes video-generation quota is controlled by xAI and is not verified by Multiver — a `403`/`permission_denied` from upstream means the connected account has no video access.

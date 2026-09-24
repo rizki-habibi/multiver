@@ -1,7 +1,7 @@
 /**
  * Security invariants of the server-assisted MiMo login proxy
  * (src/lib/mimoLoginSession.js):
- *  - credentials bound to 9router's own origin are never forwarded upstream
+ *  - credentials bound to Multiver's own origin are never forwarded upstream
  *  - upstream Set-Cookie is never replayed onto the app's own cookie jar
  */
 import { describe, it, expect } from "vitest";
@@ -24,7 +24,7 @@ describe("mimo login proxy security", () => {
         "set-cookie": "userId=123; Path=/", // plain object header: visible via getSetCookie
       },
     });
-    const out = await buildBrowserResponse({ jar: new Map() }, upstream, "http://localhost:20128", "/pass/");
+    const out = await buildBrowserResponse({ jar: new Map() }, upstream, "http://localhost:20222", "/pass/");
     expect(out.headers.getSetCookie()).toEqual([]);
   });
 
@@ -33,7 +33,7 @@ describe("mimo login proxy security", () => {
       status: 200,
       headers: { "content-type": "text/html" },
     });
-    const out = await buildBrowserResponse({ jar: new Map() }, upstream, "http://localhost:20128", "/fe/");
+    const out = await buildBrowserResponse({ jar: new Map() }, upstream, "http://localhost:20222", "/fe/");
     expect(out.status).toBe(200);
     expect(out.headers.get("content-type")).toBe("text/html");
   });

@@ -31,11 +31,11 @@ Then ask normally — *"generate an image of a cat"*, *"transcribe this URL"*, e
 ## Configure your shell once
 
 ```bash
-export NINEROUTER_URL="http://localhost:20128"   # local default, or your VPS / tunnel URL
-export NINEROUTER_KEY="sk-..."                   # from Dashboard → Keys (only if requireApiKey=true)
+export MULTIVER_URL="http://localhost:20222"   # local default, or your VPS / tunnel URL
+export MULTIVER_KEY="sk-..."                   # from Dashboard → Keys (only if requireApiKey=true)
 ```
 
-Verify: `curl $NINEROUTER_URL/api/health` → `{"ok":true}`.
+Verify: `curl $MULTIVER_URL/api/health` → `{"ok":true}`.
 
 ## Links
 

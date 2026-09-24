@@ -1,6 +1,6 @@
-﻿---
+---
 name: Multiver
-description: Entry point for Multiver — local/remote AI gateway with OpenAI-compatible REST for chat, image, TTS, embeddings, web search, web fetch. Use when the user mentions Multiver, NINEROUTER_URL, or wants AI without writing provider boilerplate. This skill covers setup + indexes capability skills; fetch the relevant capability SKILL.md from the URLs below when needed.
+description: Entry point for Multiver � local/remote AI gateway with OpenAI-compatible REST for chat, image, TTS, embeddings, web search, web fetch. Use when the user mentions Multiver, MULTIVER_URL, or wants AI without writing provider boilerplate. This skill covers setup + indexes capability skills; fetch the relevant capability SKILL.md from the URLs below when needed.
 ---
 
 # Multiver
@@ -10,24 +10,24 @@ Local/remote AI gateway exposing OpenAI-compatible REST. One key, many providers
 ## Setup
 
 ```bash
-export NINEROUTER_URL="http://localhost:20128"      # or VPS / tunnel URL
-export NINEROUTER_KEY="sk-..."                      # from Dashboard → Keys (only if requireApiKey=true)
+export MULTIVER_URL="http://localhost:20222"      # or VPS / tunnel URL
+export MULTIVER_KEY="sk-..."                      # from Dashboard ? Keys (only if requireApiKey=true)
 ```
 
-All requests: `${NINEROUTER_URL}/v1/...` with header `Authorization: Bearer ${NINEROUTER_KEY}` (omit if auth disabled).
+All requests: `${MULTIVER_URL}/v1/...` with header `Authorization: Bearer ${MULTIVER_KEY}` (omit if auth disabled).
 
-Verify: `curl $NINEROUTER_URL/api/health` → `{"ok":true}`
+Verify: `curl $MULTIVER_URL/api/health` ? `{"ok":true}`
 
 ## Discover models
 
 ```bash
-curl $NINEROUTER_URL/v1/models                  # chat/LLM (default)
-curl $NINEROUTER_URL/v1/models/image            # image-gen
-curl $NINEROUTER_URL/v1/models/tts              # text-to-speech
-curl $NINEROUTER_URL/v1/models/embedding        # embeddings
-curl $NINEROUTER_URL/v1/models/web              # web search + fetch (entries have `kind` field)
-curl $NINEROUTER_URL/v1/models/stt              # speech-to-text
-curl $NINEROUTER_URL/v1/models/image-to-text    # vision
+curl $MULTIVER_URL/v1/models                  # chat/LLM (default)
+curl $MULTIVER_URL/v1/models/image            # image-gen
+curl $MULTIVER_URL/v1/models/tts              # text-to-speech
+curl $MULTIVER_URL/v1/models/embedding        # embeddings
+curl $MULTIVER_URL/v1/models/web              # web search + fetch (entries have `kind` field)
+curl $MULTIVER_URL/v1/models/stt              # speech-to-text
+curl $MULTIVER_URL/v1/models/image-to-text    # vision
 ```
 
 Use `data[].id` as `model` field in requests. Combos appear with `owned_by:"combo"`.
@@ -52,10 +52,10 @@ When the user needs a specific capability, fetch that skill's `SKILL.md` from it
 | Speech-to-text | https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver-stt/SKILL.md |
 | Embeddings | https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver-embeddings/SKILL.md |
 | Web search | https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver-web-search/SKILL.md |
-| Web fetch (URL → markdown) | https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver-web-fetch/SKILL.md |
+| Web fetch (URL ? markdown) | https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver-web-fetch/SKILL.md |
 
 ## Errors
 
-- 401 → set/refresh `NINEROUTER_KEY` (Dashboard → Keys)
-- 400 `Invalid model format` → check `model` exists in `/v1/models/<kind>`
-- 503 `All accounts unavailable` → wait `retry-after` or add another provider account
+- 401 ? set/refresh `MULTIVER_KEY` (Dashboard ? Keys)
+- 400 `Invalid model format` ? check `model` exists in `/v1/models/<kind>`
+- 503 `All accounts unavailable` ? wait `retry-after` or add another provider account

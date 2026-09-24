@@ -1,25 +1,25 @@
-ï»¿---
+---
 name: Multiver-web-search
 description: Web and X search via Multiver /v1/search using Tavily / Exa / Brave / Serper / SearXNG / Google PSE / Linkup / SearchAPI / You.com / Perplexity / Xquik. Use when the user wants to search the web, find articles, or search public X posts.
 ---
 
-# Multiver â€” Web Search
+# Multiver — Web Search
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
+Requires `MULTIVER_URL` (and `MULTIVER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/Multiver/refs/heads/master/skills/Multiver/SKILL.md for setup.
 
 ## Discover
 
 ```bash
-curl $NINEROUTER_URL/v1/models/web | jq '.data[] | select(.kind=="webSearch") | .id'
+curl $MULTIVER_URL/v1/models/web | jq '.data[] | select(.kind=="webSearch") | .id'
 # Per-provider params (searchTypes, maxResults, required options like cx for google-pse)
-curl "$NINEROUTER_URL/v1/models/info?id=tavily/search"
+curl "$MULTIVER_URL/v1/models/info?id=tavily/search"
 ```
 
 IDs end in `/search` (e.g. `tavily/search`). Combos (`owned_by:"combo"`) chain providers with auto-fallback.
 
 ## Endpoint
 
-`POST $NINEROUTER_URL/v1/search`
+`POST $MULTIVER_URL/v1/search`
 
 | Field | Required | Notes |
 |---|---|---|
@@ -32,8 +32,8 @@ IDs end in `/search` (e.g. `tavily/search`). Combos (`owned_by:"combo"`) chain p
 ## Examples
 
 ```bash
-curl -X POST $NINEROUTER_URL/v1/search \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl -X POST $MULTIVER_URL/v1/search \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"tavily","query":"Multiver open source","max_results":5}'
 ```
@@ -41,9 +41,9 @@ curl -X POST $NINEROUTER_URL/v1/search \
 JS:
 
 ```js
-const r = await fetch(`${process.env.NINEROUTER_URL}/v1/search`, {
+const r = await fetch(`${process.env.MULTIVER_URL}/v1/search`, {
   method: "POST",
-  headers: { "Authorization": `Bearer ${process.env.NINEROUTER_KEY}`, "Content-Type": "application/json" },
+  headers: { "Authorization": `Bearer ${process.env.MULTIVER_KEY}`, "Content-Type": "application/json" },
   body: JSON.stringify({ model: "search-combo", query: "latest LLM benchmarks", max_results: 10 }),
 });
 console.log(await r.json());
@@ -52,8 +52,8 @@ console.log(await r.json());
 X search with Xquik:
 
 ```bash
-curl -X POST $NINEROUTER_URL/v1/search \
-  -H "Authorization: Bearer $NINEROUTER_KEY" \
+curl -X POST $MULTIVER_URL/v1/search \
+  -H "Authorization: Bearer $MULTIVER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"xquik","query":"from:github release","max_results":10,"provider_options":{"queryType":"Latest"}}'
 ```
@@ -97,16 +97,16 @@ All accept `query` + `max_results`. Optional fields vary:
 
 | Provider | Supports | Required extras |
 |---|---|---|
-| `tavily` | country, domain_filter, news topic | â€” |
-| `exa` | domain_filter (incl/excl), news category | â€” |
-| `brave-search` | country, language | â€” |
-| `serper` | country, language, news endpoint | â€” |
-| `perplexity` | country, language, domain_filter | â€” |
+| `tavily` | country, domain_filter, news topic | — |
+| `exa` | domain_filter (incl/excl), news category | — |
+| `brave-search` | country, language | — |
+| `serper` | country, language, news endpoint | — |
+| `perplexity` | country, language, domain_filter | — |
 | `linkup` | domain_filter, time_range | `depth: fast/standard/deep` (option) |
 | `google-pse` | country, language, time_range, offset | **`cx` required** (providerOptions) |
-| `searchapi` | country, language, pagination | â€” |
-| `youcom` | country, language, time_range, domain_filter, full_page | â€” |
+| `searchapi` | country, language, pagination | — |
+| `youcom` | country, language, time_range, domain_filter, full_page | — |
 | `searxng` | language, time_range | Self-hosted, **noAuth** |
 | `xquik` | X/Twitter search operators, language, cursor pagination | `queryType: Latest/Top`, `cursor` (options) |
 
-Provider IS the model â€” `"provider":"tavily" â‰¡ "model":"tavily"`.
+Provider IS the model — `"provider":"tavily" = "model":"tavily"`.

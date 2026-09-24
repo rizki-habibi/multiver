@@ -17,14 +17,16 @@ const PROTECTED_SETTING_KEYS = ["password", "mitmSudoEncrypted"];
 export async function GET() {
   try {
     const settings = await getSettings();
-    const { password, oidcClientSecret, ...safeSettings } = settings;
+    // ponytail: mitmSudoEncrypted is the encrypted sudo password — never in a response body.
+    const { password, oidcClientSecret, mitmSudoEncrypted, ...safeSettings } = settings;
     safeSettings.oidcConfigured = !!(safeSettings.oidcIssuerUrl && safeSettings.oidcClientId && oidcClientSecret);
-    
+    safeSettings.mitmSudoConfigured = !!mitmSudoEncrypted;
+
     const enableRequestLogs = process.env.ENABLE_REQUEST_LOGS === "true";
     const enableTranslator = process.env.ENABLE_TRANSLATOR === "true";
-    
-    return NextResponse.json({ 
-      ...safeSettings, 
+
+    return NextResponse.json({
+      ...safeSettings,
       enableRequestLogs,
       enableTranslator,
       hasPassword: !!password
@@ -60,7 +62,7 @@ export async function PATCH(request) {
         // First time setting password, no current password needed
         // Allow empty currentPassword or default "123456"
         if (body.currentPassword && body.currentPassword !== "123456") {
-           return NextResponse.json({ error: "Invalid current password" }, { status: 401 });
+          return NextResponse.json({ error: "Invalid current password" }, { status: 401 });
         }
       }
 
@@ -108,11 +110,9 @@ export async function PATCH(request) {
         .catch((error) => console.warn("[AutoPing] settings update failed:", error.message));
     }
 
-    const { password, oidcClientSecret, ...safeSettings } = settings;
+    // ponytail: mitmSudoEncrypted is the encrypted sudo password for the MITM proxy —
+    // same class as oidcClientSecret. Keep it out of every settings response body.
+    const { password, oidcClientSecret, mitmSudoEncrypted, ...safeSettings } = settings;
     safeSettings.oidcConfigured = !!(safeSettings.oidcIssuerUrl && safeSettings.oidcClientId && oidcClientSecret);
+    safeSettings.mitmSudoConfigured = !!mitmSudoEncrypted;
     return NextResponse.json(safeSettings, { headers: SETTINGS_RESPONSE_HEADERS });
-  } catch (error) {
-    console.log("Error updating settings:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}

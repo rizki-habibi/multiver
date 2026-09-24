@@ -2,9 +2,21 @@ import { getUsageStats, statsEmitter, getActiveRequests } from "@/lib/usageDb";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request) {
   const encoder = new TextEncoder();
   const state = { closed: false, keepalive: null, send: null, sendPending: null, cachedStats: null };
+
+  function cleanup() {
+    if (state.closed) return;
+    state.closed = true;
+    statsEmitter.off("update", state.send);
+    statsEmitter.off("pending", state.sendPending);
+    clearInterval(state.keepalive);
+  }
+
+  // Next.js does not reliably call ReadableStream.cancel() on client disconnect,
+  // so the EventEmitter listeners + keepalive interval would leak per closed tab.
+  request.signal.addEventListener("abort", cleanup, { once: true });
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -62,10 +74,7 @@ export async function GET() {
     },
 
     cancel() {
-      state.closed = true;
-      statsEmitter.off("update", state.send);
-      statsEmitter.off("pending", state.sendPending);
-      clearInterval(state.keepalive);
+      cleanup();
     },
   });
 

@@ -50,13 +50,13 @@ function request(pathname, headers = {}) {
 // A request that actually came through custom-server.js: peer IP stamped from the TCP
 // socket and proven by the per-process secret.
 function localRequest(pathname, headers = {}) {
-  return request(pathname, { "x-9r-peer-token": PEER_TOKEN, "x-9r-real-ip": "127.0.0.1", ...headers });
+  return request(pathname, { "x-mv-peer-token": PEER_TOKEN, "x-mv-real-ip": "127.0.0.1", ...headers });
 }
 
 describe("dashboard guard public LLM API access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+    process.env.MULTIVER_PEER_TOKEN = PEER_TOKEN;
     mocks.getSettings.mockResolvedValue({ requireLogin: true });
     mocks.validateApiKey.mockResolvedValue(false);
     mocks.getConsistentMachineId.mockResolvedValue("cli-token");
@@ -64,7 +64,7 @@ describe("dashboard guard public LLM API access", () => {
   });
 
   it("allows loopback public LLM API without API key", async () => {
-    const response = await proxy(localRequest("/v1/chat/completions", { host: "localhost:20128" }));
+    const response = await proxy(localRequest("/v1/chat/completions", { host: "localhost:20222" }));
 
     expect(response).toBe(mocks.nextResponse);
     expect(mocks.validateApiKey).not.toHaveBeenCalled();
@@ -73,7 +73,7 @@ describe("dashboard guard public LLM API access", () => {
   it("rejects remote Host-spoof when real peer IP is non-loopback", async () => {
     const response = await proxy(localRequest("/v1/chat/completions", {
       host: "localhost",
-      "x-9r-real-ip": "10.204.111.34",
+      "x-mv-real-ip": "10.204.111.34",
     }));
 
     expect(response.status).toBe(401);
@@ -82,8 +82,8 @@ describe("dashboard guard public LLM API access", () => {
 
   it("allows loopback peer IP regardless of Host", async () => {
     const response = await proxy(localRequest("/v1/chat/completions", {
-      host: "localhost:20128",
-      "x-9r-real-ip": "127.0.0.1",
+      host: "localhost:20222",
+      "x-mv-real-ip": "127.0.0.1",
     }));
 
     expect(response).toBe(mocks.nextResponse);
@@ -98,7 +98,7 @@ describe("dashboard guard public LLM API access", () => {
   });
 
   it("allows loopback rewritten public LLM API without API key", async () => {
-    const response = await proxy(localRequest("/api/v1/chat/completions", { host: "localhost:20128" }));
+    const response = await proxy(localRequest("/api/v1/chat/completions", { host: "localhost:20222" }));
 
     expect(response).toBe(mocks.nextResponse);
     expect(mocks.validateApiKey).not.toHaveBeenCalled();
@@ -219,7 +219,7 @@ describe("dashboard guard public LLM API access", () => {
 describe("dashboard guard local-only access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+    process.env.MULTIVER_PEER_TOKEN = PEER_TOKEN;
     mocks.getSettings.mockResolvedValue({ requireLogin: true });
     mocks.validateApiKey.mockResolvedValue(false);
     mocks.getConsistentMachineId.mockResolvedValue("cli-token");
@@ -237,8 +237,8 @@ describe("dashboard guard local-only access", () => {
 
   it("rejects local-only route on loopback when requireLogin=true and no JWT", async () => {
     const response = await proxy(localRequest("/api/mcp/filesystem/sse", {
-      host: "localhost:20128",
-      origin: "http://localhost:20128",
+      host: "localhost:20222",
+      origin: "http://localhost:20222",
     }));
 
     expect(response.status).toBe(403);
@@ -249,8 +249,8 @@ describe("dashboard guard local-only access", () => {
     mocks.getSettings.mockResolvedValue({ requireLogin: false });
 
     const response = await proxy(localRequest("/api/cli-tools/antigravity-mitm", {
-      host: "localhost:20128",
-      origin: "http://localhost:20128",
+      host: "localhost:20222",
+      origin: "http://localhost:20222",
     }));
 
     expect(response).toBe(mocks.nextResponse);
@@ -270,7 +270,7 @@ describe("dashboard guard local-only access", () => {
     mocks.getSettings.mockResolvedValue({ requireLogin: false });
 
     const response = await proxy(localRequest("/api/cli-tools/antigravity-mitm", {
-      host: "localhost:20128",
+      host: "localhost:20222",
       origin: "http://evil.example.com",
     }));
 
@@ -280,7 +280,7 @@ describe("dashboard guard local-only access", () => {
   it("allows local-only route with valid CLI token", async () => {
     const response = await proxy(request("/api/mcp/filesystem/sse", {
       host: "router.example.com",
-      "x-9r-cli-token": "cli-token",
+      "x-mv-cli-token": "cli-token",
     }));
 
     expect(response).toBe(mocks.nextResponse);

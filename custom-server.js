@@ -21,11 +21,11 @@
 const http = require("node:http");
 const crypto = require("node:crypto");
 
-if (!process.env.NINEROUTER_PEER_TOKEN) {
-  process.env.NINEROUTER_PEER_TOKEN = crypto.randomBytes(24).toString("hex");
+if (!process.env.MULTIVER_PEER_TOKEN) {
+  process.env.MULTIVER_PEER_TOKEN = crypto.randomBytes(24).toString("hex");
 }
 
-const PEER_TOKEN = process.env.NINEROUTER_PEER_TOKEN;
+const PEER_TOKEN = process.env.MULTIVER_PEER_TOKEN;
 const REAL_IP_HEADER = "x-mv-real-ip";
 const PEER_TOKEN_HEADER = "x-mv-peer-token";
 const VIA_PROXY_HEADER = "x-mv-via-proxy";

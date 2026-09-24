@@ -29,6 +29,9 @@ multiver_accounts_*.json
 Thumbs.db
 desktop.ini
 
+# Kiro agent settings may hold live tokens (GitHub PAT, etc.)
+.kiro/settings/
+
 # IDE
 .vscode/*
 !.vscode/settings.json
