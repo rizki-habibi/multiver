@@ -11,7 +11,6 @@ import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderIconSrc } from "@/shared/utils/providerIcon";
-import { translate } from "@/i18n/runtime";
 
 const getPageInfo = (pathname) => {
   if (!pathname) return { title: "", description: "", breadcrumbs: [] };
@@ -27,7 +26,7 @@ const getPageInfo = (pathname) => {
         title: providerInfo.name,
         description: "",
         breadcrumbs: [
-          { label: "Providers", href: "/dashboard/providers" },
+          { label: "Penyedia", href: "/dashboard/providers" },
           {
             label: providerInfo.name,
             image: getProviderIconSrc(providerInfo.id),
@@ -39,93 +38,93 @@ const getPageInfo = (pathname) => {
 
   if (pathname.includes("/providers"))
     return {
-      title: "Providers",
-      description: "Manage your AI provider connections",
+      title: "Penyedia",
+      description: "Kelola koneksi penyedia AI Anda",
       icon: "dns",
       breadcrumbs: [],
     };
   if (pathname.includes("/combos"))
     return {
-      title: "Combos",
-      description: "Model combos with fallback",
+      title: "Kombinasi",
+      description: "Kombinasi model dengan cadangan",
       icon: "layers",
       breadcrumbs: [],
     };
   if (pathname.includes("/usage"))
     return {
-      title: "Usage & Analytics",
+      title: "Penggunaan & Analitik",
       description:
-        "Monitor your API usage, token consumption, and request logs",
+        "Pantau penggunaan API, konsumsi token, dan log permintaan",
       icon: "bar_chart",
       breadcrumbs: [],
     };
   if (pathname.includes("/auth-files"))
     return {
-      title: "Auth Files",
-      description: "Map provider credentials stored in the local database",
+      title: "Berkas Autentikasi",
+      description: "Petakan kredensial penyedia yang tersimpan di database lokal",
       icon: "vpn_key",
       breadcrumbs: [],
     };
   if (pathname.includes("/quota"))
     return {
-      title: "Quota Tracker",
-      description: "Track and manage your API quota limits",
+      title: "Pelacak Kuota",
+      description: "Lacak dan kelola batas kuota API Anda",
       icon: "data_usage",
       breadcrumbs: [],
     };
   if (pathname.includes("/mitm"))
     return {
-      title: "MITM Proxy",
-      description: "Intercept CLI tool traffic and route through Multiver",
+      title: "Proksi MITM",
+      description: "Sadap lalu lintas alat CLI dan rutekan melalui Multiver",
       icon: "security",
       breadcrumbs: [],
     };
   if (pathname.includes("/token-saver"))
     return {
-      title: "Token Saver",
-      description: "Compress prompts and outputs to save tokens",
+      title: "Penghemat Token",
+      description: "Kompres permintaan dan keluaran untuk menghemat token",
       icon: "savings",
       breadcrumbs: [],
     };
   if (pathname.includes("/cli-tools"))
     return {
-      title: "CLI Tools",
-      description: "Configure CLI tools",
+      title: "Alat CLI",
+      description: "Konfigurasi alat CLI",
       icon: "terminal",
       breadcrumbs: [],
     };
   if (pathname.includes("/cloud"))
     return {
-      title: "Cloud Storage",
-      description: "Sync settings and data to cloud storage",
+      title: "Penyimpanan Awan",
+      description: "Sinkronkan pengaturan dan data ke penyimpanan awan",
       icon: "cloud",
       breadcrumbs: [],
     };
   if (pathname.includes("/proxy-pools"))
     return {
-      title: "Proxy Pools",
-      description: "Manage your proxy pool configurations",
+      title: "Kumpulan Proksi",
+      description: "Kelola konfigurasi kumpulan proksi Anda",
       icon: "lan",
       breadcrumbs: [],
     };
   if (pathname.includes("/skills"))
     return {
-      title: "Agent Skills",
-      description: "Copy a link and paste to your AI to use Multiver — no install needed",
+      title: "Keterampilan Agen",
+      description: "Salin tautan dan tempel ke AI Anda untuk menggunakan Multiver — tanpa instalasi",
       icon: "extension",
       breadcrumbs: [],
     };
   if (pathname.includes("/endpoint"))
     return {
-      title: "Endpoint",
-      description: "API endpoint configuration",
+      title: "Titik Akhir",
+      description: "Konfigurasi titik akhir API",
       icon: "api",
       breadcrumbs: [],
     };
   if (pathname.includes("/profile"))
     return {
-      title: "Settings",
-      description: "Manage your preferences",
+      title: "Pengaturan",
+      description: "Kelola preferensi Anda",
       icon: "settings",
       breadcrumbs: [],
     };
@@ -138,8 +137,8 @@ const getPageInfo = (pathname) => {
     };
   if (pathname === "/dashboard")
     return {
-      title: "Endpoint",
-      description: "API endpoint configuration",
+      title: "Titik Akhir",
+      description: "Konfigurasi titik akhir API",
       icon: "api",
       breadcrumbs: [],
     };
@@ -239,7 +238,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                       />
                     )}
                     <h1 className="text-base lg:text-2xl font-semibold text-text-main tracking-tight truncate">
-                      {translate(crumb.label)}
+                      {crumb.label}
                     </h1>
                   </div>
                 )}
@@ -255,12 +254,12 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                 </span>
               )}
               <h1 className="text-base lg:text-2xl font-semibold tracking-tight truncate">
-                {translate(title)}
+                {title}
               </h1>
             </div>
             {description && (
               <p className="hidden lg:block text-sm text-text-muted truncate">
-                {translate(description)}
+                {description}
               </p>
             )}
           </div>

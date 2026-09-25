@@ -5,9 +5,9 @@ export default function HowItWorks() {
     <section className="py-24 border-y border-[#30363d] bg-[#161b22]/40" id="how-it-works">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">How Multiver Works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Cara Kerja Multiver</h2>
           <p className="text-gray-400 max-w-xl text-lg">
-            Data flows seamlessly from your application through our intelligent routing layer to the best provider for the job.
+            Data mengalir mulus dari aplikasi Anda melalui lapisan routing cerdas kami ke penyedia terbaik untuk tugas tersebut.
           </p>
         </div>
 

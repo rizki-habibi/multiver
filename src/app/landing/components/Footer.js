@@ -14,6 +14,7 @@ export default function Footer() {
               <h3 className="text-white text-lg font-bold">Multiver</h3>
             </div>
             <p className="text-gray-500 text-sm max-w-xs mb-6">
+              Router fusi multi-AI canggih. Satu titik akhir untuk semua penyedia.
               The unified endpoint for AI generation. Connect, route, and manage your AI providers with ease.
             </p>
             <div className="flex gap-4">
@@ -25,30 +26,30 @@ export default function Footer() {
 
           {/* Product */}
           <div className="flex flex-col gap-4">
-            <h4 className="font-bold text-white">Product</h4>
-            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="#features">Features</a>
-            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="/dashboard">Dashboard</a>
-            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">Changelog</a>
+            <h4 className="font-bold text-white">Produk</h4>
+            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="#features">Fitur</a>
+            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="/dashboard">Dasbor</a>
+            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">Catatan Perubahan</a>
           </div>
 
           {/* Resources */}
           <div className="flex flex-col gap-4">
-            <h4 className="font-bold text-white">Resources</h4>
-            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
+            <h4 className="font-bold text-white">Sumber Daya</h4>
+            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Dokumentasi</a>
             <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://www.npmjs.com/package/Multiver" target="_blank" rel="noopener noreferrer">NPM</a>
           </div>
 
           {/* Legal */}
           <div className="flex flex-col gap-4">
-            <h4 className="font-bold text-white">Legal</h4>
-            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
+            <h4 className="font-bold text-white">Hukum</h4>
+            <a className="text-gray-400 hover:text-[#58A6FF] text-sm transition-colors" href="https://github.com/decolua/Multiver/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Lisensi MIT</a>
           </div>
         </div>
 
         {/* Bottom */}
         <div className="border-t border-[#30363d] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-600 text-sm">© 2025 Multiver. All rights reserved.</p>
+          <p className="text-gray-600 text-sm">© 2025 Multiver. Semua hak dilindungi.</p>
           <div className="flex gap-6">
             <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://www.npmjs.com/package/Multiver" target="_blank" rel="noopener noreferrer">NPM</a>

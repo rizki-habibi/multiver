@@ -3,7 +3,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Button, Modal } from "@/shared/components";
-import { translate } from "@/i18n/runtime";
 
 const PLACEHOLDER = `[
   {
@@ -48,13 +47,13 @@ export default function BulkImportCodexModal({ isOpen, onClose, onSuccess }) {
     try {
       parsed = JSON.parse(trimmed);
     } catch (err) {
-      setParseError(`${translate("Invalid JSON")}: ${err.message}`);
+      setParseError(`JSON tidak valid: ${err.message}`);
       return;
     }
 
     const accounts = normalizeToArray(parsed);
     if (!accounts || accounts.length === 0) {
-      setParseError(translate("No accounts found in input"));
+      setParseError("Tidak ada akun ditemukan di input");
       return;
     }
 
@@ -75,7 +74,7 @@ export default function BulkImportCodexModal({ isOpen, onClose, onSuccess }) {
         onSuccess();
       }
     } catch (err) {
-      setParseError(err.message || translate("Request failed"));
+      setParseError(err.message || "Permintaan gagal");
     } finally {
       setSubmitting(false);
     }
@@ -84,12 +83,10 @@ export default function BulkImportCodexModal({ isOpen, onClose, onSuccess }) {
   const failedItems = result?.results?.filter((r) => !r.ok) || [];
 
   return (
-    <Modal isOpen={isOpen} title={translate("Bulk Add Codex Accounts")} onClose={handleClose}>
+    <Modal isOpen={isOpen} title="Tambah Massal Akun Codex" onClose={handleClose}>
       <div className="flex flex-col gap-4">
         <p className="text-xs text-text-muted">
-          {translate(
-            "Paste an array of codex account JSON objects. Each must include accessToken (and ideally refreshToken, idToken)."
-          )}
+          Tempel array objek JSON akun codex. Setiap objek harus menyertakan accessToken (idealnya juga refreshToken, idToken).
         </p>
 
         <textarea
@@ -107,12 +104,11 @@ export default function BulkImportCodexModal({ isOpen, onClose, onSuccess }) {
         {result && (
           <div className="flex flex-col gap-2">
             <div
-              className={`text-sm font-medium ${
-                result.failed > 0 ? "text-yellow-400" : "text-green-400"
-              }`}
+              className={`text-sm font-medium ${result.failed > 0 ? "text-yellow-400" : "text-green-400"
+                }`}
             >
-              ✓ {result.success} {translate("added")}
-              {result.failed > 0 ? `, ✗ ${result.failed} ${translate("failed")}` : ""}
+              ✓ {result.success} ditambahkan
+              {result.failed > 0 ? `, ✗ ${result.failed} gagal` : ""}
             </div>
             {failedItems.length > 0 && (
               <ul className="rounded border border-accent/20 bg-sidebar/50 p-2 text-xs font-mono max-h-40 overflow-y-auto">
@@ -132,10 +128,10 @@ export default function BulkImportCodexModal({ isOpen, onClose, onSuccess }) {
             fullWidth
             disabled={submitting || !jsonText.trim()}
           >
-            {submitting ? translate("Importing...") : translate("Import All")}
+            {submitting ? "Mengimpor..." : "Impor Semua"}
           </Button>
           <Button onClick={handleClose} variant="ghost" fullWidth disabled={submitting}>
-            {translate("Close")}
+            Tutup
           </Button>
         </div>
       </div>

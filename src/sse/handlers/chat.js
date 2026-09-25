@@ -38,8 +38,8 @@ export async function handleChat(request, clientRawRequest = null) {
   try {
     body = await request.json();
   } catch {
-    log.warn("CHAT", "Invalid JSON body");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    log.warn("CHAT", "Isi JSON tidak valid");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   // Build clientRawRequest for logging (if not provided)
@@ -74,18 +74,18 @@ export async function handleChat(request, clientRawRequest = null) {
   if (settings.requireApiKey) {
     if (!apiKey) {
       log.warn("AUTH", "Missing API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     }
     const valid = await isValidApiKey(apiKey);
     if (!valid) {
       log.warn("AUTH", "Invalid API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
     }
   }
 
   if (!modelStr) {
-    log.warn("CHAT", "Missing model");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
+    log.warn("CHAT", "Model hilang");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model hilang");
   }
 
   // Bypass naming/warmup requests before combo rotation to avoid wasting rotation slots
@@ -259,8 +259,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         comboStickyLimit
       });
     }
-    log.warn("CHAT", "Invalid model format", { model: modelStr });
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+    log.warn("CHAT", "Format model tidak valid", { model: modelStr });
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
   }
 
   const { provider, model } = modelInfo;

@@ -24,9 +24,9 @@ export default function Navigation() {
 
         {/* Desktop menu */}
         <div className="hidden md:flex items-center gap-8">
-          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#features">Features</a>
-          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#how-it-works">How it Works</a>
-          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#features">Fitur</a>
+          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#how-it-works">Cara Kerja</a>
+          <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Dokumen</a>
           <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors flex items-center gap-1" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">
             GitHub <span className="material-symbols-outlined text-[14px]">open_in_new</span>
           </a>
@@ -53,15 +53,15 @@ export default function Navigation() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-[#30363d] bg-[#0D1117]/95 backdrop-blur-md">
           <div className="flex flex-col gap-4 p-6">
-            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
-            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>How it Works</a>
-            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#features" onClick={() => setMobileMenuOpen(false)}>Fitur</a>
+            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>Cara Kerja</a>
+            <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/decolua/Multiver#readme" target="_blank" rel="noopener noreferrer">Dokumen</a>
             <a className="text-gray-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/decolua/Multiver" target="_blank" rel="noopener noreferrer">GitHub</a>
             <button
               onClick={() => router.push("/dashboard")}
               className="h-9 rounded-lg bg-[#1f6feb] hover:bg-[#388bfd] text-white text-sm font-bold"
             >
-              Get Started
+              Mulai
             </button>
           </div>
         </div>

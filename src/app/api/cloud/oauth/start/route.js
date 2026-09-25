@@ -13,9 +13,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const providerId = searchParams.get("provider");
     const provider = getCloudProvider(providerId);
-    if (!provider) return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
+    if (!provider) return NextResponse.json({ error: "Penyedia tidak dikenal" }, { status: 400 });
     if (provider.supported === false) {
-      return NextResponse.json({ error: provider.reason || "Provider not supported" }, { status: 400 });
+      return NextResponse.json({ error: provider.reason || "Penyedia tidak didukung" }, { status: 400 });
     }
 
     const settings = await getSettings();

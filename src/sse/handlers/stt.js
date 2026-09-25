@@ -22,7 +22,7 @@ export async function handleStt(request) {
   try {
     formData = await request.formData();
   } catch {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid multipart form data");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Data formulir multipart tidak valid");
   }
 
   const modelStr = formData.get("model");
@@ -31,16 +31,16 @@ export async function handleStt(request) {
   const settings = await getSettings();
   if (settings.requireApiKey) {
     const apiKey = extractApiKey(request);
-    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     const valid = await isValidApiKey(apiKey);
-    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
   }
 
-  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
-  if (!formData.get("file")) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: file");
+  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model hilang");
+  if (!formData.get("file")) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: file");
 
   const modelInfo = await getModelInfo(modelStr);
-  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
 
   const { provider, model } = modelInfo;
   log.info("ROUTING", `Provider: ${provider}, Model: ${model}`);

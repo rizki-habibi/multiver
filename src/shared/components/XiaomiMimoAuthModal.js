@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button } from "@/shared/components";
-import { translate } from "@/i18n/runtime";
 
 /**
  * Xiaomi MiMo Desktop Plan auth modal.
@@ -86,7 +85,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
               );
               if (foundConn) setExistingConnection(foundConn);
             })
-            .catch(() => {});
+            .catch(() => { });
         } else {
           setPhase("not-found");
         }
@@ -220,12 +219,12 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
           {sessBusy ? "Starting..." : "Choose cluster & sign in"}
         </Button>
       )}
-      {sessError && <p className="text-[11px] text-red-500">{translate(sessError)}</p>}
+      {sessError && <p className="text-[11px] text-red-500">{sessError}</p>}
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} title={translate("Connect Xiaomi MiMo")} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} title="Hubungkan Xiaomi MiMo" onClose={onClose} size="lg">
       <div className="flex flex-col gap-3.5">
         {/* Detecting */}
         {phase === "detecting" && (
@@ -291,7 +290,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
 
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 p-2.5 rounded-lg border border-red-200 dark:border-red-800">
-                <p className="text-xs text-red-600 dark:text-red-400">{translate(error)}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
 

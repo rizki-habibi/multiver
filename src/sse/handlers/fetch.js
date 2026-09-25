@@ -26,8 +26,8 @@ export async function handleFetch(request) {
   try {
     body = await request.json();
   } catch {
-    log.warn("FETCH", "Invalid JSON body");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    log.warn("FETCH", "Isi JSON tidak valid");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   const reqUrl = new URL(request.url);
@@ -52,23 +52,23 @@ export async function handleFetch(request) {
   if (settings.requireApiKey) {
     if (!apiKey) {
       log.warn("AUTH", "Missing API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     }
     const valid = await isValidApiKey(apiKey);
     if (!valid) {
       log.warn("AUTH", "Invalid API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
     }
   }
 
   if (!providerInput || typeof providerInput !== "string") {
     log.warn("FETCH", "Missing provider/model");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: provider (or model)");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: provider (atau model)");
   }
 
   if (!targetUrl || typeof targetUrl !== "string") {
     log.warn("FETCH", "Missing url");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: url");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: url");
   }
 
   // Validate URL format
@@ -76,7 +76,7 @@ export async function handleFetch(request) {
     new URL(targetUrl);
   } catch {
     log.warn("FETCH", "Invalid URL", { url: targetUrl });
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid URL format");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format URL tidak valid");
   }
 
   // SSRF guard: reject internal/private/metadata targets, including

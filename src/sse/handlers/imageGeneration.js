@@ -26,7 +26,7 @@ export async function handleImageGeneration(request) {
   try {
     body = await request.json();
   } catch {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   const url = new URL(request.url);
@@ -38,13 +38,13 @@ export async function handleImageGeneration(request) {
   const apiKey = extractApiKey(request);
   const settings = await getSettings();
   if (settings.requireApiKey) {
-    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     const valid = await isValidApiKey(apiKey);
-    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
   }
 
-  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
-  if (!body.prompt) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: prompt");
+  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model hilang");
+  if (!body.prompt) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: prompt");
 
   // Combo expansion: model may be a combo name → run fallback/round-robin across models
   const comboModels = await getComboModels(modelStr);
@@ -69,7 +69,7 @@ export async function handleImageGeneration(request) {
 
 async function handleSingleModelImage(body, modelStr, { wantsStream, binaryOutput, preferredConnectionId } = {}) {
   const modelInfo = await getModelInfo(modelStr);
-  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
 
   const { provider, model } = modelInfo;
 

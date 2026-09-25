@@ -31,7 +31,7 @@ const BROWSER_UA =
 // allowlist rots fast. (Edge-safe: plain strings only.)
 const APP_PREFIXES = [
   "/_next/", "/api/", "/dashboard", "/v1/", "/v1beta/",
-  "/login", "/landing", "/__mimo_login/", "/i18n/", "/icons/", "/providers/",
+  "/login", "/landing", "/__mimo_login/", "/icons/", "/providers/",
 ];
 const APP_FILES = new Set([
   "/favicon.svg", "/favicon.ico", "/file.svg", "/globe.svg", "/next.svg",
@@ -447,7 +447,7 @@ async function socksFetch(url, init, proxyUrl) {
     _socksPromise = import("socks-proxy-agent")
       .then((m) => m.SocksProxyAgent || m.default?.SocksProxyAgent || m.default)
       .catch((e) => {
-        console.log(`${new Date().toISOString().slice(11,23)} [mimo-login] socks-proxy-agent unavailable:`, e?.message || e);
+        console.log(`${new Date().toISOString().slice(11, 23)} [mimo-login] socks-proxy-agent unavailable:`, e?.message || e);
         return null;
       });
   }
@@ -504,14 +504,14 @@ async function loginFetch(url, init, sessionProxyUrl = null) {
       _pafPromise = import("../../open-sse/utils/proxyFetch.js")
         .then((m) => m.proxyAwareFetch)
         .catch((e) => {
-          console.log(`${new Date().toISOString().slice(11,23)} [mimo-login] proxyAwareFetch unavailable (runtime?), direct only:`, e?.message || e);
+          console.log(`${new Date().toISOString().slice(11, 23)} [mimo-login] proxyAwareFetch unavailable (runtime?), direct only:`, e?.message || e);
           return null;
         });
     }
     const paf = await _pafPromise;
     if (paf) return await paf(url, init, proxyOptions);
   } catch (e) {
-    console.log(`${new Date().toISOString().slice(11,23)} [mimo-login] proxied fetch failed, falling back to direct:`, e?.message || e);
+    console.log(`${new Date().toISOString().slice(11, 23)} [mimo-login] proxied fetch failed, falling back to direct:`, e?.message || e);
   }
   return fetch(url, init);
 }
@@ -671,7 +671,7 @@ function buildBrowserResponse(sess, res, origin, reqPath = "", upstreamUrl = "")
     if (/^\/(pass|sts)/.test(reqPath) || res.status >= 400) {
       const m = body.match(/"code"\s*:\s*(-?\d+)/);
       if ((m && m[1] !== "0") || res.status >= 400) {
-        console.log(`${new Date().toISOString().slice(11,23)} [mimo-login] upstream ${reqPath} http=${res.status} code=${m ? m[1] : "?"} | url=${upstreamUrl.slice(0, 180)} | ${body.replace(/\s+/g, " ").slice(0, 160)}`);
+        console.log(`${new Date().toISOString().slice(11, 23)} [mimo-login] upstream ${reqPath} http=${res.status} code=${m ? m[1] : "?"} | url=${upstreamUrl.slice(0, 180)} | ${body.replace(/\s+/g, " ").slice(0, 160)}`);
       }
     }
     const rewritten = rewriteMimoBases(body, "toProxy", origin);

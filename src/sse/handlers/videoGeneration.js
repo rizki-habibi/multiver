@@ -45,9 +45,9 @@ async function requireValidApiKey(request) {
   const apiKey = extractApiKey(request);
   const settings = await getSettings();
   if (settings.requireApiKey) {
-    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     const valid = await isValidApiKey(apiKey);
-    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
   }
   return null;
 }
@@ -65,7 +65,7 @@ async function readForwardableBody(request) {
     try {
       parsed = JSON.parse(raw);
     } catch {
-      return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body") };
+      return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid") };
     }
     return { raw, parsed, contentType };
   }
@@ -81,7 +81,7 @@ async function resolveVideoProvider(parsedBody) {
   const modelStr = String(parsedBody.model);
   const modelInfo = await getModelInfo(modelStr);
   if (!modelInfo.provider) {
-    return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Combos are not supported for video generation") };
+    return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Kombinasi tidak didukung untuk pembuatan video") };
   }
   if (!getVideoConfig(modelInfo.provider)) {
     // Bare model ids (no explicit "provider/" prefix) fall back to the default
@@ -198,7 +198,7 @@ export async function handleVideoGet(request, requestId) {
   const authError = await requireValidApiKey(request);
   if (authError) return authError;
 
-  if (!requestId) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing video request id");
+  if (!requestId) return errorResponse(HTTP_STATUS.BAD_REQUEST, "ID permintaan video hilang");
 
   const preferredConnectionId = request.headers.get("x-connection-id") || null;
   const provider = await resolveGetProvider(request, preferredConnectionId);

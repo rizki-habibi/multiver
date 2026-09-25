@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { Modal, Button } from "@/shared/components";
-import { translate } from "@/i18n/runtime";
 
 const PLACEHOLDER = `[
   {
@@ -79,7 +78,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
     );
 
     if (jsonFiles.length === 0) {
-      setParseError(translate("Please select valid .json files"));
+      setParseError("Pilih file .json yang valid");
       return;
     }
 
@@ -96,7 +95,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
       }
 
       if (allAccounts.length === 0) {
-        setParseError(translate("No accounts found in selected files"));
+        setParseError("Tidak ada akun ditemukan di file yang dipilih");
         return;
       }
 
@@ -106,7 +105,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
         accountsCount: allAccounts.length,
       });
     } catch (err) {
-      setParseError(`${translate("Error reading files")}: ${err.message}`);
+      setParseError(`Gagal membaca file: ${err.message}`);
     }
   };
 
@@ -141,12 +140,12 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
     try {
       accounts = parseAccountsInput(jsonText);
     } catch (err) {
-      setParseError(`${translate("Invalid JSON")}: ${err.message}`);
+      setParseError(`JSON tidak valid: ${err.message}`);
       return;
     }
 
     if (!accounts || accounts.length === 0) {
-      setParseError(translate("No accounts found in input"));
+      setParseError("Tidak ada akun ditemukan di input");
       return;
     }
 
@@ -169,7 +168,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
         onSuccess();
       }
     } catch (err) {
-      setParseError(err.message || translate("Request failed"));
+      setParseError(err.message || "Permintaan gagal");
     } finally {
       setSubmitting(false);
     }
@@ -178,11 +177,11 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
   const failedItems = result?.results?.filter((r) => !r.ok) || [];
 
   return (
-    <Modal isOpen={isOpen} title={translate("Bulk Add Grok CLI Accounts")} onClose={handleClose}>
+    <Modal isOpen={isOpen} title="Tambah Massal Akun Grok CLI" onClose={handleClose}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-text-muted">
-            {translate("Upload multiple .json files or paste JSON array / object.")}
+            Unggah beberapa file .json atau tempel array / objek JSON.
           </p>
           <input
             ref={fileInputRef}
@@ -200,7 +199,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
             onClick={() => fileInputRef.current?.click()}
             disabled={submitting}
           >
-            {translate("Upload JSON Files")}
+            Unggah File JSON
           </Button>
         </div>
 
@@ -208,11 +207,10 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative rounded border transition-colors ${
-            isDragging
-              ? "border-primary bg-primary/10 ring-2 ring-primary/30"
-              : "border-accent/30 bg-sidebar"
-          }`}
+          className={`relative rounded border transition-colors ${isDragging
+            ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+            : "border-accent/30 bg-sidebar"
+            }`}
         >
           <textarea
             className="w-full rounded bg-transparent p-2.5 text-sm font-mono resize-y min-h-[240px] focus:outline-none focus:ring-1 focus:ring-primary"
@@ -229,7 +227,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-sidebar/90 rounded pointer-events-none backdrop-blur-xs">
               <span className="material-symbols-outlined text-3xl text-primary mb-1">upload_file</span>
               <span className="text-sm font-medium text-primary">
-                {translate("Drop .json files here")}
+                Jatuhkan file .json di sini
               </span>
             </div>
           )}
@@ -239,8 +237,8 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
           <div className="flex items-center gap-1.5 text-xs text-green-400 font-medium bg-green-500/10 border border-green-500/20 px-2.5 py-1.5 rounded">
             <span className="material-symbols-outlined text-sm">check_circle</span>
             <span>
-              {translate("Loaded")} {fileCountInfo.accountsCount} {translate("account(s) from")}{" "}
-              {fileCountInfo.filesCount} {translate("file(s)")}
+              Dimuat {fileCountInfo.accountsCount} akun dari{" "}
+              {fileCountInfo.filesCount} file
             </span>
           </div>
         )}
@@ -252,7 +250,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
         {result && result.failed > 0 && (
           <div className="flex flex-col gap-2">
             <div className="text-sm font-medium text-yellow-400">
-              ✗ {result.failed} {translate("failed")}
+              ✗ {result.failed} gagal
             </div>
             {failedItems.length > 0 && (
               <ul className="rounded border border-accent/20 bg-sidebar/50 p-2 text-xs font-mono max-h-40 overflow-y-auto">
@@ -272,10 +270,10 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
             fullWidth
             disabled={submitting || !jsonText.trim()}
           >
-            {submitting ? translate("Importing...") : translate("Import All")}
+            {submitting ? "Mengimpor..." : "Impor Semua"}
           </Button>
           <Button onClick={handleClose} variant="ghost" fullWidth disabled={submitting}>
-            {translate("Close")}
+            Tutup
           </Button>
         </div>
       </div>

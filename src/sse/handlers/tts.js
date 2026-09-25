@@ -23,7 +23,7 @@ export async function handleTts(request) {
   try {
     body = await request.json();
   } catch {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   const url = new URL(request.url);
@@ -36,13 +36,13 @@ export async function handleTts(request) {
   const settings = await getSettings();
   if (settings.requireApiKey) {
     const apiKey = extractApiKey(request);
-    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+    if (!apiKey) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     const valid = await isValidApiKey(apiKey);
-    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+    if (!valid) return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
   }
 
-  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
-  if (!body.input) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: input");
+  if (!modelStr) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model hilang");
+  if (!body.input) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: input");
 
   // Combo expansion: model may be a combo name → run fallback/round-robin across models
   const comboModels = await getComboModels(modelStr);
@@ -67,7 +67,7 @@ export async function handleTts(request) {
 
 async function handleSingleModelTts(body, modelStr, responseFormat, language, style) {
   const modelInfo = await getModelInfo(modelStr);
-  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+  if (!modelInfo.provider) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
 
   const { provider, model } = modelInfo;
   log.info("ROUTING", `Provider: ${provider}, Voice: ${model}`);

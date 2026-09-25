@@ -15,8 +15,8 @@ export default function HeroSection() {
 
         {/* Main heading */}
         <h1 className="text-5xl md:text-7xl font-black leading-[1.1] tracking-tight">
-          One Endpoint for <br />
-          <span className="text-[#58A6FF]">All AI Providers</span>
+          Satu Titik Akhir untuk <br />
+          <span className="text-[#58A6FF]">Semua Penyedia AI</span>
         </h1>
 
         {/* Description */}
@@ -37,7 +37,7 @@ export default function HeroSection() {
             className="h-12 px-8 rounded-lg border border-[#30363d] bg-[#161b22] hover:bg-[#21262d] text-white text-base font-bold transition-all flex items-center gap-2"
           >
             <span className="material-symbols-outlined">code</span>
-            View on GitHub
+            Lihat di GitHub
           </a>
         </div>
       </div>

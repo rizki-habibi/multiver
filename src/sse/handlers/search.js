@@ -25,8 +25,8 @@ export async function handleSearch(request) {
   try {
     body = await request.json();
   } catch {
-    log.warn("SEARCH", "Invalid JSON body");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    log.warn("SEARCH", "Isi JSON tidak valid");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   const url = new URL(request.url);
@@ -49,23 +49,23 @@ export async function handleSearch(request) {
   if (settings.requireApiKey) {
     if (!apiKey) {
       log.warn("AUTH", "Missing API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     }
     const valid = await isValidApiKey(apiKey);
     if (!valid) {
       log.warn("AUTH", "Invalid API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
     }
   }
 
   if (!providerInput || typeof providerInput !== "string") {
     log.warn("SEARCH", "Missing provider/model");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: provider (or model)");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: provider (atau model)");
   }
 
   if (!query || typeof query !== "string" || !query.trim()) {
     log.warn("SEARCH", "Missing query");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: query");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: query");
   }
 
   // Combo expansion: providerInput may be a combo name → run fallback/round-robin across providers

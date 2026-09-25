@@ -53,10 +53,10 @@ function getProviderName(providerId, cache) {
 
 function CollapsibleSection({ title, children, defaultOpen = false, icon = null }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
+
   return (
     <div className="border border-black/5 dark:border-white/5 rounded-lg overflow-hidden">
-      <button 
+      <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
@@ -72,7 +72,7 @@ function CollapsibleSection({ title, children, defaultOpen = false, icon = null 
           chevron_right
         </span>
       </button>
-      
+
       {isOpen && (
         <div className="p-4 border-t border-black/5 dark:border-white/5">
           {children}
@@ -184,7 +184,7 @@ export default function RequestDetailsTab() {
       <Card padding="md">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="provider-filter" className="text-sm font-medium text-text-main">Provider</label>
+            <label htmlFor="provider-filter" className="text-sm font-medium text-text-main">Penyedia</label>
             <select
               id="provider-filter"
               value={filters.provider}
@@ -204,7 +204,7 @@ export default function RequestDetailsTab() {
               ))}
             </select>
           </div>
-          
+
           <div className="flex min-w-0 flex-col gap-2">
             <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Start Date</label>
             <input
@@ -232,11 +232,11 @@ export default function RequestDetailsTab() {
               )}
             />
           </div>
-          
+
           <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
-            <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Clear</span>
-            <Button 
-              variant="ghost" 
+            <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Bersihkan</span>
+            <Button
+              variant="ghost"
               onClick={handleClearFilters}
               disabled={!filters.provider && !filters.startDate && !filters.endDate}
               className="w-full"
@@ -252,9 +252,9 @@ export default function RequestDetailsTab() {
           <table className="w-full min-w-[880px]">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Timestamp</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Cap Waktu</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Provider</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Penyedia</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cached</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cache Creation</th>
@@ -292,10 +292,10 @@ export default function RequestDetailsTab() {
                       {detail.model}
                     </td>
                     <td className="max-w-[180px] truncate p-4 text-sm text-text-main">
-                       <span className="font-medium">
-                         {getProviderName(detail.provider, providerNameCache)}
-                       </span>
-                     </td>
+                      <span className="font-medium">
+                        {getProviderName(detail.provider, providerNameCache)}
+                      </span>
+                    </td>
                     <td className="p-4 text-sm text-text-main text-right font-mono">
                       {getInputTokens(detail.tokens).toLocaleString()}
                     </td>
@@ -361,9 +361,9 @@ export default function RequestDetailsTab() {
                 <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
               </div>
               <div>
-                 <span className="text-text-muted">Provider:</span>{" "}
-                 <span className="text-text-main font-medium">{getProviderName(selectedDetail.provider, providerNameCache)}</span>
-               </div>
+                <span className="text-text-muted">Provider:</span>{" "}
+                <span className="text-text-main font-medium">{getProviderName(selectedDetail.provider, providerNameCache)}</span>
+              </div>
               <div>
                 <span className="text-text-muted">Model:</span>{" "}
                 <span className="text-text-main font-mono">{selectedDetail.model}</span>
@@ -480,7 +480,7 @@ export default function RequestDetailsTab() {
                   </pre>
                 </CollapsibleSection>
               )}
-              
+
               <CollapsibleSection title="4. Client Response (Final)" defaultOpen={true} icon="output">
                 {selectedDetail.response?.thinking && (
                   <div className="mb-4">
@@ -493,7 +493,7 @@ export default function RequestDetailsTab() {
                     </pre>
                   </div>
                 )}
-                
+
                 <h4 className="font-semibold text-text-main mb-2 text-xs uppercase tracking-wide opacity-70">
                   Content
                 </h4>

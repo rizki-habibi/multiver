@@ -33,14 +33,14 @@ function getStatusDisplay(connected, error, errorCode) {
   if (connected > 0) {
     parts.push(
       <Badge key="connected" variant="success" size="sm" dot>
-        {connected} Connected
+        {connected} Terhubung
       </Badge>,
     );
   }
   if (error > 0) {
     const errText = errorCode
-      ? `${error} Error (${errorCode})`
-      : `${error} Error`;
+      ? `${error} Kesalahan (${errorCode})`
+      : `${error} Kesalahan`;
     parts.push(
       <Badge key="error" variant="error" size="sm" dot>
         {errText}
@@ -48,7 +48,7 @@ function getStatusDisplay(connected, error, errorCode) {
     );
   }
   if (parts.length === 0) {
-    return <span className="text-text-muted">No connections</span>;
+    return <span className="text-text-muted">Tidak ada koneksi</span>;
   }
   return parts;
 }
@@ -111,7 +111,7 @@ export default function ProvidersPage() {
   const unregisterSearch = useHeaderSearchStore((s) => s.unregister);
 
   useEffect(() => {
-    registerSearch("Search providers...");
+    registerSearch("Cari penyedia...");
     return () => unregisterSearch();
   }, [registerSearch, unregisterSearch]);
 
@@ -250,12 +250,12 @@ export default function ProvidersPage() {
       setTestResults(data);
       if (data.summary) {
         const { passed, failed, total } = data.summary;
-        if (failed === 0) notify.success(`All ${total} tests passed`);
-        else notify.warning(`${passed}/${total} passed, ${failed} failed`);
+        if (failed === 0) notify.success(`Semua ${total} pengujian lulus`);
+        else notify.warning(`${passed}/${total} lulus, ${failed} gagal`);
       }
     } catch (error) {
-      setTestResults({ error: "Test request failed" });
-      notify.error("Provider test failed");
+      setTestResults({ error: "Permintaan pengujian gagal" });
+      notify.error("Pengujian penyedia gagal");
     } finally {
       setTestingMode(null);
     }
@@ -366,7 +366,7 @@ export default function ProvidersPage() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-8 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
-          aria-label="Filter providers by connection status"
+          aria-label="Saring penyedia berdasarkan status koneksi"
         >
           {STATUS_FILTER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -382,7 +382,7 @@ export default function ProvidersPage() {
             search_off
           </span>
           <p className="text-text-muted text-sm">
-            No providers match your search or filters
+            Tidak ada penyedia yang cocok dengan pencarian atau saringan Anda
           </p>
         </div>
       )}
@@ -391,7 +391,7 @@ export default function ProvidersPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
-            Custom Providers (OpenAI/Anthropic Compatible){" "}
+            Penyedia Kustom (Kompatibel OpenAI/Anthropic){" "}
           </h2>
           <div className="grid grid-cols-1 gap-2 sm:flex sm:w-auto">
             <Button
@@ -400,7 +400,7 @@ export default function ProvidersPage() {
               onClick={() => setShowAddAnthropicCompatibleModal(true)}
               className="w-full sm:w-auto"
             >
-              Add Anthropic Compatible
+              Tambah Kompatibel Anthropic
             </Button>
             <Button
               size="sm"
@@ -409,7 +409,7 @@ export default function ProvidersPage() {
               onClick={() => setShowAddCompatibleModal(true)}
               className="w-full !bg-white !text-black hover:!bg-gray-100 sm:w-auto"
             >
-              Add OpenAI Compatible
+              Tambah Kompatibel OpenAI
             </Button>
           </div>
         </div>
@@ -417,7 +417,7 @@ export default function ProvidersPage() {
           anthropicCompatibleProviders.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-xl text-text-muted text-sm">
             <span className="material-symbols-outlined text-[18px]">extension</span>
-            <span>No custom providers — use buttons above to add OpenAI/Anthropic compatible endpoints</span>
+            <span>Belum ada penyedia kustom — gunakan tombol di atas untuk menambah titik akhir kompatibel OpenAI/Anthropic</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -444,7 +444,7 @@ export default function ProvidersPage() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
-              OAuth Providers
+              Penyedia OAuth
             </h2>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <ModelAvailabilityBadge />
@@ -455,15 +455,15 @@ export default function ProvidersPage() {
                   ? "bg-primary/20 border-primary/40 text-primary animate-pulse"
                   : "bg-bg border-border text-text-muted hover:text-text-main hover:border-primary/40"
                   }`}
-                title="Test all OAuth connections"
-                aria-label="Test all OAuth connections"
+                title="Uji semua koneksi OAuth"
+                aria-label="Uji semua koneksi OAuth"
               >
                 <span
                   className={`material-symbols-outlined text-[14px]${testingMode === "oauth" ? " animate-spin" : ""}`}
                 >
                   play_arrow
                 </span>
-                {testingMode === "oauth" ? "Testing..." : "Test All"}
+                {testingMode === "oauth" ? "Menguji..." : "Uji Semua"}
               </button>
             </div>
           </div>
@@ -490,7 +490,7 @@ export default function ProvidersPage() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
-              Free Tier Providers
+              Penyedia Tier Gratis
             </h2>
             <button
               onClick={() => handleBatchTest("free")}
@@ -499,15 +499,15 @@ export default function ProvidersPage() {
                 ? "bg-primary/20 border-primary/40 text-primary animate-pulse"
                 : "bg-bg border-border text-text-muted hover:text-text-main hover:border-primary/40"
                 }`}
-              title="Test all Free connections"
-              aria-label="Test all Free provider connections"
+              title="Uji semua koneksi Gratis"
+              aria-label="Uji semua koneksi penyedia Gratis"
             >
               <span
                 className={`material-symbols-outlined text-[14px]${testingMode === "free" ? " animate-spin" : ""}`}
               >
                 play_arrow
               </span>
-              {testingMode === "free" ? "Testing..." : "Test All"}
+              {testingMode === "free" ? "Menguji..." : "Uji Semua"}
             </button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -597,11 +597,11 @@ export default function ProvidersPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 border-b border-border bg-surface/95 backdrop-blur-sm rounded-t-xl">
-              <h3 className="font-semibold">Test Results</h3>
+              <h3 className="font-semibold">Hasil Pengujian</h3>
               <button
                 onClick={() => setTestResults(null)}
                 className="p-1 rounded-lg hover:bg-bg text-text-muted hover:text-text-main transition-colors"
-                aria-label="Close test results"
+                aria-label="Tutup hasil pengujian"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -668,11 +668,11 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                       <span className="material-symbols-outlined text-[12px]">
                         pause_circle
                       </span>
-                      Disabled
+                      Nonaktif
                     </span>
                   </Badge>
                 ) : isNoAuth ? (
-                  <Badge variant="success" size="sm" dot>Ready</Badge>
+                  <Badge variant="success" size="sm" dot>Siap</Badge>
                 ) : (
                   <>
                     {getStatusDisplay(connected, error, errorCode)}
@@ -703,7 +703,7 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                   size="sm"
                   checked={!allDisabled}
                   onChange={() => { }}
-                  title={allDisabled ? "Enable provider" : "Disable provider"}
+                  title={allDisabled ? "Aktifkan penyedia" : "Nonaktifkan penyedia"}
                 />
               </div>
             )}
@@ -802,7 +802,7 @@ function ApiKeyProviderCard({
                       <span className="material-symbols-outlined text-[12px]">
                         pause_circle
                       </span>
-                      Disabled
+                      Nonaktif
                     </span>
                   </Badge>
                 ) : (
@@ -847,7 +847,7 @@ function ApiKeyProviderCard({
                   size="sm"
                   checked={!allDisabled}
                   onChange={() => { }}
-                  title={allDisabled ? "Enable provider" : "Disable provider"}
+                  title={allDisabled ? "Aktifkan penyedia" : "Nonaktifkan penyedia"}
                 />
               </div>
             )}
@@ -904,17 +904,17 @@ function ProviderTestResultsView({ results }) {
     <div className="flex min-w-0 flex-col gap-3">
       {summary && (
         <div className="flex flex-wrap items-center gap-2 text-xs mb-1 sm:gap-3">
-          <span className="text-text-muted">{modeLabel} Test</span>
+          <span className="text-text-muted">Pengujian {modeLabel}</span>
           <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium">
-            {summary.passed} passed
+            {summary.passed} lulus
           </span>
           {summary.failed > 0 && (
             <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">
-              {summary.failed} failed
+              {summary.failed} gagal
             </span>
           )}
           <span className="text-text-muted sm:ml-auto">
-            {summary.total} tested
+            {summary.total} diuji
           </span>
         </div>
       )}
@@ -953,7 +953,7 @@ function ProviderTestResultsView({ results }) {
       ))}
       {items.length === 0 && (
         <div className="text-center py-4 text-text-muted text-sm">
-          No active connections found for this group.
+          Tidak ada koneksi aktif untuk grup ini.
         </div>
       )}
     </div>

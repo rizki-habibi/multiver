@@ -102,9 +102,9 @@ function CallbackContent() {
             <div className="size-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
               <span className="material-symbols-outlined text-3xl text-green-600">check_circle</span>
             </div>
-            <h1 className="text-xl font-semibold mb-2">Authorization Successful!</h1>
+            <h1 className="text-xl font-semibold mb-2">Otorisasi Berhasil!</h1>
             <p className="text-text-muted">
-              {status === "success" ? "This window will close automatically..." : "You can close this tab now."}
+              {status === "success" ? "Jendela ini akan tertutup otomatis..." : "Anda dapat menutup tab ini sekarang."}
             </p>
           </>
         )}
@@ -114,9 +114,9 @@ function CallbackContent() {
             <div className="size-16 mx-auto mb-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
               <span className="material-symbols-outlined text-3xl text-yellow-600">info</span>
             </div>
-            <h1 className="text-xl font-semibold mb-2">Copy This URL</h1>
+            <h1 className="text-xl font-semibold mb-2">Salin URL Ini</h1>
             <p className="text-text-muted mb-4">
-              Please copy the URL from the address bar and paste it in the application.
+              Silakan salin URL dari address bar dan tempel di aplikasi.
             </p>
             <div className="bg-surface border border-border rounded-lg p-3 text-left">
               <code className="text-xs break-all">{typeof window !== "undefined" ? window.location.href : ""}</code>

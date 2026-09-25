@@ -12,25 +12,23 @@ import { ConfirmModal } from "./Modal";
 import NineRemotePromoModal from "./NineRemotePromoModal";
 
 const navItems = [
-  { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
-  { href: "/dashboard/providers", label: "Providers", icon: "dns" },
-  // { href: "/dashboard/basic-chat", label: "Basic Chat", icon: "chat" }, // Hidden
-  { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
-  { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
-  { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
-  { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
-  // { href: "/dashboard/pxpipe", label: "PXPIPE", icon: "image" },
-  { href: "/dashboard/cli-tools", label: "CLI Tools", icon: "terminal" },
+  { href: "/dashboard/endpoint", label: "Titik Akhir & Kunci", icon: "api" },
+  { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
+  { href: "/dashboard/combos", label: "Kombinasi & Adaptor Vision", icon: "layers" },
+  { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
+  { href: "/dashboard/quota", label: "Pelacak Kuota", icon: "data_usage" },
+  { href: "/dashboard/token-saver", label: "Penghemat Token", icon: "savings" },
+  { href: "/dashboard/cli-tools", label: "Alat CLI", icon: "terminal" },
 ];
 
 const debugItems = [
-  { href: "/dashboard/translator", label: "Translator", icon: "translate" },
+  { href: "/dashboard/translator", label: "Penerjemah", icon: "translate" },
 ];
 
 const systemItems = [
-  { href: "/dashboard/cloud", label: "Cloud Storage", icon: "cloud" },
-  { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
-  { href: "/dashboard/skills", label: "Skills", icon: "extension" },
+  { href: "/dashboard/cloud", label: "Penyimpanan Awan", icon: "cloud" },
+  { href: "/dashboard/proxy-pools", label: "Kumpulan Proksi", icon: "lan" },
+  { href: "/dashboard/skills", label: "Keterampilan", icon: "extension" },
 ];
 
 export default function Sidebar({ onClose }) {
@@ -126,22 +124,22 @@ export default function Sidebar({ onClose }) {
           {updateInfo && (
             <div className="flex flex-col gap-1.5 rounded p-1 -m-1">
               <span className="text-xs font-semibold text-green-600 dark:text-amber-500">
-                ↑ New version available: v{updateInfo.latestVersion}
+                ↑ Versi baru tersedia: v{updateInfo.latestVersion}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowUpdateModal(true)}
                   className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-[11px] font-semibold transition-colors cursor-pointer"
                 >
-                  Update now
+                  Perbarui sekarang
                 </button>
                 <button
                   onClick={() => copy(INSTALL_CMD)}
-                  title="Copy install command"
+                  title="Salin perintah instalasi"
                   className="flex-1 text-left hover:opacity-80 transition-opacity cursor-pointer min-w-0"
                 >
                   <code className="block text-[10px] text-green-600/80 dark:text-amber-400/70 font-mono truncate">
-                    {copied ? "✓ copied!" : INSTALL_CMD}
+                    {copied ? "✓ disalin!" : INSTALL_CMD}
                   </code>
                 </button>
               </div>
@@ -178,7 +176,7 @@ export default function Sidebar({ onClose }) {
           {/* System section */}
           <div className="pt-3 mt-2 space-y-0.5">
             <p className="px-4 text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2">
-              System
+              Sistem
             </p>
 
             {systemItems.map((item) => (
@@ -246,7 +244,7 @@ export default function Sidebar({ onClose }) {
               </span>
               <span className="text-[13px] font-medium">9Remote</span>
               <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">
-                NEW
+                BARU
               </span>
             </button>
 
@@ -269,7 +267,7 @@ export default function Sidebar({ onClose }) {
               >
                 settings
               </span>
-              <span className="text-[13px] font-medium">Settings</span>
+              <span className="text-[13px] font-medium">Pengaturan</span>
             </Link>
           </div>
         </nav>
@@ -284,10 +282,10 @@ export default function Sidebar({ onClose }) {
         isOpen={showUpdateModal}
         onClose={() => setShowUpdateModal(false)}
         onConfirm={handleUpdate}
-        title="Update Multiver"
-        message={`Show install command for v${updateInfo?.latestVersion || ""}? You can copy it and shutdown to install manually.`}
-        confirmText="Show Command"
-        cancelText="Cancel"
+        title="Perbarui Multiver"
+        message={`Tampilkan perintah instalasi untuk v${updateInfo?.latestVersion || ""}? Anda dapat menyalinnya dan mematikan server untuk instalasi manual.`}
+        confirmText="Tampilkan Perintah"
+        cancelText="Batal"
         variant="primary"
       />
 
@@ -309,10 +307,10 @@ export default function Sidebar({ onClose }) {
               <div className="flex items-center justify-center size-16 rounded-full bg-red-500/20 text-red-500 mx-auto mb-4">
                 <span className="material-symbols-outlined text-[32px]">power_off</span>
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">Server Disconnected</h2>
-              <p className="text-text-muted mb-6">The proxy server has been stopped.</p>
+              <h2 className="text-xl font-semibold text-white mb-2">Server Terputus</h2>
+              <p className="text-text-muted mb-6">Server proksi telah dihentikan.</p>
               <Button variant="secondary" onClick={() => globalThis.location.reload()}>
-                Reload Page
+                Muat Ulang Halaman
               </Button>
             </div>
           )}
@@ -335,39 +333,39 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
           <span className="material-symbols-outlined text-[24px]">content_copy</span>
         </div>
         <div>
-          <h2 className="text-lg font-semibold">Update Multiver{latestVersion ? ` to v${latestVersion}` : ""}</h2>
+          <h2 className="text-lg font-semibold">Perbarui Multiver{latestVersion ? ` ke v${latestVersion}` : ""}</h2>
           <p className="text-xs text-white/60">
             {isDisconnected
-              ? "Server stopped. Paste the command into a terminal to install."
+              ? "Server dihentikan. Tempelkan perintah ke terminal untuk instalasi."
               : isCountingDown
-                ? `Command copied. Server will stop in ${countdown}s...`
-                : "Click the button below to copy the install command and shutdown."}
+                ? `Perintah disalin. Server akan berhenti dalam ${countdown}s...`
+                : "Klik tombol di bawah untuk menyalin perintah instalasi dan mematikan server."}
           </p>
         </div>
       </div>
 
-      <p className="text-sm text-white/80 mb-2">Install command:</p>
+      <p className="text-sm text-white/80 mb-2">Perintah instalasi:</p>
       <div className="w-full px-3 py-2 rounded bg-white/5 mb-4">
         <code className="text-xs font-mono text-amber-400 break-all">{installCmd}</code>
       </div>
 
       <ol className="text-xs text-white/70 space-y-1 list-decimal list-inside mb-4">
-        <li>Click <strong>Copy & Shutdown</strong> below.</li>
-        <li>Paste the command into your terminal and press Enter.</li>
-        <li>Run <code className="px-1 rounded bg-white/10 text-green-400">Multiver</code> again after install.</li>
+        <li>Klik <strong>Salin &amp; Matikan</strong> di bawah.</li>
+        <li>Tempelkan perintah ke terminal Anda dan tekan Enter.</li>
+        <li>Jalankan <code className="px-1 rounded bg-white/10 text-green-400">Multiver</code> lagi setelah instalasi.</li>
       </ol>
 
       {isDisconnected ? (
         <Button variant="secondary" fullWidth onClick={() => globalThis.location.reload()}>
-          Reload Page
+          Muat Ulang Halaman
         </Button>
       ) : (
         <div className="flex gap-2">
           <Button variant="secondary" onClick={onCancel} disabled={isCountingDown}>
-            Cancel
+            Batal
           </Button>
           <Button variant="primary" fullWidth onClick={onCopyAndShutdown} disabled={isCountingDown}>
-            {copied ? "✓ Copied — shutting down..." : isCountingDown ? `Shutting down in ${countdown}s` : "Copy & Shutdown"}
+            {copied ? "✓ Disalin — mematikan..." : isCountingDown ? `Mematikan dalam ${countdown}s` : "Salin & Matikan"}
           </Button>
         </div>
       )}

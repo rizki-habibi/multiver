@@ -426,7 +426,7 @@ export default function TokenSaverClient() {
 
   const headroomRunning = !!headroomStatus.running;
   const headroomStatusLabel = headroomStatus.loading
-    ? "Checking…"
+    ? "Checking&"
     : headroomRunning
       ? "Running"
       : headroomStatus.localUrl !== false && !headroomStatus.installed
@@ -441,9 +441,9 @@ export default function TokenSaverClient() {
 
   const pxpipeHealthy = pxpipeHealth?.healthy === true;
   const pxpipeStatusLabel = pxpipeStatus.loading
-    ? "Checking…"
+    ? "Checking&"
     : pxpipeStatus.installing
-      ? "Installing…"
+      ? "Installing&"
       : !pxpipeStatus.installed
         ? "Not installed"
         : pxpipeHealthy
@@ -530,7 +530,7 @@ export default function TokenSaverClient() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-text-muted">
                 Compression extras
-                {headroomExtras.version ? ` · v${headroomExtras.version}` : ""}:
+                {headroomExtras.version ? ` Â· v${headroomExtras.version}` : ""}:
               </span>
               {headroomExtras.available.map((extra) => {
                 const installed = !!headroomExtras.extras[extra];
@@ -562,7 +562,7 @@ export default function TokenSaverClient() {
                         className="ml-1 text-error underline hover:opacity-80 disabled:opacity-50"
                         title={`Uninstall [${extra}]`}
                       >
-                        {removingExtra === extra ? "Uninstalling…" : "Uninstall"}
+                        {removingExtra === extra ? "Uninstalling&" : "Uninstall"}
                       </button>
                     </div>
                   );
@@ -595,7 +595,7 @@ export default function TokenSaverClient() {
                   className="text-xs px-2.5 py-1 rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {extrasActionLoading
-                    ? "Installing…"
+                    ? "Installing&"
                     : `Install [proxy,${pendingExtras.join(",")}]`}
                 </button>
               )}
@@ -604,7 +604,7 @@ export default function TokenSaverClient() {
               <p className="text-xs text-error mt-1">{extrasActionError}</p>
             )}
             {restartingProxy && (
-              <p className="text-xs text-text-muted mt-1">Restarting proxy…</p>
+              <p className="text-xs text-text-muted mt-1">Restarting proxy&</p>
             )}
             {(extrasActionLoading || removingExtra) && installLog && (
               <pre className="mt-2 max-h-32 overflow-auto rounded bg-surface-2 p-2 text-[10px] leading-tight text-text-muted whitespace-pre-wrap">
@@ -721,7 +721,7 @@ export default function TokenSaverClient() {
             />
           </div>
         </div>
-        {/* PXPIPE hidden from UI — experimental, not exposed to users yet */}
+        {/* PXPIPE hidden from UI Â— experimental, not exposed to users yet */}
         {false && (
           <div className="flex items-center justify-between pt-4 mt-4 border-t border-border gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
@@ -827,7 +827,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Stopping…" : "Stop Headroom"}
+              {headroomActionLoading ? "Stopping&" : "Stop Headroom"}
             </Button>
           ) : headroomRunning ? (
             <p className="text-sm text-success">
@@ -839,7 +839,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Starting…" : "Start Headroom"}
+              {headroomActionLoading ? "Starting&" : "Start Headroom"}
             </Button>
           ) : !headroomLocalUrl ? (
             <p className="text-sm text-warning">
@@ -897,14 +897,14 @@ export default function TokenSaverClient() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">
-            Compress prompts using multimodal encoding. Runs in-process — no
+            Compress prompts using multimodal encoding. Runs in-process Â— no
             extra server or environment variables required.
           </p>
           <div className="flex items-center justify-between text-sm">
             <span>Status</span>
             <span className={pxpipeHealthy || pxpipeStatus.running ? "text-success" : "text-warning"}>
               {pxpipeStatusLabel}
-              {pxpipeStatus.version ? ` · v${pxpipeStatus.version}` : ""}
+              {pxpipeStatus.version ? ` Â· v${pxpipeStatus.version}` : ""}
             </span>
           </div>
           {pxpipeHealth?.checks?.length > 0 && (
@@ -933,7 +933,7 @@ export default function TokenSaverClient() {
                 fullWidth
                 disabled={pxpipeActionLoading || pxpipeStatus.installing}
               >
-                {pxpipeActionLoading || pxpipeStatus.installing ? "Installing…" : "Install"}
+                {pxpipeActionLoading || pxpipeStatus.installing ? "Installing&" : "Install"}
               </Button>
               <p className="text-xs text-text-muted">
                 Installs the npm package <code className="font-mono">pxpipe-proxy</code> into
@@ -953,7 +953,7 @@ export default function TokenSaverClient() {
                 </>
               ) : (
                 <Button onClick={() => pxpipeAction("start")} disabled={pxpipeActionLoading}>
-                  {pxpipeActionLoading ? "Starting…" : "Start"}
+                  {pxpipeActionLoading ? "Starting&" : "Start"}
                 </Button>
               )}
               <Button onClick={() => pxpipeAction("install")} variant="ghost" disabled={pxpipeActionLoading}>

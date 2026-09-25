@@ -34,8 +34,8 @@ export async function handleEmbeddings(request) {
   try {
     body = await request.json();
   } catch {
-    log.warn("EMBEDDINGS", "Invalid JSON body");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+    log.warn("EMBEDDINGS", "Isi JSON tidak valid");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
   const url = new URL(request.url);
@@ -56,29 +56,29 @@ export async function handleEmbeddings(request) {
   if (settings.requireApiKey) {
     if (!apiKey) {
       log.warn("AUTH", "Missing API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
     }
     const valid = await isValidApiKey(apiKey);
     if (!valid) {
       log.warn("AUTH", "Invalid API key (requireApiKey=true)");
-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API tidak valid");
     }
   }
 
   if (!modelStr) {
-    log.warn("EMBEDDINGS", "Missing model");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
+    log.warn("EMBEDDINGS", "Model hilang");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model hilang");
   }
 
   if (!body.input) {
     log.warn("EMBEDDINGS", "Missing input");
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: input");
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi wajib hilang: input");
   }
 
   const modelInfo = await getModelInfo(modelStr);
   if (!modelInfo.provider) {
-    log.warn("EMBEDDINGS", "Invalid model format", { model: modelStr });
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+    log.warn("EMBEDDINGS", "Format model tidak valid", { model: modelStr });
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
   }
 
   const { provider, model } = modelInfo;
