@@ -18,7 +18,10 @@ import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
 import { handleComboChat, handleFusionChat, detectRequiredCapabilities } from "open-sse/services/combo.js";
 import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActiveAdapterStrategy } from "open-sse/services/capacityAdapter.js";
 import { handleBypassRequest } from "open-sse/utils/bypassHandler.js";
+import { getProviderModels } from "open-sse/config/providerModels.js";
+import { PROVIDERS } from "open-sse/config/providers.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
+
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
@@ -161,6 +164,48 @@ export async function handleChat(request, clientRawRequest = null) {
 }
 
 /**
+ * Check whether the resolved provider/model can serve the request's modality.
+ * Returns { kind, message } when unsupported, else null.
+ *
+ * ponytail: covers modality at provider level (serviceKinds) plus model-level
+ * capability flags ("vision"/"audio"/"pdf" etc.) when the registry declares
+ * them. Providers omitting serviceKinds default to chat-only (llm).
+ */
+function checkModalitySupport(provider, model, body) {
+  const required = detectRequiredCapabilities(body);
+  if (!required.size) return null;
+
+  const regEntry = PROVIDERS[provider];
+  const kinds = regEntry?.serviceKinds;
+
+  const modelEntry = getProviderModels(provider).find((m) => m.id === model);
+  const caps = modelEntry?.capabilities;
+
+  const KIND_LABEL = { vision: "image", audioInput: "audio", videoInput: "video", pdf: "PDF", search: "web search" };
+  const KIND_KIND = { vision: "imageToText", audioInput: "stt", videoInput: "imageToText", pdf: "imageToText", search: "webSearch" };
+
+  for (const cap of required) {
+    // Model-level capability flag wins when present
+    if (Array.isArray(caps)) {
+      const has = caps.includes(cap) || caps.includes("text") && cap === "vision" && caps.includes("vision");
+      if (has) continue;
+      return {
+        kind: cap,
+        message: `${regEntry?.display?.name || provider} model "${model}" does not support ${KIND_LABEL[cap] || cap} input. Please use another AI service that supports ${KIND_LABEL[cap] || cap}.`,
+      };
+    }
+    // Provider serviceKinds gate
+    if (kinds && !kinds.includes("llm") && !kinds.includes(KIND_KIND[cap])) {
+      return {
+        kind: cap,
+        message: `${regEntry?.display?.name || provider} does not support ${KIND_LABEL[cap] || cap} input. Please use another AI service that supports ${KIND_LABEL[cap] || cap}.`,
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * Handle single model chat request
  */
 async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null) {
@@ -219,6 +264,14 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   }
 
   const { provider, model } = modelInfo;
+
+  // Modality guard: reject requests whose modality the provider/model cannot
+  // serve, with an actionable message instead of an unexplained upstream failure.
+  const modalityError = checkModalitySupport(provider, model, body);
+  if (modalityError) {
+    log.warn("CHAT", `[${provider}/${model}] unsupported modality: ${modalityError.kind}`);
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, modalityError.message);
+  }
 
   // Routing shown in the unified "▶" line (client model → provider/model)
 

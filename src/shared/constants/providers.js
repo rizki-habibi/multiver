@@ -35,6 +35,8 @@ function buildProviderEntry(r) {
     ...(r.authModes ? { authModes: r.authModes } : {}),
     ...(r.authType ? { authType: r.authType } : {}),
     ...(r.authHint ? { authHint: r.authHint } : {}),
+    ...(r.category ? { category: r.category } : {}),
+    ...(r.hasFree ? { hasFree: true } : {}),
   };
 }
 
@@ -70,16 +72,16 @@ export const WEB_COOKIE_PROVIDERS = byCategory("webCookie");
 
 // Media provider kinds — each kind maps to a route and endpoint config
 export const MEDIA_PROVIDER_KINDS = [
-  { id: "embedding",   label: "Embedding",      icon: "data_array",        endpoint: { method: "POST", path: "/v1/embeddings" } },
-  { id: "image",       label: "Text to Image",  icon: "brush",             endpoint: { method: "POST", path: "/v1/images/generations" } },
-  { id: "imageToText", label: "Image to Text",  icon: "image_search",      endpoint: { method: "POST", path: "/v1/images/understanding" } },
-  { id: "tts",         label: "Text To Speech", icon: "record_voice_over", endpoint: { method: "POST", path: "/v1/audio/speech" } },
-  { id: "stt",         label: "Speech To Text", icon: "mic",               endpoint: { method: "POST", path: "/v1/audio/transcriptions" } },
-  { id: "webSearch",   label: "Web Search",     icon: "travel_explore",    endpoint: { method: "POST", path: "/v1/search" } },
-  { id: "webFetch",    label: "Web Fetch",      icon: "language",          endpoint: { method: "POST", path: "/v1/web/fetch" } },
-  { id: "video",       label: "Video",          icon: "movie",             endpoint: { method: "POST", path: "/v1/videos/generations" } },
-  { id: "music",       label: "Music",          icon: "music_note",        endpoint: { method: "POST", path: "/v1/audio/music" } },
-  { id: "systemone",   label: "System One",     icon: "psychology",        endpoint: { method: "POST", path: "/v1/systemone" }, isNew: true },
+  { id: "embedding", label: "Embedding", icon: "data_array", endpoint: { method: "POST", path: "/v1/embeddings" } },
+  { id: "image", label: "Text to Image", icon: "brush", endpoint: { method: "POST", path: "/v1/images/generations" } },
+  { id: "imageToText", label: "Image to Text", icon: "image_search", endpoint: { method: "POST", path: "/v1/images/understanding" } },
+  { id: "tts", label: "Text To Speech", icon: "record_voice_over", endpoint: { method: "POST", path: "/v1/audio/speech" } },
+  { id: "stt", label: "Speech To Text", icon: "mic", endpoint: { method: "POST", path: "/v1/audio/transcriptions" } },
+  { id: "webSearch", label: "Web Search", icon: "travel_explore", endpoint: { method: "POST", path: "/v1/search" } },
+  { id: "webFetch", label: "Web Fetch", icon: "language", endpoint: { method: "POST", path: "/v1/web/fetch" } },
+  { id: "video", label: "Video", icon: "movie", endpoint: { method: "POST", path: "/v1/videos/generations" } },
+  { id: "music", label: "Music", icon: "music_note", endpoint: { method: "POST", path: "/v1/audio/music" } },
+  { id: "systemone", label: "System One", icon: "psychology", endpoint: { method: "POST", path: "/v1/systemone" }, isNew: true },
 ];
 
 export const OPENAI_COMPATIBLE_PREFIX = "openai-compatible-";
@@ -109,13 +111,49 @@ export const AUTH_METHODS = {
 };
 
 // Helper: Get provider by alias
-export function getProviderByAlias(alias) {
-  for (const provider of Object.values(AI_PROVIDERS)) {
-    if (provider.alias === alias || provider.id === alias) {
-      return provider;
-    }
-  }
+export function getProviderPriceLabel(provider) {
+  if (!provider) return null;
+  const { category, hasFree, noAuth } = provider;
+  if (category === "free") return { text: "Free", variant: "success" };
+  if (category === "freeTier") return { text: "Free Tier", variant: "success" };
+  if (noAuth) return { text: "Free", variant: "success" };
+  if (hasFree) return { text: "Paid · Free models", variant: "default" };
+  if (category) return { text: "Paid", variant: "default" };
   return null;
+}
+
+// Modality support for graceful rejection. `serviceKinds` is the registry
+// source of truth; LLM providers that omit it default to chat-only.
+export function getProviderModalities(provider) {
+  if (!provider) return [];
+  const kinds = provider.serviceKinds || [];
+  const out = new Set();
+  for (const k of kinds) {
+    if (k === "llm") out.add("text");
+    else out.add(k);
+  }
+  if (!out.has("text") && (!kinds.length || kinds.includes("llm"))) out.add("text");
+  return [...out];
+}
+
+export function providerSupportsModality(provider, kind) {
+  if (!provider || !kind) return true;
+  const kinds = provider.serviceKinds;
+  if (!kinds || kinds.includes("llm")) return kind === "text";
+  return kinds.includes(kind);
+}
+
+
+// Helper: Get provider by alias
+export function getProviderByAlias(alias) {
+  
+
+for (const provider of Object.values(AI_PROVIDERS)) {
+  if (provider.alias === alias || provider.id === alias) {
+    return provider;
+  }
+}
+return null;
 }
 
 // Helper: Get provider ID from alias

@@ -18,6 +18,7 @@ import {
   WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
+  getProviderPriceLabel,
 } from "@/shared/constants/providers";
 import Link from "next/link";
 import { getErrorCode, getRelativeTime } from "@/shared/utils";
@@ -618,6 +619,7 @@ export default function ProvidersPage() {
 function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isNoAuth = !!provider.noAuth;
+  const priceLabel = getProviderPriceLabel(provider);
 
   const dotColors = {
     free: "bg-green-500",
@@ -679,6 +681,11 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                     )}
                   </>
                 )}
+                {priceLabel && (
+                  <Badge variant={priceLabel.variant} size="sm">
+                    {priceLabel.text}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -737,6 +744,7 @@ function ApiKeyProviderCard({
   const isAnthropicCompatible = providerId.startsWith(
     ANTHROPIC_COMPATIBLE_PREFIX,
   );
+  const priceLabel = getProviderPriceLabel(provider);
 
   const dotColors = {
     free: "bg-green-500",
@@ -816,6 +824,11 @@ function ApiKeyProviderCard({
                       <span className="text-text-muted">{errorTime}</span>
                     )}
                   </>
+                )}
+                {priceLabel && (
+                  <Badge variant={priceLabel.variant} size="sm">
+                    {priceLabel.text}
+                  </Badge>
                 )}
               </div>
             </div>

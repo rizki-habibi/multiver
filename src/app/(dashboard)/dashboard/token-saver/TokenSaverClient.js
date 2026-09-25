@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, Button, Input, Modal, Toggle, ConfirmModal } from "@/shared/components";
@@ -426,7 +426,7 @@ export default function TokenSaverClient() {
 
   const headroomRunning = !!headroomStatus.running;
   const headroomStatusLabel = headroomStatus.loading
-    ? "Checking‚Ä¶"
+    ? "CheckingÖ"
     : headroomRunning
       ? "Running"
       : headroomStatus.localUrl !== false && !headroomStatus.installed
@@ -441,9 +441,9 @@ export default function TokenSaverClient() {
 
   const pxpipeHealthy = pxpipeHealth?.healthy === true;
   const pxpipeStatusLabel = pxpipeStatus.loading
-    ? "Checking‚Ä¶"
+    ? "CheckingÖ"
     : pxpipeStatus.installing
-      ? "Installing‚Ä¶"
+      ? "InstallingÖ"
       : !pxpipeStatus.installed
         ? "Not installed"
         : pxpipeHealthy
@@ -481,7 +481,7 @@ export default function TokenSaverClient() {
               </a>
             </p>
             <p className="text-sm text-text-muted">
-              git/grep/ls/tree/logs ‚Üí 60-90% fewer input tokens
+              git/grep/ls/tree/logs ? 60-90% fewer input tokens
             </p>
           </div>
           <Toggle
@@ -530,7 +530,7 @@ export default function TokenSaverClient() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-text-muted">
                 Compression extras
-                {headroomExtras.version ? ` ¬∑ v${headroomExtras.version}` : ""}:
+                {headroomExtras.version ? ` ∑ v${headroomExtras.version}` : ""}:
               </span>
               {headroomExtras.available.map((extra) => {
                 const installed = !!headroomExtras.extras[extra];
@@ -562,7 +562,7 @@ export default function TokenSaverClient() {
                         className="ml-1 text-error underline hover:opacity-80 disabled:opacity-50"
                         title={`Uninstall [${extra}]`}
                       >
-                        {removingExtra === extra ? "Uninstalling‚Ä¶" : "Uninstall"}
+                        {removingExtra === extra ? "UninstallingÖ" : "Uninstall"}
                       </button>
                     </div>
                   );
@@ -595,7 +595,7 @@ export default function TokenSaverClient() {
                   className="text-xs px-2.5 py-1 rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {extrasActionLoading
-                    ? "Installing‚Ä¶"
+                    ? "InstallingÖ"
                     : `Install [proxy,${pendingExtras.join(",")}]`}
                 </button>
               )}
@@ -604,7 +604,7 @@ export default function TokenSaverClient() {
               <p className="text-xs text-error mt-1">{extrasActionError}</p>
             )}
             {restartingProxy && (
-              <p className="text-xs text-text-muted mt-1">Restarting proxy‚Ä¶</p>
+              <p className="text-xs text-text-muted mt-1">Restarting proxyÖ</p>
             )}
             {(extrasActionLoading || removingExtra) && installLog && (
               <pre className="mt-2 max-h-32 overflow-auto rounded bg-surface-2 p-2 text-[10px] leading-tight text-text-muted whitespace-pre-wrap">
@@ -636,7 +636,7 @@ export default function TokenSaverClient() {
               </a>
             </p>
             <p className="text-sm text-text-muted">
-              Terse-style system prompt ‚Üí ~65% fewer output tokens (up to 87%)
+              Terse-style system prompt ? ~65% fewer output tokens (up to 87%)
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -721,7 +721,7 @@ export default function TokenSaverClient() {
             />
           </div>
         </div>
-        {/* PXPIPE hidden from UI ‚Äî experimental, not exposed to users yet */}
+        {/* PXPIPE hidden from UI ó experimental, not exposed to users yet */}
         {false && (
           <div className="flex items-center justify-between pt-4 mt-4 border-t border-border gap-4 flex-wrap">
             <div className="min-w-0 flex-1">
@@ -747,12 +747,12 @@ export default function TokenSaverClient() {
                 >
                   {pxpipeStatus.installed ? "Manage" : "Setup"}
                 </button>
-                <a
-                  href="/dashboard/pxpipe"
+                <button
+                  onClick={() => setShowPxpipeModal(true)}
                   className="text-xs text-primary underline hover:opacity-80"
                 >
                   Dashboard
-                </a>
+                </button>
               </div>
               <p className="text-sm text-text-muted mt-1">
                 Transforms large textual context into optimized images before
@@ -827,7 +827,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Stopping‚Ä¶" : "Stop Headroom"}
+              {headroomActionLoading ? "StoppingÖ" : "Stop Headroom"}
             </Button>
           ) : headroomRunning ? (
             <p className="text-sm text-success">
@@ -839,7 +839,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Starting‚Ä¶" : "Start Headroom"}
+              {headroomActionLoading ? "StartingÖ" : "Start Headroom"}
             </Button>
           ) : !headroomLocalUrl ? (
             <p className="text-sm text-warning">
@@ -847,7 +847,7 @@ export default function TokenSaverClient() {
             </p>
           ) : !headroomStatus.python ? (
             <p className="text-sm text-warning">
-              Python ‚â• 3.10 required for local managed mode. Install Python
+              Python = 3.10 required for local managed mode. Install Python
               first, or use an external proxy URL.
             </p>
           ) : (
@@ -897,14 +897,14 @@ export default function TokenSaverClient() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">
-            Compress prompts using multimodal encoding. Runs in-process ‚Äî no
+            Compress prompts using multimodal encoding. Runs in-process ó no
             extra server or environment variables required.
           </p>
           <div className="flex items-center justify-between text-sm">
             <span>Status</span>
             <span className={pxpipeHealthy || pxpipeStatus.running ? "text-success" : "text-warning"}>
               {pxpipeStatusLabel}
-              {pxpipeStatus.version ? ` ¬∑ v${pxpipeStatus.version}` : ""}
+              {pxpipeStatus.version ? ` ∑ v${pxpipeStatus.version}` : ""}
             </span>
           </div>
           {pxpipeHealth?.checks?.length > 0 && (
@@ -913,7 +913,7 @@ export default function TokenSaverClient() {
               {pxpipeHealth.checks.map((check) => (
                 <div key={check.id} className="flex items-center justify-between text-xs">
                   <span className={check.ok ? "text-success" : "text-warning"}>
-                    {check.ok ? "‚óè" : "‚óã"} {check.label}
+                    {check.ok ? "?" : "?"} {check.label}
                   </span>
                   {check.detail && (
                     <span className="text-text-muted font-mono truncate max-w-[50%]">{check.detail}</span>
@@ -933,7 +933,7 @@ export default function TokenSaverClient() {
                 fullWidth
                 disabled={pxpipeActionLoading || pxpipeStatus.installing}
               >
-                {pxpipeActionLoading || pxpipeStatus.installing ? "Installing‚Ä¶" : "Install"}
+                {pxpipeActionLoading || pxpipeStatus.installing ? "InstallingÖ" : "Install"}
               </Button>
               <p className="text-xs text-text-muted">
                 Installs the npm package <code className="font-mono">pxpipe-proxy</code> into
@@ -953,18 +953,15 @@ export default function TokenSaverClient() {
                 </>
               ) : (
                 <Button onClick={() => pxpipeAction("start")} disabled={pxpipeActionLoading}>
-                  {pxpipeActionLoading ? "Starting‚Ä¶" : "Start"}
+                  {pxpipeActionLoading ? "StartingÖ" : "Start"}
                 </Button>
               )}
               <Button onClick={() => pxpipeAction("install")} variant="ghost" disabled={pxpipeActionLoading}>
                 Repair
               </Button>
-              <a
-                href="/dashboard/pxpipe#logs"
-                className="col-span-2 rounded border border-border px-4 py-2 text-center text-sm hover:bg-surface-2"
-              >
+              <Button onClick={() => pxpipeAction("logs")} variant="ghost" disabled={pxpipeActionLoading}>
                 Open Logs
-              </a>
+              </Button>
             </div>
           )}
           <div className="flex flex-col gap-1">

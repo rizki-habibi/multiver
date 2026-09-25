@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
 import { Card, Button, Badge, Input, Modal, CardSkeleton, OAuthModal, KiroOAuthWrapper, CursorAuthModal, XiaomiMimoAuthModal, IFlowCookieModal, GitLabAuthModal, Toggle, Select, EditConnectionModal, NoAuthProxyCard, ConfirmModal } from "@/shared/components";
-import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, getProviderAlias, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
+import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, getProviderAlias, getProviderPriceLabel, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getThinkingLevels } from "open-sse/providers/thinkingLevels.js";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
@@ -141,14 +141,14 @@ export default function ProviderDetailPage() {
 
   const providerInfo = providerNode
     ? {
-        id: providerNode.id,
-        name: providerNode.name || (providerNode.type === "anthropic-compatible" ? "Anthropic Compatible" : "OpenAI Compatible"),
-        color: providerNode.type === "anthropic-compatible" ? "#D97757" : "#10A37F",
-        textIcon: providerNode.type === "anthropic-compatible" ? "AC" : "OC",
-        apiType: providerNode.apiType,
-        baseUrl: providerNode.baseUrl,
-        type: providerNode.type,
-      }
+      id: providerNode.id,
+      name: providerNode.name || (providerNode.type === "anthropic-compatible" ? "Anthropic Compatible" : "OpenAI Compatible"),
+      color: providerNode.type === "anthropic-compatible" ? "#D97757" : "#10A37F",
+      textIcon: providerNode.type === "anthropic-compatible" ? "AC" : "OC",
+      apiType: providerNode.apiType,
+      baseUrl: providerNode.baseUrl,
+      type: providerNode.type,
+    }
     : (OAUTH_PROVIDERS[providerId] || APIKEY_PROVIDERS[providerId] || FREE_PROVIDERS[providerId] || FREE_TIER_PROVIDERS[providerId] || WEB_COOKIE_PROVIDERS[providerId]);
   const authModes = providerInfo?.authModes || [];
   const isOAuth = !!OAUTH_PROVIDERS[providerId] || !!FREE_PROVIDERS[providerId] || authModes.includes("oauth");
@@ -159,21 +159,21 @@ export default function ProviderDetailPage() {
     ? liveModels
     : staticModels;
   const providerAlias = getProviderAlias(providerId);
-  
+
   const isOpenAICompatible = isOpenAICompatibleProvider(providerId);
   const isAnthropicCompatible = isAnthropicCompatibleProvider(providerId);
   const isCompatible = isOpenAICompatible || isAnthropicCompatible;
   const hasDualAuthModes = !isCompatible && isOAuth && supportsApiKeyAuth;
   const oauthConnectionLabel =
     providerId === "xai" ? "Grok Build OAuth"
-    : providerId === "grok-cli" ? "Grok CLI Device Login"
-    : providerId === "kimi" ? "Kimi Coding OAuth"
-    : "OAuth";
+      : providerId === "grok-cli" ? "Grok CLI Device Login"
+        : providerId === "kimi" ? "Kimi Coding OAuth"
+          : "OAuth";
   const apiKeyConnectionLabel =
     providerId === "xai" ? "xAI API Key"
-    : providerId === "kimi" ? "Kimi API Key"
-    : (providerId === "qoder" || providerId === "qoder-cn") ? "PAT"
-    : "API Key";
+      : providerId === "kimi" ? "Kimi API Key"
+        : (providerId === "qoder" || providerId === "qoder-cn") ? "PAT"
+          : "API Key";
   // Resolve suffix "(level)" for a model when a thinking level is picked and the model supports it.
   const resolveThinkingSuffix = (modelId) => {
     if (!thinkingMode || thinkingMode === "auto") return null;
@@ -298,7 +298,7 @@ export default function ProviderDetailPage() {
     fetch("/api/providers/kilo/free-models")
       .then((res) => res.json())
       .then((data) => { if (data.models?.length) setKiloFreeModels(data.models); })
-      .catch(() => {});
+      .catch(() => { });
   }, [providerId]);
 
   const fetchConnections = useCallback(async () => {
@@ -611,7 +611,7 @@ export default function ProviderDetailPage() {
       for (const model of models) {
         const modelId = model.id || model.name;
         if (!modelId) continue;
-        
+
         // Qoder model ID format may be "qoder/auto", "qoder-cn/auto" or "auto",
         // need to remove the provider prefix before storing.
         const cleanModelId = modelId.replace(/^(qoder-cn|qoder)\//, "");
@@ -625,7 +625,7 @@ export default function ProviderDetailPage() {
         await handleAddCustomModel(cleanModelId, "llm", providerStorageAlias);
         importedCount += 1;
       }
-      
+
       if (importedCount === 0) {
         alert(translate("All models already exist, no new models added"));
       } else {
@@ -1192,7 +1192,7 @@ export default function ProviderDetailPage() {
             alias={model.alias}
             copied={copied}
             onCopy={copy}
-            onSetAlias={() => {}}
+            onSetAlias={() => { }}
             onDeleteAlias={() => {
               if (model.source === "custom") {
                 handleDeleteCustomModel(model.id, "llm", providerStorageAlias);
@@ -1337,7 +1337,7 @@ export default function ProviderDetailPage() {
         <CardSkeleton />
       </div>
     );
-}
+  }
 
   if (!providerInfo) {
     return (
@@ -1393,14 +1393,20 @@ export default function ProviderDetailPage() {
                   markProviderIconMissing(providerInfo.id);
                   setHeaderImgError(true);
                 }}
-              loading="lazy"
-              decoding="async"
+                loading="lazy"
+                decoding="async"
               />
             )}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">{providerInfo.name}</h1>
+              {(() => {
+                const pl = getProviderPriceLabel(providerInfo);
+                return pl ? (
+                  <Badge variant={pl.variant} size="sm">{pl.text}</Badge>
+                ) : null;
+              })()}
               {(providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website) && (
                 <a
                   href={providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website}
