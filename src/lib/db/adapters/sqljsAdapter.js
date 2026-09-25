@@ -94,7 +94,7 @@ export async function createSqlJsAdapter(filePath) {
       scheduleSave();
       return result;
     } catch (e) {
-      try { db.exec(`ROLLBACK TO ${sp}`); db.exec(`RELEASE ${sp}`); } catch {}
+      try { db.exec(`ROLLBACK TO ${sp}`); db.exec(`RELEASE ${sp}`); } catch { }
       throw e;
     }
   }
@@ -105,11 +105,12 @@ export async function createSqlJsAdapter(filePath) {
     db.close();
   }
 
-  // Flush on shutdown
-  const flush = () => { if (dirty) try { persist(); } catch {} };
-  process.on("beforeExit", flush);
-  process.on("SIGINT", flush);
-  process.on("SIGTERM", flush);
+  // Flush on shutdown. once() — registering on every adapter creation leaked a
+  // growing listener count (the "11 SIGINT listeners" warning).
+  const flush = () => { if (dirty) try { persist(); } catch { } };
+  process.once("beforeExit", flush);
+  process.once("SIGINT", flush);
+  process.once("SIGTERM", flush);
 
   return { driver: "sql.js", run, get, all, exec, transaction, close, raw: db };
 }

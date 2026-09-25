@@ -28,6 +28,16 @@ function errorMessage(value, fallback) {
   return JSON.stringify(value);
 }
 
+// Decode a possibly-gzipped or brotlied error body before JSON parsing so a
+// compressed upstream error is surfaced instead of crashing the caller.
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text.slice(0, 500) };
+  }
+}
+
 function getCodexAccountId(providerSpecificData) {
   return providerSpecificData?.workspaceId || providerSpecificData?.accountId || providerSpecificData?.chatgptAccountId || null;
 }
@@ -111,6 +121,9 @@ export async function getCodexUsage(accessToken, proxyOptions = null) {
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "Accept": "application/json",
+        // ponytail: OpenAI gzips error bodies when the client advertises gzip,
+        // which makes them unreadable in safeJsonParse. Ask for identity.
+        "Accept-Encoding": "identity",
       },
     }, proxyOptions);
 
@@ -118,7 +131,12 @@ export async function getCodexUsage(accessToken, proxyOptions = null) {
       return { message: `Codex connected. Usage API temporarily unavailable (${response.status}).` };
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(async () => {
+      // ponytail: OpenAI gzips some error bodies; a raw decode keeps AutoPing
+      // from crashing on "Unexpected token" when JSON.parse hits binary.
+      const text = await response.text().catch(() => "");
+      return text ? safeJsonParse(text) : null;
+    });
     const normalRateLimit = data.rate_limit || data.rate_limits || data.rate_limits_by_limit_id?.codex || {};
     const reviewRateLimit = getCodexReviewRateLimit(data);
     const sparkRateLimit = getCodexSparkRateLimit(data);

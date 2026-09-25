@@ -125,6 +125,13 @@ const getPageInfo = (pathname) => {
       icon: "terminal",
       breadcrumbs: [],
     };
+  if (pathname.includes("/cloud"))
+    return {
+      title: "Cloud Storage",
+      description: "Sync settings and data to cloud storage",
+      icon: "cloud",
+      breadcrumbs: [],
+    };
   if (pathname.includes("/proxy-pools"))
     return {
       title: "Proxy Pools",
