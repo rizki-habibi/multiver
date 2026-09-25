@@ -6,16 +6,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
 import { APP_CONFIG, UPDATER_CONFIG } from "@/shared/constants/config";
-import { MEDIA_PROVIDER_KINDS } from "@/shared/constants/providers";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import Button from "./Button";
 import { ConfirmModal } from "./Modal";
 import NineRemotePromoModal from "./NineRemotePromoModal";
-
-// const VISIBLE_MEDIA_KINDS = ["embedding", "image", "imageToText", "tts", "stt", "webSearch", "webFetch", "video", "music"];
-const VISIBLE_MEDIA_KINDS = ["embedding", "image", "video", "tts", "stt", "systemone"];
-// Combined entry: webSearch + webFetch share one page at /dashboard/media-providers/web
-const COMBINED_WEB_ITEM = { id: "web", label: "Web Fetch & Search", icon: "travel_explore", href: "/dashboard/media-providers/web" };
 
 const navItems = [
   { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
@@ -30,7 +24,6 @@ const navItems = [
 ];
 
 const debugItems = [
-  { href: "/dashboard/console-log", label: "Console Log", icon: "terminal" },
   { href: "/dashboard/translator", label: "Translator", icon: "translate" },
 ];
 
@@ -42,7 +35,6 @@ const systemItems = [
 
 export default function Sidebar({ onClose }) {
   const pathname = usePathname();
-  const [mediaOpen, setMediaOpen] = useState(false);
   const [showRemoteModal, setShowRemoteModal] = useState(false);
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -189,63 +181,6 @@ export default function Sidebar({ onClose }) {
               System
             </p>
 
-            {/* Media Providers accordion */}
-            <button
-              onClick={() => setMediaOpen((v) => !v)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
-                pathname.startsWith("/dashboard/media-providers")
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-muted hover:bg-surface-2 hover:text-text-main"
-              )}
-            >
-              <span className="material-symbols-outlined text-[18px]">perm_media</span>
-              <span className="text-[13px] font-medium flex-1 text-left">Media Providers</span>
-              {MEDIA_PROVIDER_KINDS.some((k) => VISIBLE_MEDIA_KINDS.includes(k.id) && k.isNew) && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">NEW</span>
-              )}
-              <span className="material-symbols-outlined text-[14px] transition-transform" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-                expand_more
-              </span>
-            </button>
-            {mediaOpen && (
-              <div className="pl-4">
-                {MEDIA_PROVIDER_KINDS.filter((k) => VISIBLE_MEDIA_KINDS.includes(k.id)).map((kind) => (
-                  <Link
-                    key={kind.id}
-                    href={`/dashboard/media-providers/${kind.id}`}
-                    onClick={onClose}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-1 rounded-lg transition-all group",
-                      pathname.startsWith(`/dashboard/media-providers/${kind.id}`)
-                        ? "bg-primary/10 text-primary"
-                        : "text-text-muted hover:bg-surface-2 hover:text-text-main"
-                    )}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">{kind.icon}</span>
-                    <span className="text-sm">{kind.label}</span>
-                    {kind.isNew && (
-                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">NEW</span>
-                    )}
-                  </Link>
-                ))}
-                <Link
-                  key={COMBINED_WEB_ITEM.id}
-                  href={COMBINED_WEB_ITEM.href}
-                  onClick={onClose}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-1 rounded-lg transition-all group",
-                    pathname.startsWith(COMBINED_WEB_ITEM.href)
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-muted hover:bg-surface-2 hover:text-text-main"
-                  )}
-                >
-                  <span className="material-symbols-outlined text-[16px]">{COMBINED_WEB_ITEM.icon}</span>
-                  <span className="text-sm">{COMBINED_WEB_ITEM.label}</span>
-                </Link>
-              </div>
-            )}
-
             {systemItems.map((item) => (
               <Link
                 key={item.href}
@@ -314,23 +249,6 @@ export default function Sidebar({ onClose }) {
                 NEW
               </span>
             </button>
-
-            {/* 9English */}
-            <a
-              href="https://9english.net/"
-              target="_blank"
-              rel="noreferrer"
-              onClick={onClose}
-              className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group w-full",
-                "text-text-muted hover:bg-surface-2 hover:text-text-main"
-              )}
-            >
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">
-                translate
-              </span>
-              <span className="text-[13px] font-medium">9English</span>
-            </a>
 
             {/* Settings */}
             <Link

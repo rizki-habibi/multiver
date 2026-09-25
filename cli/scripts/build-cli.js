@@ -84,12 +84,34 @@ function copyRecursive(src, dest) {
 // Next.js 15 silently ignores NEXT_DIST_DIR (that env var only exists in Next 16+),
 // so the build always lands in the default ".next" directory. Detect the real output
 // dir instead of trusting the env var we pass to `next build`.
+// Next.js 15 silently ignores NEXT_DIST_DIR (that env var only exists in Next 16+),
+// so the build always lands in the default ".next" directory.
+//
+// ponytail: assumes a single app build owns appDir/.next. Two concurrent builds
+// (e.g. `next dev` + `next build`) racing over the same .next can still confuse
+// this; upgrade to Next 16 for real NEXT_DIST_DIR isolation.
 function resolveBuildDistDir(appDir, buildDistDirName) {
   const configured = path.join(appDir, buildDistDirName);
   const standard = path.join(appDir, ".next");
-  if (fs.existsSync(path.join(configured, "standalone"))) return configured;
-  if (fs.existsSync(path.join(standard, "standalone"))) return standard;
+
+  const configuredComplete = fs.existsSync(path.join(configured, "standalone", "server.js")) &&
+    fs.existsSync(path.join(configured, "server"));
+  const standardComplete = fs.existsSync(path.join(standard, "standalone", "server.js")) &&
+    fs.existsSync(path.join(standard, "server"));
+
+  // Prefer the configured dir only when it is a *complete* build; otherwise Next 15
+  // wrote to .next and the stale/absent .next-cli-build must not win.
+  if (configuredComplete && (!standardComplete || isNewer(configured, standard))) return configured;
+  if (standardComplete) return standard;
   return configured;
+}
+
+function isNewer(a, b) {
+  try {
+    return fs.statSync(path.join(a, "BUILD_ID")).mtimeMs > fs.statSync(path.join(b, "BUILD_ID")).mtimeMs;
+  } catch {
+    return false;
+  }
 }
 
 function resolveStandaloneBuild(appDir, buildDistDir) {
@@ -168,11 +190,6 @@ function buildCliPackage() {
   fs.mkdirSync(path.join(buildHomeDir, "AppData", "Roaming"), { recursive: true });
   fs.mkdirSync(path.join(buildHomeDir, "AppData", "Local"), { recursive: true });
 
-  // Next 15 ignores NEXT_DIST_DIR; resolve the real output dir after the build.
-  const actualBuildDistDir = resolveBuildDistDir(appDir, buildDistDirName);
-  if (actualBuildDistDir !== buildDistDir) {
-    console.log(`ℹ️  Next.js ignored NEXT_DIST_DIR — using ${path.basename(actualBuildDistDir)}/\n`);
-  }
   // Step 0: Sync version from app/cli/package.json to app/package.json
   console.log("0️⃣  Syncing version to app/package.json...");
   const cliPkg = JSON.parse(fs.readFileSync(path.join(cliDir, "package.json"), "utf8"));
@@ -214,6 +231,12 @@ function buildCliPackage() {
     fs.rmSync(cliAppDir, { recursive: true, force: true });
   }
   console.log("✅ Cleaned\n");
+
+  // Next 15 ignores NEXT_DIST_DIR; the real output dir can only be known *after* the build.
+  const actualBuildDistDir = resolveBuildDistDir(appDir, buildDistDirName);
+  if (actualBuildDistDir !== buildDistDir) {
+    console.log(`ℹ️  Next.js ignored NEXT_DIST_DIR — using ${path.basename(actualBuildDistDir)}/\n`);
+  }
 
   // Step 3: Copy Next.js standalone build to app/cli/app.
   // Newer Next.js standalone output writes server.js/package.json plus .next/, src/, and
