@@ -1,4 +1,4 @@
-﻿{
+{
   "($/1M tokens). Example: An input rate of 2.50 means $2.50 per 1,000,000 input tokens.": "($/1M token). Contoh: Tarif masukan 2.50 berarti $2.50 per 1.000.000 token masukan.",
   "($/1M tokens). Example: Input rate of 2.50 means $2.50 per 1,000,000 input tokens.": "($/1M token). Contoh: Tarif masukan 2.50 berarti $2.50 per 1.000.000 token masukan.",
   "(Caveman)": "(Caveman)",
@@ -37,7 +37,6 @@
   "API Key Compatible Providers": "Penyedia Kompatibel Kunci API",
   "API Key Created": "Kunci API Dibuat",
   "API Key Name": "Nama Kunci API",
-  "API Key Providers": "Penyedia Kunci API",
   "API Keys": "Kunci API",
   "API Reference": "Referensi API",
   "API Token": "Token API",
@@ -280,7 +279,6 @@
   "Connection Details": "Detail Koneksi",
   "Connection Failed": "Koneksi Gagal",
   "Connections": "Koneksi",
-  "Console Log": "Log Konsol",
   "Contact": "Kontak",
   "Content": "Konten",
   "Continue": "Lanjutkan",
@@ -673,7 +671,6 @@
   "Maximum request detail records to keep (older records are auto-deleted)": "Rekam detail permintaan maksimal untuk disimpan (rekam lama otomatis dihapus)",
   "Maximum size for each JSON field (request/response) before truncation": "Ukuran maksimum untuk setiap bidang JSON (permintaan/respons) sebelum pemotongan",
   "Maximum time to wait before flushing buffer (prevents data loss during low traffic)": "Waktu maksimum untuk menunggu sebelum mem-flush buffer (mencegah kehilangan data saat lalu lintas rendah)",
-  "Media Providers": "Penyedia Media",
   "Menu": "Menu",
   "Message AI": "Pesan AI",
   "Messages": "Pesan",
