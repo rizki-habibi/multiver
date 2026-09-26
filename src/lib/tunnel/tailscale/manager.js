@@ -2,7 +2,9 @@ import { loadState, generateShortId } from "../shared/state.js";
 import { startFunnel, stopFunnel, isTailscaleRunning, isTailscaleRunningStrict, isTailscaleLoggedIn, isTailscaleLoggedInStrict, startLogin, startDaemonWithPassword, provisionCert } from "./tailscale.js";
 import { waitForHealth } from "./healthCheck.js";
 import { getSettings, updateSettings } from "@/lib/localDb";
+import { getMultiverPort } from "@/shared/constants/config";
 import { getCachedPassword, loadEncryptedPassword, initDbHooks } from "@/mitm/manager";
+import { getMultiverPort } from "@/shared/constants/config";
 
 initDbHooks(getSettings, updateSettings);
 
@@ -20,7 +22,7 @@ function throwIfCancelled(token) {
   if (token.cancelled) throw new Error("tailscale cancelled");
 }
 
-export async function enableTailscale(localPort = 20128) {
+export async function enableTailscale(localPort = getMultiverPort()) {
   console.log(`[Tailscale] enable start (port=${localPort})`);
   svc.cancelToken = { cancelled: false };
   svc.activeLocalPort = localPort;

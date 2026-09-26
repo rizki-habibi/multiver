@@ -24,6 +24,7 @@ import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
+import { logger as centralLogger, createRequestId, redactSecrets } from "@/lib/logger";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
@@ -34,11 +35,14 @@ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
  * Format detection and translation handled by translator
  */
 export async function handleChat(request, clientRawRequest = null) {
+  // requestId correlates every log line for one request across gateway hops
+  // (provider selection, account fallback, response). Surfaced in Log Konsol.
+  const requestId = createRequestId();
   let body;
   try {
     body = await request.json();
   } catch {
-    log.warn("CHAT", "Isi JSON tidak valid");
+    centralLogger.warn("REQUEST", "Isi JSON tidak valid", { requestId });
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Isi JSON tidak valid");
   }
 
@@ -51,6 +55,11 @@ export async function handleChat(request, clientRawRequest = null) {
       headers: Object.fromEntries(request.headers.entries())
     };
   }
+
+  centralLogger.info("REQUEST", `${request.method || "POST"} ${redactSecrets(clientRawRequest.endpoint || "/v1/chat/completions")}`, {
+    requestId,
+    model: typeof body.model === "string" ? redactSecrets(body.model) : null,
+  });
   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
   // no combo, alias or provider/model pair, so it must not reach resolution.
   // The capability travels in the anthropic-beta header, forwarded as-is.
@@ -116,7 +125,7 @@ export async function handleChat(request, clientRawRequest = null) {
             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
             cleanRawReq = { ...clientRawRequest, body: cleanBody };
           }
-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, requestId);
         },
         log,
         comboName: modelStr,
@@ -131,7 +140,7 @@ export async function handleChat(request, clientRawRequest = null) {
       body,
       models: augmentedModels,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
         adapterAdded
       ),
       log,
@@ -151,7 +160,7 @@ export async function handleChat(request, clientRawRequest = null) {
       body,
       models: soloAugmented,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
         adapterAdded
       ),
       log,
@@ -160,7 +169,7 @@ export async function handleChat(request, clientRawRequest = null) {
     });
   }
 
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, requestId);
 }
 
 /**
@@ -208,7 +217,7 @@ function checkModalitySupport(provider, model, body) {
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestId = null) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -235,7 +244,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, requestId);
           },
           log,
           comboName: modelStr,
@@ -250,7 +259,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         body,
         models: augmentedModels,
         handleSingleModel: withCapacityAdapterStripping(
-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
           adapterAdded
         ),
         log,
@@ -260,6 +269,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       });
     }
     log.warn("CHAT", "Format model tidak valid", { model: modelStr });
+    centralLogger.warn("MODEL", `Format model tidak valid: ${modelStr}`, { requestId, model: modelStr });
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
   }
 
@@ -270,8 +280,11 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   const modalityError = checkModalitySupport(provider, model, body);
   if (modalityError) {
     log.warn("CHAT", `[${provider}/${model}] unsupported modality: ${modalityError.kind}`);
+    centralLogger.warn("PROVIDER", `[${provider}/${model}] modality tidak didukung: ${modalityError.kind}`, { requestId, provider, model });
     return errorResponse(HTTP_STATUS.BAD_REQUEST, modalityError.message);
   }
+
+  centralLogger.info("GATEWAY", `Provider: ${provider} | Model: ${model}`, { requestId, provider, model });
 
   // Routing shown in the unified "▶" line (client model → provider/model)
 
@@ -303,6 +316,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     }
 
     // Account selection shown in the unified "▶" line (acc:...)
+    centralLogger.info("ACCOUNT", `Account selected: ${credentials.connectionName || credentials.connectionId.slice(0, 8)}`, { requestId, provider, model });
     const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
 
     // Ensure real project ID is available for providers that need it (P0 fix: cold miss)
@@ -360,7 +374,12 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       }
     });
 
-    if (result.success) return result.response;
+    if (result.success) {
+      centralLogger.info("RESPONSE", `Request completed`, { requestId, provider, model });
+      return result.response;
+    }
+
+    centralLogger.error("ERROR", `[${provider}/${model}] ${result.status} ${redactSecrets(result.error || "")}`, { requestId, provider, model });
 
     // Antigravity 409/429: refresh live quota to get exact resetAt before locking
     let quotaResetMs = null;
@@ -381,6 +400,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
     if (shouldFallback) {
       log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} UNAVAILABLE (${result.status}) → NEXT ACCOUNT`);
+      centralLogger.warn("QUOTA", `Account unavailable (${result.status}) → fallback to next account`, { requestId, provider, model });
       excludeConnectionIds.add(credentials.connectionId);
       lastError = result.error;
       lastStatus = result.status;

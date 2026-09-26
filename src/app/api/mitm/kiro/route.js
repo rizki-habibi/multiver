@@ -14,9 +14,12 @@ import {
 } from "@/mitm/manager";
 import { getSettings, updateSettings } from "@/lib/localDb";
 
+import { NETWORK_CONFIG, getMultiverBaseUrl } from "@/shared/constants/config";
+
 initDbHooks(getSettings, updateSettings);
 
-const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20128";
+// canonical router base derived from the port SSOT (NETWORK_CONFIG)
+const DEFAULT_MITM_ROUTER_BASE = getMultiverBaseUrl("localhost");
 
 function normalizeMitmRouterBaseUrlInput(input) {
   if (input == null || String(input).trim() === "") {

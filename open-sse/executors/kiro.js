@@ -122,7 +122,7 @@ async function readResponsePrefix(response, signal, maxBytes, timeoutMs) {
       if (value.byteLength > remaining) break;
     }
   } finally {
-    await reader.cancel("bounded Kiro retry error body").catch(() => {});
+    await reader.cancel("bounded Kiro retry error body").catch(() => { });
   }
   return decoder.decode(concatChunks(chunks, totalBytes));
 }
@@ -197,12 +197,14 @@ function isShortFutureAction(value) {
 }
 
 function encodeSSEError(code, message, details) {
-  return encoder.encode(`data: ${JSON.stringify({ error: {
-    message,
-    type: "upstream_error",
-    code,
-    ...(details ? { details } : {})
-  } })}\n\ndata: [DONE]\n\n`);
+  return encoder.encode(`data: ${JSON.stringify({
+    error: {
+      message,
+      type: "upstream_error",
+      code,
+      ...(details ? { details } : {})
+    }
+  })}\n\ndata: [DONE]\n\n`);
 }
 
 function inspectSSEChunk(chunk, state) {
@@ -236,7 +238,10 @@ export class KiroExecutor extends BaseExecutor {
     const headers = {
       ...this.config.headers,
       "Amz-Sdk-Request": "attempt=1; max=3",
-      "Amz-Sdk-Invocation-Id": uuidv4()
+      "Amz-Sdk-Invocation-Id": uuidv4(),
+      // Loop protection: MITM server skips any request carrying this header,
+      // so a Kiro turn forwarded by Multiver can never be re-intercepted.
+      "x-request-source": "local",
     };
     if (url.includes("://codewhisperer.")) {
       headers["X-Amz-Target"] = KIRO_CODEWHISPERER_TARGET;
@@ -509,12 +514,12 @@ export class KiroExecutor extends BaseExecutor {
     const code = attempt.diagnostics?.terminal_provenance === "integrity_buffer_exceeded"
       ? "kiro_integrity_buffer_exceeded"
       : attempt.kind === "upstream_error"
-      ? "kiro_upstream_eventstream_error"
-      : disposition === "terminal_refusal"
-        ? "kiro_terminal_refusal"
-        : disposition === "terminal_incomplete"
-          ? "kiro_terminal_incomplete"
-          : "kiro_unknown_stop_reason";
+        ? "kiro_upstream_eventstream_error"
+        : disposition === "terminal_refusal"
+          ? "kiro_terminal_refusal"
+          : disposition === "terminal_incomplete"
+            ? "kiro_terminal_incomplete"
+            : "kiro_unknown_stop_reason";
     return encodeSSEError(code, attempt.message || "Kiro stream ended with a terminal failure", attempt.diagnostics);
   }
 
@@ -568,7 +573,7 @@ export class KiroExecutor extends BaseExecutor {
         sawChunk = true;
         totalBytes += value.byteLength;
         if (totalBytes > options.maxBytes) {
-          await reader.cancel("kiro_integrity_buffer_exceeded").catch(() => {});
+          await reader.cancel("kiro_integrity_buffer_exceeded").catch(() => { });
           return {
             kind: "terminal_stop",
             message: `Kiro integrity buffer exceeded ${options.maxBytes} bytes`,
@@ -579,7 +584,7 @@ export class KiroExecutor extends BaseExecutor {
         inspectSSEChunk(value, output);
       }
     } catch (error) {
-      await reader.cancel(error.message).catch(() => {});
+      await reader.cancel(error.message).catch(() => { });
       throw error;
     }
 
@@ -600,15 +605,15 @@ export class KiroExecutor extends BaseExecutor {
       return { kind, message: output.error?.message, diagnostics: safeDiagnostics };
     }
     if (safeDiagnostics.stop_disposition === "terminal_incomplete" ||
-        safeDiagnostics.stop_disposition === "terminal_refusal" ||
-        safeDiagnostics.stop_disposition === "unknown_failure") {
+      safeDiagnostics.stop_disposition === "terminal_refusal" ||
+      safeDiagnostics.stop_disposition === "unknown_failure") {
       const kind = safeDiagnostics.terminal_provenance === "upstream_eventstream_error"
         ? "upstream_error"
         : safeDiagnostics.terminal_provenance === "integrity_buffer_exceeded"
           ? "terminal_stop"
-        : ["metadata_stop_reason", "message_stop_event"].includes(safeDiagnostics.terminal_provenance)
-          ? "terminal_stop"
-          : "missing_terminal";
+          : ["metadata_stop_reason", "message_stop_event"].includes(safeDiagnostics.terminal_provenance)
+            ? "terminal_stop"
+            : "missing_terminal";
       return { kind, message: output.error?.message, diagnostics: safeDiagnostics };
     }
     if (output.error) {
@@ -616,7 +621,7 @@ export class KiroExecutor extends BaseExecutor {
     }
     if (!output.hasToolCalls) {
       if (isEllipsisOnly(output.content) ||
-          (!output.content.trim() && isEllipsisOnly(output.reasoning))) {
+        (!output.content.trim() && isEllipsisOnly(output.reasoning))) {
         return { kind: "ellipsis", diagnostics: safeDiagnostics };
       }
       if (isShortFutureAction(output.content)) {
@@ -785,7 +790,7 @@ export class KiroExecutor extends BaseExecutor {
       // re-derived into a repair retry -- discarding text the client had already
       // been promised.
       if (state.stopReason === "tool_use" && !state.hasToolCalls &&
-          !state.hasText && !state.hasReasoning && !state.hasCode) {
+        !state.hasText && !state.hasReasoning && !state.hasCode) {
         throw new Error("Kiro tool_use stop reason did not include a complete tool call");
       }
     };
@@ -951,7 +956,7 @@ export class KiroExecutor extends BaseExecutor {
         const totalLength = view.getUint32(0, false);
         const headersLength = view.getUint32(4, false);
         if (totalLength < 16 || totalLength > EVENTSTREAM_MAX_MESSAGE_BYTES ||
-            headersLength > EVENTSTREAM_MAX_HEADERS_BYTES || headersLength > totalLength - 16) {
+          headersLength > EVENTSTREAM_MAX_HEADERS_BYTES || headersLength > totalLength - 16) {
           fail(controller, "corrupt_eventstream_frame", "kiro_missing_terminal", "Kiro EventStream frame bounds are invalid");
           return false;
         }
@@ -1051,7 +1056,7 @@ export class KiroExecutor extends BaseExecutor {
       // A turn that also produced text keeps that text -- the dropped call is
       // logged, not fatal.
       if (state.toolValidationError && !state.hasToolCalls &&
-          !state.hasText && !state.hasReasoning && !state.hasCode) {
+        !state.hasText && !state.hasReasoning && !state.hasCode) {
         fail(
           controller,
           "invalid_tool_call",
@@ -1156,7 +1161,7 @@ export class KiroExecutor extends BaseExecutor {
             const chunksBefore = state.chunkIndex;
             const framesBefore = state.validatedFrames;
             if (!processBytes(value, controller)) {
-              await reader.cancel("invalid Kiro EventStream").catch(() => {});
+              await reader.cancel("invalid Kiro EventStream").catch(() => { });
               break;
             }
             if (state.validatedFrames > framesBefore && state.chunkIndex === chunksBefore) {
@@ -1224,8 +1229,8 @@ function parseEventFrame(data) {
     throw new Error("AWS EventStream frame length does not match its prelude");
   }
   if (totalLength > EVENTSTREAM_MAX_MESSAGE_BYTES ||
-      headersLength > EVENTSTREAM_MAX_HEADERS_BYTES ||
-      headersLength > totalLength - 16) {
+    headersLength > EVENTSTREAM_MAX_HEADERS_BYTES ||
+    headersLength > totalLength - 16) {
     throw new Error("AWS EventStream frame bounds are invalid");
   }
   if (view.getUint32(8, false) !== crc32(data.subarray(0, 8))) {

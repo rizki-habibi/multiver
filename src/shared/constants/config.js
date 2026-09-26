@@ -12,6 +12,30 @@ export const GITHUB_CONFIG = {
   changelogUrl: "https://raw.githubusercontent.com/rizki/multiver/refs/heads/main/CHANGELOG.md",
 };
 
+// ─── Network configuration (single source of truth) ────────────────────────
+// Every component (gateway, MITM router, updater, tunnels, CLI, tests, UI)
+// reads this. Change here and it propagates everywhere.
+//
+// ponytail: MITM listens on its own privileged port (443, see src/mitm/manager.js
+// MITM_PORT); MULTIVER_PORT is the gateway port MITM forwards intercepted traffic
+// to (MITM_ROUTER_BASE) and the dashboard's public endpoint.
+export const NETWORK_CONFIG = {
+  host: process.env.MULTIVER_HOST || "127.0.0.1",
+  port: Number(process.env.MULTIVER_PORT || 20222),
+  mitmPort: Number(process.env.MULTIVER_MITM_PORT || 443),
+  statusPort: Number(process.env.MULTIVER_STATUS_PORT || 20223),
+};
+
+export function getMultiverPort() {
+  return NETWORK_CONFIG.port;
+}
+
+// Canonical user-facing endpoint, e.g. http://localhost:20222
+export function getMultiverBaseUrl(host) {
+  const h = host || NETWORK_CONFIG.host;
+  return `http://${h}:${NETWORK_CONFIG.port}`;
+}
+
 // Updater configuration
 export const UPDATER_CONFIG = {
   npmPackageName: "multiver",
@@ -19,7 +43,7 @@ export const UPDATER_CONFIG = {
   installCmdLatest: "npm i -g multiver@latest --prefer-online",
   shutdownCountdownSec: 3,
   exitDelayMs: 500,
-  statusPort: 20223, // Incremented to avoid conflict with main port
+  statusPort: NETWORK_CONFIG.statusPort, // Incremented to avoid conflict with main port
   statusPollIntervalMs: 1000,
   statusLogTailLines: 8,
   installRetries: 3,
@@ -28,7 +52,7 @@ export const UPDATER_CONFIG = {
   waitForExitMinMs: 5000,
   waitForExitMaxMs: 20000,
   waitForExitCheckMs: 500,
-  appPort: 20222, // Changed from 20128 to 20222
+  appPort: NETWORK_CONFIG.port, // canonical Multiver gateway port
 };
 
 // Theme configuration

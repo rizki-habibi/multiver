@@ -13,23 +13,19 @@ const LSOF_BIN = (() => {
   return "lsof"; // last-resort fallback (depends on PATH)
 })();
 
+// Intercepted domains — Kiro is the single supported IDE target (see getToolForHost).
+// Antigravity / Copilot / Cursor interception was removed; keeping a host here
+// requires the same host in TOOL_HOSTS (dnsConfig) or DNS toggle silently no-ops.
 const TARGET_HOSTS = [
-  "daily-cloudcode-pa.googleapis.com",
-  "cloudcode-pa.googleapis.com",
-  "api.individual.githubcopilot.com",
   "q.us-east-1.amazonaws.com",
   "codewhisperer.us-east-1.amazonaws.com",
   "runtime.us-east-1.kiro.dev",
-  "api2.cursor.sh",
 ];
 
 const URL_PATTERNS = {
-  antigravity: [":generateContent", ":streamGenerateContent"],
-  copilot: ["/chat/completions", "/v1/messages", "/responses"],
   // Legacy path form. Kiro IDE 1.0.228+ posts to `/` with x-amz-target instead —
   // see isChatRequest() for the header-based match.
   kiro: ["/generateAssistantResponse"],
-  cursor: ["/BidiAppend", "/RunSSE", "/RunPoll", "/Run"],
 };
 
 /**
@@ -49,49 +45,13 @@ function isChatRequest(tool, req) {
 }
 
 // Synonym map: rawModel from request → canonical alias key in mitmAlias DB
-const MODEL_SYNONYMS = {
-  antigravity: {
-    "gemini-default": "gemini-3.5-flash-low",
-    "gemini-3.5-flash-high": "gemini-3-flash-agent",
-    "gemini-3.5-flash-medium": "gemini-3.5-flash-low",
-    "gemini-3.5-flash-extra-low": "gemini-3.5-flash-extra-low",
-    "gemini-3.8-flash": "gemini-3.8-flash-medium",
-    "gemini-3.8-flash-high": "gemini-3.8-flash-high",
-    "gemini-3.8-flash-medium": "gemini-3.8-flash-medium",
-    "gemini-3.8-flash-low": "gemini-3.8-flash-low",
-    "gemini-3.7-flash-high": "gemini-3.7-flash-high",
-    "gemini-3.7-flash-medium": "gemini-3.7-flash-medium",
-    "gemini-3.7-flash-low": "gemini-3.7-flash-low",
-    "gemini-3.1-pro-high": "gemini-pro-agent",
-    "gemini-3-pro-high": "gemini-pro-agent",
-    "gemini-3-pro-low": "gemini-3.1-pro-low",
-  },
-};
+const MODEL_SYNONYMS = {};
 
 // Pattern fallback: rawModel regex → canonical alias key (when exact + prefix match fail)
-// Order matters: more specific patterns first. Catches AG renamed variants (e.g. gemini-pro-agent)
-const MODEL_PATTERNS = {
-  antigravity: [
-    { match: /flash.*extra.*low|extra.*low.*flash|flash.*low|low.*flash/i, alias: "gemini-3.5-flash-extra-low" },
-    { match: /flash.*medium|medium.*flash/i,                       alias: "gemini-3.5-flash-low" },
-    { match: /flash.*agent|agent.*flash|flash/i,                   alias: "gemini-3-flash-agent" },
-    { match: /pro.*low|low.*pro/i,                                 alias: "gemini-3.1-pro-low" },
-    { match: /gemini.*pro|pro.*gemini/i,                           alias: "gemini-pro-agent" },
-    { match: /opus/i,                                              alias: "claude-opus-4-6-thinking" },
-    { match: /sonnet|claude/i,                                     alias: "claude-sonnet-4-6" },
-    { match: /gpt.*oss|oss/i,                                      alias: "gpt-oss-120b-medium" },
-  ],
-};
+const MODEL_PATTERNS = {};
 
-// Models that must NEVER be re-routed — always passthrough to the real upstream, even when
-// the tool's other models are mapped. Antigravity's tab-autocomplete (`tab_jump_flash_lite_preview`,
-// `tab_flash_lite_preview`, requestType tab/tab_jump) is latency-critical inline completion; routing
-// it through Multiver to an external chat model makes typing laggy and burns provider quota per
-// keystroke. Without this guard the broad `flash` pattern in MODEL_PATTERNS hijacks them onto the
-// flash-agent slot. Verified via MITM dump capture of streamGenerateContent (see AI_JOURNAL).
-const MODEL_NO_MAP = {
-  antigravity: [/^tab[_-]/i],
-};
+// Models that must NEVER be re-routed — always passthrough to the real upstream.
+const MODEL_NO_MAP = {};
 
 // URL substrings whose request/response should NOT be dumped to file (telemetry, polling, empty)
 const LOG_BLACKLIST_URL_PARTS = [
@@ -104,10 +64,7 @@ const LOG_BLACKLIST_URL_PARTS = [
 
 function getToolForHost(host) {
   const h = (host || "").split(":")[0];
-  if (h === "api.individual.githubcopilot.com") return "copilot";
-  if (h === "daily-cloudcode-pa.googleapis.com" || h === "cloudcode-pa.googleapis.com") return "antigravity";
   if (h === "q.us-east-1.amazonaws.com" || h === "codewhisperer.us-east-1.amazonaws.com" || h === "runtime.us-east-1.kiro.dev") return "kiro";
-  if (h === "api2.cursor.sh") return "cursor";
   return null;
 }
 

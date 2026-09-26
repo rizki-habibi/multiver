@@ -99,13 +99,14 @@ async function tryGotScrapingFetch(url, options) {
 
 // DNS cache — use Map to avoid prototype pollution via malformed hostnames
 const DNS_CACHE = new Map();
+// Hosts intercepted by the local Kiro MITM proxy (see src/mitm/config.js TARGET_HOSTS).
+// Outbound requests from Multiver to these hosts must resolve the REAL IP via public
+// DNS instead of trusting /etc/hosts — otherwise the request re-enters our own MITM
+// and loops. Must stay in sync with TOOL_HOSTS (src/shared/constants/mitmToolHosts.js).
 const MITM_BYPASS_HOSTS = [
-  "cloudcode-pa.googleapis.com",
-  "daily-cloudcode-pa.googleapis.com",
-  "api.individual.githubcopilot.com",
+  "runtime.us-east-1.kiro.dev",
   "q.us-east-1.amazonaws.com",
   "codewhisperer.us-east-1.amazonaws.com",
-  "api2.cursor.sh",
 ];
 const GOOGLE_DNS_SERVERS = ["8.8.8.8", "8.8.4.4"];
 const HTTPS_PORT = 443;

@@ -17,7 +17,14 @@ const { DATA_DIR, MITM_DIR } = require("./paths");
 const { log, err } = require("./logger");
 const { LSOF_BIN } = require("./config");
 
-const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20222";
+// Gateway port (SSOT). src/mitm is CommonJS and runs standalone outside Next,
+// so it reads the same env the CLI/parent sets rather than importing the ESM
+// config module. Defaults mirror src/shared/constants/config.js NETWORK_CONFIG.
+const MULTIVER_PORT = Number(process.env.MULTIVER_PORT || 20222);
+
+// Canonical router base: where intercepted traffic is forwarded (Multiver gateway).
+const DEFAULT_MITM_ROUTER_BASE = process.env.MITM_ROUTER_BASE
+  || `http://localhost:${MULTIVER_PORT}`;
 
 function shellQuoteSingle(str) {
   if (str == null || str === "") return "''";
@@ -38,8 +45,8 @@ async function resolveMitmRouterBaseUrl() {
   }
 }
 
-const MITM_PORT = 443;
-const MITM_WIN_NODE_PORT = 8443;
+const MITM_PORT = Number(process.env.MULTIVER_MITM_PORT || 443);
+const MITM_WIN_NODE_PORT = 8443; // legacy, unused
 const PID_FILE = path.join(MITM_DIR, ".mitm.pid");
 const LOCK_FILE = path.join(MITM_DIR, ".mitm.lock");
 

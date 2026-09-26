@@ -7,11 +7,10 @@ const dns = require("dns");
 const { promisify } = require("util");
 const { execSync } = require("child_process");
 const { log, err, dumpRequest, createResponseDumper, clearDumpDir } = require("./logger");
-const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, MODEL_NO_MAP, getToolForHost, isChatRequest, extractModel } = require("./config");
+const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, getToolForHost, isChatRequest, extractModel } = require("./config");
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { generateCert, getCertForDomain } = require("./cert/generate");
 const { getMitmAlias } = require("./dbReader");
-const { applyAntigravityIdeVersionOverride } = require("./antigravityIdeVersion");
 const LOCAL_PORT = 443;
 const IS_WIN = process.platform === "win32";
 const ENABLE_FILE_LOG = IS_DEV;
@@ -20,18 +19,40 @@ const ENABLE_FILE_LOG = IS_DEV;
 clearDumpDir();
 const INTERNAL_REQUEST_HEADER = { name: "x-request-source", value: "local" };
 
-// Host rewrite for upstream forward: PROD cloudcode-pa is rate-limited (429),
-// daily-cloudcode-pa (dev endpoint) accepts same body+token. Same trick as open-sse.
-const HOST_REWRITE = {
-  "cloudcode-pa.googleapis.com": "daily-cloudcode-pa.googleapis.com",
-};
+// Host rewrite for upstream forward. Left as a map so a future target can be
+// remapped without touching passthrough() again.
+const HOST_REWRITE = {};
 
 const handlers = {
-  antigravity: require("./handlers/antigravity"),
-  copilot: require("./handlers/copilot"),
   kiro: require("./handlers/kiro"),
-  cursor: require("./handlers/cursor"),
 };
+
+// ── Runtime stats — the proof that interception actually works ───────────────
+// Written by the request handler on every intercepted chat turn; read by
+// /api/mitm/kiro/diagnostics so the dashboard never says "RUNNING" without it.
+// Written to PID_FILE-adjacent JSON so a restarted Next process still sees counts.
+const STATS_FILE = path.join(DATA_DIR, "logs", "mitm", "stats.json");
+const runtimeStats = { intercepted: 0, lastInterceptAt: null, lastModel: null };
+
+function loadStats() {
+  try {
+    if (fs.existsSync(STATS_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(STATS_FILE, "utf-8"));
+      runtimeStats.intercepted = Number(raw.intercepted) || 0;
+      runtimeStats.lastInterceptAt = raw.lastInterceptAt || null;
+      runtimeStats.lastModel = raw.lastModel || null;
+    }
+  } catch { /* corrupt stats file is not fatal */ }
+}
+
+function persistStats() {
+  try {
+    fs.mkdirSync(path.dirname(STATS_FILE), { recursive: true });
+    fs.writeFileSync(STATS_FILE, JSON.stringify(runtimeStats, null, 2));
+  } catch { /* best effort */ }
+}
+
+loadStats();
 
 // ── SSL / SNI ─────────────────────────────────────────────────
 
@@ -101,14 +122,14 @@ function getMappedModel(tool, model) {
   try {
     const aliases = getMitmAlias(tool);
     if (!aliases) return null;
-    // Normalize via synonym map (e.g., public AG names -> backend model ids)
+    // Normalize via synonym map (e.g., public model names -> backend model ids)
     const normalizedModel = String(model).replace(/^models\//, "");
     const lookup = MODEL_SYNONYMS?.[tool]?.[normalizedModel] || normalizedModel;
     if (aliases[lookup]) return aliases[lookup];
     // Prefix match fallback
     const prefixKey = Object.keys(aliases).find(k => k && aliases[k] && (lookup.startsWith(k) || k.startsWith(lookup)));
     if (prefixKey) return aliases[prefixKey];
-    // Pattern fallback: catches AG renamed variants (e.g. deprecated pro IDs → gemini-pro-agent)
+    // Pattern fallback: catches renamed variants (e.g. deprecated pro IDs → gemini-pro-agent)
     const patterns = MODEL_PATTERNS?.[tool] || [];
     for (const { match, alias } of patterns) {
       if (match.test(lookup) && aliases[alias]) return aliases[alias];
@@ -131,14 +152,8 @@ async function passthrough(req, res, bodyBuffer, onResponse) {
   const dumper = ENABLE_FILE_LOG ? createResponseDumper(req, "passthrough") : null;
 
   const tool = getToolForHost(req.headers.host);
-  const versionOverride = tool === "antigravity"
-    ? applyAntigravityIdeVersionOverride(bodyBuffer, req.headers, req.url)
-    : { bodyBuffer, headers: req.headers };
-  const bodyForForwarding = versionOverride.bodyBuffer;
-  const headersForForwarding = { ...versionOverride.headers, host: targetHost };
-  if (bodyForForwarding !== bodyBuffer) {
-    headersForForwarding["content-length"] = String(bodyForForwarding.length);
-  }
+  const bodyForForwarding = bodyBuffer;
+  const headersForForwarding = { ...req.headers, host: targetHost };
 
   // ALPN negotiate: try HTTP/2 first (like browsers/mitmweb), fallback HTTP/1.1
   try {
@@ -182,7 +197,7 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
   for (const [k, v] of Object.entries(headers)) {
     const lk = k.toLowerCase();
     if (lk === "host" || lk === "connection" || lk === "keep-alive" ||
-        lk === "transfer-encoding" || lk === "upgrade" || lk === "proxy-connection") continue;
+      lk === "transfer-encoding" || lk === "upgrade" || lk === "proxy-connection") continue;
     h2Headers[lk] = v;
   }
   h2Headers[":method"] = req.method;
@@ -202,7 +217,7 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       if (dumper) { dumper.writeChunk(`\n[ERROR h2] ${e.message}\n`); dumper.end(); }
       if (!res.headersSent) res.writeHead(502);
       if (!res.writableEnded) res.end("Bad Gateway");
-      try { client.close(); } catch {}
+      try { client.close(); } catch { }
       resolve();
     });
 
@@ -230,8 +245,8 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       stream.on("end", () => {
         if (dumper) dumper.end();
         if (!res.writableEnded) res.end();
-        if (onResponse) try { onResponse(Buffer.concat(chunks), outHeaders); } catch {}
-        try { client.close(); } catch {}
+        if (onResponse) try { onResponse(Buffer.concat(chunks), outHeaders); } catch { }
+        try { client.close(); } catch { }
         resolve();
       });
     });
@@ -240,7 +255,7 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       if (dumper) { dumper.writeChunk(`\n[ERROR h2-stream] ${e.message}\n`); dumper.end(); }
       if (!res.headersSent) res.writeHead(502);
       if (!res.writableEnded) res.end();
-      try { client.close(); } catch {}
+      try { client.close(); } catch { }
       resolve();
     });
   });
@@ -296,7 +311,13 @@ const server = https.createServer(sslOptions, async (req, res) => {
   try {
     if (req.url === "/_mitm_health") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, pid: process.pid }));
+      res.end(JSON.stringify({
+        ok: true,
+        pid: process.pid,
+        stats: runtimeStats,
+        target: "kiro",
+        gatewayPort: Number(process.env.MULTIVER_PORT || 20222),
+      }));
       return;
     }
 
@@ -314,25 +335,21 @@ const server = https.createServer(sslOptions, async (req, res) => {
     // Kiro IDE posts chat to `/` with x-amz-target (not path /generateAssistantResponse)
     if (!isChatRequest(tool, req)) return passthrough(req, res, bodyBuffer);
 
-    // Cursor uses binary proto — model extraction not possible at this layer.
-    // Delegate directly to handler which decodes proto internally.
-    if (tool === "cursor") {
-      return handlers[tool].intercept(req, res, bodyBuffer, null, passthrough);
-    }
-
     const model = extractModel(req.url, bodyBuffer);
-
-    // Intentional passthrough: some models must never be re-routed (e.g. Antigravity
-    // tab-autocomplete) so latency-critical inline completion stays native. Silent — this
-    // is by design, not a leak, and fires per keystroke. See MODEL_NO_MAP in config.js.
-    if (model && (MODEL_NO_MAP[tool] || []).some((re) => re.test(model))) {
-      return passthrough(req, res, bodyBuffer);
-    }
 
     const mappedModel = getMappedModel(tool, model);
     if (!mappedModel) {
+      log(`[mitm] ${req.headers.host}${req.url} model=${model || "?"} → passthrough (no alias mapping)`);
       return passthrough(req, res, bodyBuffer);
     }
+
+    // Traffic proof: bump the counter before handing off to the handler so a
+    // crash downstream still counts as "Kiro traffic detected".
+    runtimeStats.intercepted += 1;
+    runtimeStats.lastInterceptAt = new Date().toISOString();
+    runtimeStats.lastModel = model || null;
+    persistStats();
+    log(`🛰 [mitm] kiro intercepted model=${model || "?"} → ${mappedModel}`);
 
     return handlers[tool].intercept(req, res, bodyBuffer, mappedModel, passthrough);
   } catch (e) {

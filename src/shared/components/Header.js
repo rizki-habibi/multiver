@@ -74,8 +74,8 @@ const getPageInfo = (pathname) => {
     };
   if (pathname.includes("/mitm"))
     return {
-      title: "Proksi MITM",
-      description: "Sadap lalu lintas alat CLI dan rutekan melalui Multiver",
+      title: "Kiro MITM",
+      description: "Sadap lalu lintas Kiro IDE dan rutekan melalui Multiver",
       icon: "security",
       breadcrumbs: [],
     };
@@ -84,13 +84,6 @@ const getPageInfo = (pathname) => {
       title: "Penghemat Token",
       description: "Kompres permintaan dan keluaran untuk menghemat token",
       icon: "savings",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/cli-tools"))
-    return {
-      title: "Alat CLI",
-      description: "Konfigurasi alat CLI",
-      icon: "terminal",
       breadcrumbs: [],
     };
   if (pathname.includes("/cloud"))

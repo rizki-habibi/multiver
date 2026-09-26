@@ -10,7 +10,10 @@ const fs = require("fs");
 const os = require("os");
 
 const packageName = process.env.UPDATER_PKG_NAME || "Multiver";
-const port = parseInt(process.env.UPDATER_PORT || "20129", 10);
+// ponytail: updater runs standalone (CJS, outside Next), so it can't import the
+// NETWORK_CONFIG SSOT. Env UPDATER_PORT is set by the CLI/parent from
+// NETWORK_CONFIG.statusPort. Defaults keep in sync with NETWORK_CONFIG.
+const port = parseInt(process.env.UPDATER_PORT || "20223", 10);
 const tailLines = parseInt(process.env.UPDATER_TAIL_LINES || "8", 10);
 const maxRetries = parseInt(process.env.UPDATER_RETRIES || "3", 10);
 const retryDelayMs = parseInt(process.env.UPDATER_RETRY_DELAY_MS || "5000", 10);

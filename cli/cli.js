@@ -620,7 +620,12 @@ function startServer(updatePromise) {
       env: {
         ...buildEnvWithRuntime(process.env),
         PORT: port.toString(),
-        HOSTNAME: host
+        HOSTNAME: host,
+        // Propagate port SSOT to child processes (Next server, MITM server).
+        // src/mitm/* reads these to build MITM_ROUTER_BASE.
+        MULTIVER_PORT: port.toString(),
+        MULTIVER_HOST: host,
+        MULTIVER_MITM_PORT: "443",
       }
     });
     if (!showLog && child.stderr) {

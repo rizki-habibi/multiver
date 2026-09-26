@@ -57,7 +57,7 @@ describe("parseArgs", () => {
     expect(opts.prompt).toBe("hi");
     expect(opts.model).toBe("xai/grok-imagine-video");
     expect(opts.output).toBe("video.mp4");
-    expect(opts.port).toBe(20128);
+    expect(opts.port).toBe(20222);
   });
 
   it("parses all documented flags", () => {
@@ -174,7 +174,7 @@ describe("run (against a mock gateway)", () => {
 
     const output = path.join(tmpDir, "nope.mp4");
     const errors = [];
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => { });
     vi.spyOn(console, "error").mockImplementation((...a) => errors.push(a.join(" ")));
 
     const code = await run([
@@ -195,7 +195,7 @@ describe("run (against a mock gateway)", () => {
       res.end(req.method === "POST" ? JSON.stringify({ request_id: "job-slow" }) : JSON.stringify({ status: "pending", progress: 1 }));
     }));
 
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => { });
     const errors = [];
     vi.spyOn(console, "error").mockImplementation((...a) => errors.push(a.join(" ")));
 
@@ -215,7 +215,7 @@ describe("run (against a mock gateway)", () => {
       res.end(JSON.stringify({ error: { message: "No credentials for provider: xai", type: "invalid_request_error" } }));
     }));
 
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => { });
     const errors = [];
     vi.spyOn(console, "error").mockImplementation((...a) => errors.push(a.join(" ")));
 
