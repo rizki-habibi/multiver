@@ -79,6 +79,13 @@ const getPageInfo = (pathname) => {
       icon: "security",
       breadcrumbs: [],
     };
+  if (pathname.includes("/console-log"))
+    return {
+      title: "Log Konsol",
+      description: "Pantau alur MITM Kiro secara real-time",
+      icon: "terminal",
+      breadcrumbs: [],
+    };
   if (pathname.includes("/token-saver"))
     return {
       title: "Penghemat Token",

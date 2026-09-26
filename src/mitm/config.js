@@ -45,10 +45,32 @@ function isChatRequest(tool, req) {
 }
 
 // Synonym map: rawModel from request → canonical alias key in mitmAlias DB
-const MODEL_SYNONYMS = {};
+const MODEL_SYNONYMS = {
+  kiro: {
+    "simple_task": "simple-task",
+    "simpletask": "simple-task",
+    "qwen3-coder-next": "simple-task",
+    "claude-sonnet-4-5": "claude-sonnet-4.5",
+    "claude-haiku-4-5": "claude-haiku-4.5",
+    "claude-sonnet-5-latest": "claude-sonnet-5",
+  },
+};
 
 // Pattern fallback: rawModel regex → canonical alias key (when exact + prefix match fail)
-const MODEL_PATTERNS = {};
+const MODEL_PATTERNS = {
+  kiro: [
+    { match: /^auto$/i, alias: "auto" },
+    { match: /^simple[-_]?task$/i, alias: "simple-task" },
+    { match: /^claude-sonnet-5/i, alias: "claude-sonnet-5" },
+    { match: /^claude-sonnet-4(?:[.-]?5)?/i, alias: "claude-sonnet-4.5" },
+    { match: /^claude-haiku-4(?:[.-]?5)?/i, alias: "claude-haiku-4.5" },
+    { match: /^deepseek-3(?:[.-]?2)?/i, alias: "deepseek-3.2" },
+    { match: /^minimax-m2(?:[.-]?1)?/i, alias: "minimax-m2.1" },
+    { match: /^gpt-5(?:[.-]?6)?-sol/i, alias: "gpt-5.6-sol" },
+    { match: /^gpt-5(?:[.-]?6)?-terra/i, alias: "gpt-5.6-terra" },
+    { match: /^gpt-5(?:[.-]?6)?-luna/i, alias: "gpt-5.6-luna" },
+  ],
+};
 
 // Models that must NEVER be re-routed — always passthrough to the real upstream.
 const MODEL_NO_MAP = {};

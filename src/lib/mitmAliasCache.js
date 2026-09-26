@@ -26,8 +26,10 @@ export async function syncToJson() {
     const { getMitmAlias } = await import("@/lib/db/repos/aliasRepo.js");
     const all = await getMitmAlias();
     writeAtomic(all || {});
+    return { success: true, database: true, cache: true };
   } catch (e) {
-    console.log("[mitmAliasCache] sync failed:", e.message);
+    console.error("[mitmAliasCache] sync failed:", e.message);
+    return { success: false, database: false, cache: false, error: e.message };
   }
 }
 
@@ -40,7 +42,9 @@ export function writeAliasForTool(tool, mappings) {
     }
     current[tool] = mappings || {};
     writeAtomic(current);
+    return { success: true, cache: true };
   } catch (e) {
-    console.log("[mitmAliasCache] write failed:", e.message);
+    console.error("[mitmAliasCache] write failed:", e.message);
+    return { success: false, cache: false, error: e.message };
   }
 }

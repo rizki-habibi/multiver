@@ -7,7 +7,8 @@ const dns = require("dns");
 const { promisify } = require("util");
 const { execSync } = require("child_process");
 const { log, err, dumpRequest, createResponseDumper, clearDumpDir } = require("./logger");
-const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, getToolForHost, isChatRequest, extractModel } = require("./config");
+const { emitMitmLog } = require("./consoleLog");
+const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, getToolForHost, isChatRequest, extractModel } = require("./config");
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { generateCert, getCertForDomain } = require("./cert/generate");
 const { getMitmAlias } = require("./dbReader");
@@ -121,21 +122,37 @@ function getMappedModel(tool, model) {
   if (!model) return null;
   try {
     const aliases = getMitmAlias(tool);
-    if (!aliases) return null;
+    if (!aliases) {
+      log(`[MITM][${tool}] aliases tidak ditemukan`);
+      return null;
+    }
     // Normalize via synonym map (e.g., public model names -> backend model ids)
     const normalizedModel = String(model).replace(/^models\//, "");
     const lookup = MODEL_SYNONYMS?.[tool]?.[normalizedModel] || normalizedModel;
-    if (aliases[lookup]) return aliases[lookup];
+    if (aliases[lookup]) {
+      log(`[MITM][${tool}] alias ${lookup} -> ${aliases[lookup]}`);
+      return aliases[lookup];
+    }
     // Prefix match fallback
     const prefixKey = Object.keys(aliases).find(k => k && aliases[k] && (lookup.startsWith(k) || k.startsWith(lookup)));
-    if (prefixKey) return aliases[prefixKey];
+    if (prefixKey) {
+      log(`[MITM][${tool}] prefix ${lookup} -> ${aliases[prefixKey]}`);
+      return aliases[prefixKey];
+    }
     // Pattern fallback: catches renamed variants (e.g. deprecated pro IDs → gemini-pro-agent)
     const patterns = MODEL_PATTERNS?.[tool] || [];
     for (const { match, alias } of patterns) {
-      if (match.test(lookup) && aliases[alias]) return aliases[alias];
+      if (match.test(lookup) && aliases[alias]) {
+        log(`[MITM][${tool}] pattern ${lookup} -> ${aliases[alias]}`);
+        return aliases[alias];
+      }
     }
+    log(`[MITM][${tool}] alias tidak ditemukan untuk model=${lookup}`);
     return null;
-  } catch { return null; }
+  } catch (error) {
+    err(`[MITM][${tool}] alias resolver error: ${error.message}`);
+    return null;
+  }
 }
 
 /**
@@ -335,23 +352,75 @@ const server = https.createServer(sslOptions, async (req, res) => {
     // Kiro IDE posts chat to `/` with x-amz-target (not path /generateAssistantResponse)
     if (!isChatRequest(tool, req)) return passthrough(req, res, bodyBuffer);
 
+    const requestId = `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const startedAt = Date.now();
+    const target = String(req.headers?.["x-amz-target"] || "");
     const model = extractModel(req.url, bodyBuffer);
-
-    const mappedModel = getMappedModel(tool, model);
-    if (!mappedModel) {
-      log(`[mitm] ${req.headers.host}${req.url} model=${model || "?"} → passthrough (no alias mapping)`);
-      return passthrough(req, res, bodyBuffer);
-    }
-
     // Traffic proof: bump the counter before handing off to the handler so a
     // crash downstream still counts as "Kiro traffic detected".
     runtimeStats.intercepted += 1;
     runtimeStats.lastInterceptAt = new Date().toISOString();
     runtimeStats.lastModel = model || null;
     persistStats();
+    emitMitmLog({
+      level: "info",
+      source: "MITM",
+      tool,
+      event: "mitm.request",
+      message: "Kiro request intercepted",
+      requestId,
+      host: req.headers.host || null,
+      target,
+      model: model || null,
+      alias: String(model || "").replace(/^models\//, "") || null,
+    });
+
+    const mappedModel = getMappedModel(tool, model);
+    if (!mappedModel) {
+      emitMitmLog({
+        level: "warning",
+        source: "MITM",
+        tool,
+        event: "mitm.route",
+        message: "Alias tidak ditemukan, request passthrough",
+        requestId,
+        model: model || null,
+        alias: String(model || "").replace(/^models\//, "") || null,
+        mappedModel: "NONE",
+        route: "PASSTHROUGH",
+        reason: "ALIAS_NOT_FOUND",
+        durationMs: Date.now() - startedAt,
+      });
+      log(`[mitm] ${req.headers.host}${req.url} model=${model || "?"} → passthrough (no alias mapping)`);
+      return passthrough(req, res, bodyBuffer);
+    }
+
+    const gateway = String(process.env.MITM_ROUTER_BASE || `http://127.0.0.1:${Number(process.env.MULTIVER_PORT || 20222)}`);
+    emitMitmLog({
+      level: "info",
+      source: "MITM",
+      tool,
+      event: "mitm.mapping",
+      message: "Model mapping resolved",
+      requestId,
+      model: model || null,
+      alias: String(model || "").replace(/^models\//, "") || null,
+      mappedModel,
+      route: "MULTIVER",
+      gateway,
+    });
     log(`🛰 [mitm] kiro intercepted model=${model || "?"} → ${mappedModel}`);
 
-    return handlers[tool].intercept(req, res, bodyBuffer, mappedModel, passthrough);
+    return handlers[tool].intercept(req, res, bodyBuffer, mappedModel, passthrough, {
+      requestId,
+      tool,
+      host: req.headers.host || null,
+      target,
+      model: model || null,
+      alias: String(model || "").replace(/^models\//, "") || null,
+      gateway,
+      startedAt,
+    });
   } catch (e) {
     err(`Unhandled error: ${e.message}`);
     if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
@@ -396,7 +465,17 @@ try {
   process.exit(1);
 }
 
-server.listen(LOCAL_PORT, () => log(`🚀 Server ready on :${LOCAL_PORT}`));
+server.listen(LOCAL_PORT, () => {
+  log(`🚀 Server ready on :${LOCAL_PORT}`);
+  emitMitmLog({
+    level: "info",
+    source: "MITM",
+    tool: "kiro",
+    event: "mitm.started",
+    message: "MITM server ready",
+    status: "RUNNING",
+  });
+});
 
 server.on("error", (e) => {
   if (e.code === "EADDRINUSE") err(`Port ${LOCAL_PORT} already in use`);
@@ -410,6 +489,14 @@ let isShuttingDown = false;
 const shutdown = () => {
   if (isShuttingDown) return;
   isShuttingDown = true;
+  emitMitmLog({
+    level: "info",
+    source: "MITM",
+    tool: "kiro",
+    event: "mitm.stopped",
+    message: "MITM shutdown signal received",
+    status: "STOPPED",
+  });
   // Strip tool hosts from /etc/hosts so other apps aren't broken after exit
   removeAllDNSEntriesSync();
   const forceExit = setTimeout(() => process.exit(0), 1500);
