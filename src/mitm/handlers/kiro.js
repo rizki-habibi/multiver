@@ -1,4 +1,5 @@
 ﻿const { err } = require("../logger");
+const { emitMitmLog } = require("../consoleLog");
 const { IS_DEV } = require("../config");
 const { fetchRouter, pipeTransformedEventStream } = require("./base");
 const fs = require("fs");
@@ -515,7 +516,9 @@ function emitFinish(state) {
  * @param {Buffer} bodyBuffer - Request body buffer
  * @param {string} mappedModel - Model name after MITM alias mapping
  */
-async function intercept(req, res, bodyBuffer, mappedModel) {
+async function intercept(req, res, bodyBuffer, mappedModel, _passthrough, context = {}) {
+  const startedAt = Number(context.startedAt) || Date.now();
+  const requestId = context.requestId || null;
   try {
     // Detect and handle binary data (e.g., continuation requests with EventStream frames)
     if (isBinaryEventStream(bodyBuffer)) {
@@ -543,14 +546,73 @@ async function intercept(req, res, bodyBuffer, mappedModel) {
     };
 
     // 3: Forward to Multiver
+    emitMitmLog({
+      level: "info",
+      source: "MITM",
+      tool: context.tool || "kiro",
+      event: "mitm.gateway",
+      message: "Routing request to Multiver gateway",
+      requestId,
+      model: context.model || null,
+      alias: context.alias || null,
+      mappedModel,
+      route: "MULTIVER",
+      gateway: context.gateway || null,
+    });
     const routerRes = await fetchRouter(openaiBody, "/v1/chat/completions", req.headers);
+    if (!routerRes.ok) {
+      emitMitmLog({
+        level: "error",
+        source: "MITM",
+        tool: context.tool || "kiro",
+        event: "mitm.error",
+        message: "Gateway returned non-2xx response",
+        requestId,
+        model: context.model || null,
+        mappedModel,
+        route: "MULTIVER",
+        gateway: context.gateway || null,
+        status: `HTTP_${routerRes.status}`,
+        durationMs: Date.now() - startedAt,
+      });
+    }
 
     // 4 + 5: Re-encode response as AWS EventStream binary using standard pipeline
     const state = initKiroState(mappedModel);
 
     await pipeTransformedEventStream(routerRes, res, convertOpenAIToKiro, state);
+    emitMitmLog({
+      level: "success",
+      source: "MITM",
+      tool: context.tool || "kiro",
+      event: "mitm.response",
+      message: "Response returned to Kiro",
+      requestId,
+      model: context.model || null,
+      mappedModel,
+      route: "MULTIVER",
+      gateway: context.gateway || null,
+      status: "SUCCESS",
+      durationMs: Date.now() - startedAt,
+    });
   } catch (error) {
     err(`[Kiro MITM] Request processing failed: ${error.message}`);
+    emitMitmLog({
+      level: "error",
+      source: "MITM",
+      tool: context.tool || "kiro",
+      event: "mitm.error",
+      message: "Kiro request failed",
+      requestId,
+      model: context.model || null,
+      alias: context.alias || null,
+      mappedModel: mappedModel || null,
+      route: mappedModel ? "MULTIVER" : "PASSTHROUGH",
+      gateway: context.gateway || null,
+      status: "ERROR",
+      error: error.message,
+      durationMs: Date.now() - startedAt,
+    });
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
     }

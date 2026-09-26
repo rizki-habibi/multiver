@@ -56,11 +56,16 @@ export default function MitmToolCard({
 
   const saveMappings = useCallback(async (mappings) => {
     try {
-      await fetch("/api/mitm/kiro/alias", {
+      const res = await fetch("/api/mitm/kiro/alias", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tool: tool.id, mappings }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to save mappings");
+      if (data.cache === false) {
+        setWarning("Alias tersimpan di database, tetapi cache aliases.json gagal diperbarui");
+      }
     } catch { /* ignore */ }
   }, [tool.id]);
 

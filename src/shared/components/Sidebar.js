@@ -26,7 +26,7 @@ const debugItems = [
 
 const operationalItems = [
   { href: "/dashboard/mitm", label: "Kiro MITM", icon: "security" },
-  { href: "/dashboard/logs", label: "Log Konsol", icon: "console" },
+  { href: "/dashboard/console-log", label: "Log Konsol", icon: "terminal" },
   { href: "/dashboard/diagnostics", label: "Diagnostik", icon: "health_and_safety" },
   { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
 ];

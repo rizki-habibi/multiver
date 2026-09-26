@@ -78,8 +78,8 @@ export const API_ENDPOINTS = {
 };
 
 export const CONSOLE_LOG_CONFIG = {
-  maxLines: 200,
-  pollIntervalMs: 1000,
+  maxLines: 100,
+  pollIntervalMs: 1500,
 };
 
 // Client-side store TTL: how long fetched data stays fresh before re-fetching
@@ -130,4 +130,3 @@ export {
   PROVIDER_MODELS,
   AI_MODELS,
 } from "./models.js";
-
