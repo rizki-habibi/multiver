@@ -83,6 +83,21 @@ export default function MitmPageClient() {
         </p>
       </div>
 
+      {/* Step 0: launch Kiro IDE once MITM is armed, so it picks up the CA + DNS */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-text-muted">
+          Setelah MITM berjalan dan CA terpasang, buka Kiro IDE agar request-nya lewat MITM ke Multiver (port 20222).
+        </p>
+        <a
+          href="kiro://"
+          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:opacity-90 inline-flex items-center gap-1.5 transition-opacity shrink-0"
+          title="Luncurkan Kiro IDE via custom protocol"
+        >
+          <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+          Buka Kiro IDE
+        </a>
+      </div>
+
       {/* MITM Server Card */}
       <MitmServerCard
         apiKeys={apiKeys}

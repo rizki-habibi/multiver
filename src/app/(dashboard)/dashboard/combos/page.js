@@ -49,6 +49,7 @@ function normalizeCapEntry(entry) {
 const STRATEGY_OPTIONS = [
   { value: "fallback", label: "Fallback — try in order" },
   { value: "round-robin", label: "Round Robin — rotate" },
+  { value: "max", label: "MAX — all models in parallel" },
   { value: "fusion", label: "Fusion — panel + judge" },
 ];
 
@@ -371,6 +372,7 @@ export default function CombosPage() {
           <ul className="text-sm text-text-muted mt-2 flex flex-col gap-1">
             <li><span className="font-medium text-text-main">Fallback</span> — tries models in order (next on failure)</li>
             <li><span className="font-medium text-text-main">Round Robin</span> — rotates models across requests to spread load</li>
+            <li><span className="font-medium text-text-main">MAX</span> — runs ALL models in parallel, preserving each response (partial success allowed)</li>
             <li><span className="font-medium text-text-main">Fusion</span> — queries all models in parallel, then a judge synthesizes one answer. Best quality, but costs the most: every request bills all panel models + the judge (N+1 calls)</li>
           </ul>
           <p className="hidden text-xs text-text-muted mt-3 max-w-2xl">
@@ -876,9 +878,9 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
         title="Drag to reorder"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="9" cy="4" r="2"/><circle cx="15" cy="4" r="2"/>
-          <circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/>
-          <circle cx="9" cy="20" r="2"/><circle cx="15" cy="20" r="2"/>
+          <circle cx="9" cy="4" r="2" /><circle cx="15" cy="4" r="2" />
+          <circle cx="9" cy="12" r="2" /><circle cx="15" cy="12" r="2" />
+          <circle cx="9" cy="20" r="2" /><circle cx="15" cy="20" r="2" />
         </svg>
       </button>
 
@@ -1069,30 +1071,30 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
                 <p className="text-xs text-text-muted">No models added yet</p>
               </div>
             ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
-              <SortableContext items={modelItems.map((m) => m.uid)} strategy={verticalListSortingStrategy}>
-                <div className="flex max-h-[55vh] min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[350px]">
-                  {modelItems.map(({ uid, model }, index) => (
-                    <ModelItem
-                      key={uid}
-                      id={uid}
-                      index={index}
-                      model={model}
-                      isFirst={index === 0}
-                      isLast={index === modelItems.length - 1}
-                      onEdit={(newVal) => {
-                        const updated = [...models];
-                        updated[index] = newVal;
-                        setModels(updated);
-                      }}
-                      onMoveUp={() => handleMoveUp(index)}
-                      onMoveDown={() => handleMoveDown(index)}
-                      onRemove={() => handleRemoveModel(index)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
+                <SortableContext items={modelItems.map((m) => m.uid)} strategy={verticalListSortingStrategy}>
+                  <div className="flex max-h-[55vh] min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[350px]">
+                    {modelItems.map(({ uid, model }, index) => (
+                      <ModelItem
+                        key={uid}
+                        id={uid}
+                        index={index}
+                        model={model}
+                        isFirst={index === 0}
+                        isLast={index === modelItems.length - 1}
+                        onEdit={(newVal) => {
+                          const updated = [...models];
+                          updated[index] = newVal;
+                          setModels(updated);
+                        }}
+                        onMoveUp={() => handleMoveUp(index)}
+                        onMoveDown={() => handleMoveDown(index)}
+                        onRemove={() => handleRemoveModel(index)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
 
             {/* Add Model button */}

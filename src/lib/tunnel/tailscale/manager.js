@@ -4,7 +4,6 @@ import { waitForHealth } from "./healthCheck.js";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { getMultiverPort } from "@/shared/constants/config";
 import { getCachedPassword, loadEncryptedPassword, initDbHooks } from "@/mitm/manager";
-import { getMultiverPort } from "@/shared/constants/config";
 
 initDbHooks(getSettings, updateSettings);
 

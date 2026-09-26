@@ -1,17 +1,19 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, lazy } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { UsageStats, RequestLogger, CardSkeleton, SegmentedControl } from "@/shared/components";
 import RequestDetailsTab from "./components/RequestDetailsTab";
+import ConsoleTab from "./components/ConsoleTab";
+import KeyValidationTab from "./components/KeyValidationTab";
 
 const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "24h", label: "24h" },
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-  { value: "60d", label: "60D" },
-  { value: "all", label: "All" },
+  { value: "today", label: "Hari ini" },
+  { value: "24h", label: "24j" },
+  { value: "7d", label: "7H" },
+  { value: "30d", label: "30H" },
+  { value: "60d", label: "60H" },
+  { value: "all", label: "Semua" },
 ];
 
 export default function UsagePage() {
@@ -29,9 +31,8 @@ function UsageContent() {
   const [period, setPeriod] = useState("today");
 
   const tabFromUrl = searchParams.get("tab");
-  const activeTab = tabFromUrl && ["overview", "logs", "details"].includes(tabFromUrl)
-    ? tabFromUrl
-    : "overview";
+  const validTabs = ["overview", "details", "console", "keys"];
+  const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview";
 
   const handleTabChange = (value) => {
     if (value === activeTab) return;
@@ -42,12 +43,14 @@ function UsageContent() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Tabs + period selector on same row */}
+      {/* Tabs + period selector */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <SegmentedControl
           options={[
-            { value: "overview", label: "Overview" },
-            { value: "details", label: "Details" },
+            { value: "overview", label: "Ikhtisar" },
+            { value: "details", label: "Detail" },
+            { value: "console", label: "Konsol" },
+            { value: "keys", label: "Validasi Kunci" },
           ]}
           value={activeTab}
           onChange={handleTabChange}
@@ -69,8 +72,9 @@ function UsageContent() {
           <UsageStats period={period} setPeriod={setPeriod} hidePeriodSelector />
         </Suspense>
       )}
-      {activeTab === "logs" && <RequestLogger />}
       {activeTab === "details" && <RequestDetailsTab />}
+      {activeTab === "console" && <ConsoleTab />}
+      {activeTab === "keys" && <KeyValidationTab />}
     </div>
   );
 }

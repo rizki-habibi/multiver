@@ -93,20 +93,7 @@ const getPageInfo = (pathname) => {
       icon: "cloud",
       breadcrumbs: [],
     };
-  if (pathname.includes("/proxy-pools"))
-    return {
-      title: "Kumpulan Proksi",
-      description: "Kelola konfigurasi kumpulan proksi Anda",
-      icon: "lan",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/skills"))
-    return {
-      title: "Keterampilan Agen",
-      description: "Salin tautan dan tempel ke AI Anda untuk menggunakan Multiver — tanpa instalasi",
-      icon: "extension",
-      breadcrumbs: [],
-    };
+
   if (pathname.includes("/endpoint"))
     return {
       title: "Titik Akhir",

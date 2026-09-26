@@ -254,10 +254,10 @@ export function resetComboRotation(comboName) {
 export function getComboModelsFromData(modelStr, combosData) {
   // Don't check if it's in provider/model format
   if (modelStr.includes("/")) return null;
-  
+
   // Handle both array and object formats
   const combos = Array.isArray(combosData) ? combosData : (combosData?.combos || []);
-  
+
   const combo = combos.find(c => c.name === modelStr);
   if (combo && combo.models && combo.models.length > 0) {
     return combo.models;
@@ -292,7 +292,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       rotatedModels = reordered;
     }
   }
-  
+
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
@@ -303,7 +303,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
     try {
       const result = await handleSingleModel(body, modelStr);
-      
+
       // Success (2xx) - return response
       if (result.ok) {
         log.info("COMBO", `Model ${modelStr} succeeded`);
@@ -343,7 +343,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       // so a briefly-overloaded provider gets a chance to recover rather than being
       // skipped immediately (fixes: combo falls through on transient 503)
       if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
-          (result.status === 503 || result.status === 502 || result.status === 504)) {
+        (result.status === 503 || result.status === 502 || result.status === 504)) {
         log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
         await new Promise(r => setTimeout(r, cooldownMs));
       }
@@ -622,4 +622,370 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   const judgeBody = appendUserTurn(body, buildJudgePrompt(answers));
   log.info("FUSION", `Judging ${answers.length} answers with ${judge}`);
   return handleSingleModel(judgeBody, judge);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAX — All Models: runs every model in the combo in parallel and preserves
+// each model's response individually. Partial success is allowed. The judge is
+// optional and never replaces the individual results.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MAX_DEFAULTS = {
+  perModelTimeoutMs: 120000,
+  maxConcurrency: 6,
+  maxRetries: 0,
+  enableJudge: false,
+  preserveFailedResults: true,
+};
+
+/**
+ * Run a simple p-limit style concurrency limiter.
+ * Resolves in arrival order; never starts more than `limit` tasks at once.
+ */
+function createConcurrencyLimiter(limit) {
+  if (!limit || limit <= 0) {
+    return { run: (fn) => fn() };
+  }
+  let active = 0;
+  const queue = [];
+  const flush = () => {
+    while (active < limit && queue.length > 0) {
+      active += 1;
+      const job = queue.shift();
+      Promise.resolve()
+        .then(job.fn)
+        .then(job.resolve, job.reject)
+        .finally(() => { active -= 1; flush(); });
+    }
+  };
+  return {
+    run(fn) {
+      return new Promise((resolve, reject) => {
+        queue.push({ fn, resolve, reject });
+        flush();
+      });
+    },
+  };
+}
+
+/**
+ * Extract usage / token counts from a completion response across formats.
+ */
+function extractPanelUsage(json) {
+  const usage = json?.usage;
+  if (!usage || typeof usage !== "object") return null;
+  const inputTokens = Number(usage.prompt_tokens ?? usage.input_tokens ?? usage.inputTokens) || null;
+  const outputTokens = Number(usage.completion_tokens ?? usage.output_tokens ?? usage.outputTokens) || null;
+  const totalTokens = Number(usage.total_tokens ?? usage.totalTokens) || null;
+  if (inputTokens === null && outputTokens === null && totalTokens === null) return null;
+  return {
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    total_tokens: totalTokens ?? (inputTokens && outputTokens ? inputTokens + outputTokens : null),
+  };
+}
+
+/**
+ * Handle a MAX (all models) chat request.
+ *
+ * @param {Object} options
+ * @param {Object} options.body - Request body
+ * @param {string[]} options.models - All models in the combo
+ * @param {Function} options.handleSingleModel - (body, modelStr, isPanel) => Promise<Response>
+ * @param {Object} options.log - Logger
+ * @param {string} [options.comboName] - Combo name
+ * @param {Object} [options.tuning] - Override MAX_DEFAULTS
+ * @returns {Promise<Response>} JSON response with individual_results
+ */
+export async function handleMaxChat({ body, models, handleSingleModel, log, comboName, tuning }) {
+  const panel = Array.isArray(models) ? models.filter(Boolean) : [];
+  if (panel.length === 0) {
+    return new Response(
+      JSON.stringify({ error: { message: "MAX combo has no models" } }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Single model combo: no parallelism needed, answer directly.
+  if (panel.length === 1) {
+    return handleSingleModel(body, panel[0]);
+  }
+
+  const cfg = { ...MAX_DEFAULTS, ...(tuning || {}) };
+  log.info("MAX", `Combo "${comboName}" | all=${panel.length} [${panel.join(", ")}] | concurrency=${cfg.maxConcurrency} | judge=${cfg.enableJudge}`);
+
+  // Emit MAX_REQUEST_STARTED (best-effort, never breaks execution)
+  let emit = () => { };
+  try {
+    const events = await import("@/lib/maxEvents");
+    emit = (type, data = {}) => events.emitMaxEvent({ type, combo: comboName, ...data });
+  } catch {
+    // maxEvents unavailable (older runtime) — continue without console log
+  }
+
+  const requestId = `max_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await emit("MAX_REQUEST_STARTED", { requestId, total_models: panel.length, models: panel });
+
+  // Panel body: tools stripped (we want prose per model), non-streaming.
+  const { tools, tool_choice, stream_options, ...rest } = body;
+  const panelBody = { ...rest, stream: false };
+  if (Array.isArray(panelBody.messages)) {
+    panelBody.messages = flattenToolHistory(panelBody.messages);
+  } else if (Array.isArray(panelBody.input)) {
+    panelBody.input = flattenToolHistory(panelBody.input);
+  }
+
+  const limiter = createConcurrencyLimiter(cfg.maxConcurrency);
+
+  const runOne = async (model, index) => {
+    const start = Date.now();
+    let ttftMs = null;
+    let retryCount = 0;
+
+    await emit("MAX_MODEL_STARTED", { requestId, model, index });
+
+    // Optional retry loop (bounded by cfg.maxRetries)
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      try {
+        const result = await withTimeout(
+          handleSingleModel(panelBody, model, true),
+          cfg.perModelTimeoutMs
+        );
+
+        if (result.__timeout) {
+          const latencyMs = Date.now() - start;
+          await emit("MAX_MODEL_TIMEOUT", { requestId, model, latency_ms: latencyMs });
+          return {
+            model,
+            status: "timeout",
+            error_type: "TIMEOUT",
+            message: `Model timed out after ${cfg.perModelTimeoutMs}ms`,
+            latency_ms: latencyMs,
+            ttft_ms: ttftMs,
+            retry_count: retryCount,
+          };
+        }
+
+        if (!result.ok) {
+          let errorText = result.statusText || "";
+          let errorType = "ERROR";
+          try {
+            const errorBody = await result.clone().json();
+            errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
+          } catch {
+            // Non-JSON error body
+          }
+          if (typeof errorText !== "string") {
+            try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
+          }
+
+          if (result.status === 429) errorType = "RATE_LIMIT";
+          else if (result.status >= 500) errorType = "UPSTREAM";
+
+          // Bounded retry on transient errors
+          if (retryCount < cfg.maxRetries && (result.status === 429 || result.status >= 500)) {
+            retryCount += 1;
+            log.info("MAX", `Model ${model} ${errorType} — retry ${retryCount}/${cfg.maxRetries}`);
+            continue;
+          }
+
+          const latencyMs = Date.now() - start;
+          await emit("MAX_MODEL_FAILED", { requestId, model, latency_ms: latencyMs, error_type: errorType, status: result.status, message: errorText });
+          return {
+            model,
+            status: "error",
+            error_type: errorType,
+            status_code: result.status,
+            message: errorText,
+            latency_ms: latencyMs,
+            ttft_ms: ttftMs,
+            retry_count: retryCount,
+          };
+        }
+
+        // Success — parse JSON body
+        let json = null;
+        try {
+          json = await result.clone().json();
+        } catch {
+          const latencyMs = Date.now() - start;
+          await emit("MAX_MODEL_FAILED", { requestId, model, latency_ms: latencyMs, error_type: "PARSE", message: "Unparseable response body" });
+          return {
+            model,
+            status: "error",
+            error_type: "PARSE",
+            message: "Unparseable response body",
+            latency_ms: latencyMs,
+            ttft_ms: ttftMs,
+            retry_count: retryCount,
+          };
+        }
+
+        const text = extractPanelText(json);
+        const usage = extractPanelUsage(json);
+        const latencyMs = Date.now() - start;
+
+        if (!text && !cfg.preserveFailedResults) {
+          await emit("MAX_MODEL_FAILED", { requestId, model, latency_ms: latencyMs, error_type: "EMPTY", message: "Empty content" });
+          return {
+            model,
+            status: "error",
+            error_type: "EMPTY",
+            message: "Model returned empty content",
+            latency_ms: latencyMs,
+            ttft_ms: ttftMs,
+            retry_count: retryCount,
+          };
+        }
+
+        await emit("MAX_MODEL_COMPLETED", {
+          requestId,
+          model,
+          latency_ms: latencyMs,
+          ttft_ms: ttftMs,
+          input_tokens: usage?.input_tokens ?? null,
+          output_tokens: usage?.output_tokens ?? null,
+          total_tokens: usage?.total_tokens ?? null,
+          chars: text ? text.length : 0,
+        });
+
+        return {
+          model,
+          status: "success",
+          response: text || "",
+          raw: json,
+          latency_ms: latencyMs,
+          ttft_ms: ttftMs,
+          input_tokens: usage?.input_tokens ?? null,
+          output_tokens: usage?.output_tokens ?? null,
+          total_tokens: usage?.total_tokens ?? null,
+          retry_count: retryCount,
+        };
+      } catch (error) {
+        const latencyMs = Date.now() - start;
+        await emit("MAX_MODEL_FAILED", { requestId, model, latency_ms: latencyMs, error_type: "EXCEPTION", message: error?.message || String(error) });
+        return {
+          model,
+          status: "error",
+          error_type: "EXCEPTION",
+          message: error?.message || String(error),
+          latency_ms: latencyMs,
+          ttft_ms: ttftMs,
+          retry_count: retryCount,
+        };
+      }
+    }
+  };
+
+  // Fan out: all models queued, concurrency limited. allSettled-style — one failure
+  // never cancels the others.
+  const results = await Promise.all(
+    panel.map((model, index) => limiter.run(() => runOne(model, index)))
+  );
+
+  const total = results.length;
+  const succeeded = results.filter((r) => r.status === "success");
+  const failed = results.filter((r) => r.status === "error");
+  const timedOut = results.filter((r) => r.status === "timeout");
+
+  const overallStatus =
+    succeeded.length === total ? "success"
+      : succeeded.length === 0 ? "failed"
+        : "partial_success";
+
+  const totalTokensIn = succeeded.reduce((sum, r) => sum + (r.input_tokens || 0), 0);
+  const totalTokensOut = succeeded.reduce((sum, r) => sum + (r.output_tokens || 0), 0);
+  const maxLatency = results.reduce((mx, r) => Math.max(mx, r.latency_ms || 0), 0);
+
+  let judgeResult = null;
+  const judgeBody = null;
+
+  // Optional judge: synthesize one answer from all successful responses.
+  // Individual results remain available in `results`.
+  if (cfg.enableJudge && succeeded.length >= 2) {
+    const judge = (tuning?.judgeModel && String(tuning.judgeModel).trim()) || panel[0];
+    const answers = succeeded.map((r) => ({ model: r.model, text: r.response }));
+    const judgeReq = appendUserTurn(body, buildJudgePrompt(answers));
+    log.info("MAX", `Judge synthesizing ${answers.length} answers with ${judge}`);
+    await emit("MAX_MODEL_STARTED", { requestId, model: judge, index: -1, judge: true });
+    try {
+      const judgeRes = await handleSingleModel(judgeReq, judge, false);
+      if (judgeRes.ok) {
+        const judgeJson = await judgeRes.clone().json();
+        judgeResult = {
+          model: judge,
+          response: extractPanelText(judgeJson),
+          usage: extractPanelUsage(judgeJson),
+        };
+        await emit("MAX_MODEL_COMPLETED", { requestId, model: judge, judge: true, latency_ms: Date.now() - Date.now() });
+      }
+    } catch (e) {
+      log.warn("MAX", `Judge failed: ${e.message || e}`);
+      await emit("MAX_MODEL_FAILED", { requestId, model: judge, judge: true, error_type: "JUDGE", message: e?.message || String(e) });
+    }
+  }
+
+  await emit("MAX_REQUEST_COMPLETED", {
+    requestId,
+    total_models: total,
+    completed: succeeded.length,
+    failed: failed.length + timedOut.length,
+    status: overallStatus,
+    total_input_tokens: totalTokensIn,
+    total_output_tokens: totalTokensOut,
+    max_latency_ms: maxLatency,
+  });
+
+  log.info("MAX", `Combo "${comboName}" done: ${succeeded.length}/${total} succeeded (${overallStatus}) in ${maxLatency}ms`);
+
+  // Build the response. Individual results are always preserved; judge is optional.
+  const responsePayload = {
+    strategy: "max",
+    status: overallStatus,
+    total_models: total,
+    completed: succeeded.length,
+    failed: failed.length + timedOut.length,
+    results: results.map((r) => {
+      // Keep payload lean: drop the heavy `raw` from the API response.
+      const { raw, ...lean } = r;
+      return lean;
+    }),
+  };
+
+  if (judgeResult) {
+    responsePayload.judge = judgeResult;
+  }
+
+  // Preserve OpenAI-compatible shape so existing clients don't break:
+  // choices[0].message.content carries a readable multi-model summary.
+  const summaryLines = [];
+  for (const r of results) {
+    if (r.status === "success") {
+      summaryLines.push(`### ${r.model}\n\n${r.response}`);
+    } else {
+      summaryLines.push(`### ${r.model}\n\n*[${r.status}: ${r.message || r.error_type}]*`);
+    }
+  }
+  responsePayload.choices = [{
+    index: 0,
+    message: {
+      role: "assistant",
+      content: summaryLines.join("\n\n---\n\n"),
+    },
+    finish_reason: "stop",
+  }];
+  responsePayload.usage = {
+    prompt_tokens: totalTokensIn,
+    completion_tokens: totalTokensOut,
+    total_tokens: totalTokensIn + totalTokensOut,
+  };
+
+  const httpStatus = overallStatus === "failed" ? 503 : 200;
+
+  return new Response(
+    JSON.stringify(responsePayload),
+    { status: httpStatus, headers: { "Content-Type": "application/json" } }
+  );
 }

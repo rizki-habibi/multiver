@@ -9,7 +9,6 @@ import { APP_CONFIG, UPDATER_CONFIG } from "@/shared/constants/config";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import Button from "./Button";
 import { ConfirmModal } from "./Modal";
-import NineRemotePromoModal from "./NineRemotePromoModal";
 
 const navItems = [
   { href: "/dashboard/endpoint", label: "Titik Akhir & Kunci", icon: "api" },
@@ -26,20 +25,16 @@ const debugItems = [
 
 const operationalItems = [
   { href: "/dashboard/mitm", label: "Kiro MITM", icon: "security" },
-  { href: "/dashboard/logs", label: "Log Konsol", icon: "console" },
   { href: "/dashboard/diagnostics", label: "Diagnostik", icon: "health_and_safety" },
   { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
 ];
 
 const systemItems = [
   { href: "/dashboard/cloud", label: "Penyimpanan Awan", icon: "cloud" },
-  { href: "/dashboard/proxy-pools", label: "Kumpulan Proksi", icon: "lan" },
-  { href: "/dashboard/skills", label: "Keterampilan", icon: "extension" },
 ];
 
 export default function Sidebar({ onClose }) {
   const pathname = usePathname();
-  const [showRemoteModal, setShowRemoteModal] = useState(false);
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -268,23 +263,6 @@ export default function Sidebar({ onClose }) {
               ) : null;
             })}
 
-            {/* Remote */}
-            <button
-              onClick={() => setShowRemoteModal(true)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group w-full",
-                "text-text-muted hover:bg-surface-2 hover:text-text-main"
-              )}
-            >
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">
-                computer
-              </span>
-              <span className="text-[13px] font-medium">9Remote</span>
-              <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">
-                BARU
-              </span>
-            </button>
-
             {/* Settings */}
             <Link
               href="/dashboard/profile"
@@ -310,9 +288,6 @@ export default function Sidebar({ onClose }) {
         </nav>
 
       </aside>
-
-      {/* Remote Promo Modal */}
-      <NineRemotePromoModal isOpen={showRemoteModal} onClose={() => setShowRemoteModal(false)} />
 
       {/* Update Confirmation Modal */}
       <ConfirmModal

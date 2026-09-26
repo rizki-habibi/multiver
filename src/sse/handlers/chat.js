@@ -15,7 +15,7 @@ import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
 import { getTransform as getPxpipeTransform } from "@/lib/pxpipe/loader.js";
 import { appendPxpipeEvent } from "@/lib/pxpipe/events.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
-import { handleComboChat, handleFusionChat, detectRequiredCapabilities } from "open-sse/services/combo.js";
+import { handleComboChat, handleFusionChat, handleMaxChat, detectRequiredCapabilities } from "open-sse/services/combo.js";
 import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActiveAdapterStrategy } from "open-sse/services/capacityAdapter.js";
 import { handleBypassRequest } from "open-sse/utils/bypassHandler.js";
 import { getProviderModels } from "open-sse/config/providerModels.js";
@@ -114,6 +114,29 @@ export async function handleChat(request, clientRawRequest = null) {
     const augmentedModels = augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, settings);
     const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
 
+    if (comboStrategy === "max") {
+      log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: MAX — all models)`);
+      return handleMaxChat({
+        body,
+        models: augmentedModels,
+        handleSingleModel: (b, m, isPanel) => {
+          let cleanRawReq = clientRawRequest;
+          if (isPanel && clientRawRequest) {
+            const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+            cleanRawReq = { ...clientRawRequest, body: cleanBody };
+          }
+          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, requestId);
+        },
+        log,
+        comboName: modelStr,
+        tuning: {
+          ...(comboStrategies[modelStr]?.maxTuning || {}),
+          enableJudge: !!comboStrategies[modelStr]?.enableMaxJudge,
+          judgeModel: comboStrategies[modelStr]?.judgeModel,
+        },
+      });
+    }
+
     if (comboStrategy === "fusion") {
       log.info("CHAT", `Combo "${modelStr}" with ${comboModels.length} models (strategy: fusion)`);
       return handleFusionChat({
@@ -131,6 +154,23 @@ export async function handleChat(request, clientRawRequest = null) {
         comboName: modelStr,
         judgeModel: comboStrategies[modelStr]?.judgeModel,
         tuning: comboStrategies[modelStr]?.fusionTuning,
+      });
+    }
+
+    if (comboStrategy === "max") {
+      log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: max)`);
+      return handleMaxChat({
+        body,
+        models: augmentedModels,
+        handleSingleModel: (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
+        log,
+        comboName: modelStr,
+        judgeModel: comboStrategies[modelStr]?.judgeModel,
+        enableJudge: !!comboStrategies[modelStr]?.maxEnableJudge,
+        maxConcurrent: comboStrategies[modelStr]?.maxConcurrent || settings.maxConcurrent || 6,
+        timeoutMs: comboStrategies[modelStr]?.maxTimeoutMs || settings.maxTimeoutMs || 90000,
+        retryPerModel: comboStrategies[modelStr]?.maxRetry || settings.maxRetry || 0,
+        requestId,
       });
     }
 
@@ -250,6 +290,23 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
           comboName: modelStr,
           judgeModel: comboStrategies[modelStr]?.judgeModel,
           tuning: comboStrategies[modelStr]?.fusionTuning,
+        });
+      }
+
+      if (comboStrategy === "max") {
+        log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: max)`);
+        return handleMaxChat({
+          body,
+          models: augmentedModels,
+          handleSingleModel: (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
+          log,
+          comboName: modelStr,
+          judgeModel: comboStrategies[modelStr]?.judgeModel,
+          enableJudge: !!comboStrategies[modelStr]?.maxEnableJudge,
+          maxConcurrent: comboStrategies[modelStr]?.maxConcurrent || chatSettings.maxConcurrent || 6,
+          timeoutMs: comboStrategies[modelStr]?.maxTimeoutMs || chatSettings.maxTimeoutMs || 90000,
+          retryPerModel: comboStrategies[modelStr]?.maxRetry || chatSettings.maxRetry || 0,
+          requestId,
         });
       }
 
