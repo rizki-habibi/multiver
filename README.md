@@ -2,6 +2,9 @@
 
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
+![Version](https://img.shields.io/badge/version-10.0.0-0969DA)
+[![License](https://img.shields.io/npm/l/multiver.svg)](https://github.com/rizki-habibi/multiver/blob/main/LICENSE)
+
 Multiver bukan sekadar router AI yang memilih satu model. Multiver Max menjalankan
 **semua model** yang sudah dikonfigurasi dalam satu combo secara bersamaan, mempertahankan
 hasil masing-masing model, dan membiarkan Anda membandingkannya.
@@ -156,9 +159,9 @@ Kompresi external (Headroom `/v1/compress` di `localhost:8787`) sudah non-aktif 
 Halaman **Penggunaan** (`/dashboard/usage`) sekarang punya 4 tab:
 
 - **Ikhtisar** — statistik penggunaan API, konsumsi token, request count per periode
-- **Detail** — breakdown per request
-- **Konsol** — terminal real-time (SSE) untuk memantau error, fallback, dan rate limit
-- **Validasi Kunci** — cek apakah API key tiap provider masih valid, satu per satu atau semua sekaligus
+- **Konsol Log** — terminal real-time (SSE) untuk memantau error, fallback, dan rate limit
+- **Diagnostik** — cek kesehatan gateway, MITM, DNS, dan CA dalam satu halaman
+- **Kiro MITM** — intersepsi traffic Kiro IDE (sebelumnya halaman terpisah)
 
 #### Konsol Log real-time
 
@@ -184,10 +187,12 @@ Contoh yang akan Anda lihat saat MAX jalan:
 [20:31:45] ℹ️ [MAX] partial success 3/5
 ```
 
-- **Pause/Jeda** — hentikan stream sementara
-- **Filter level** — ALL / INFO / WARN / ERROR
-- **Search** — cari teks, kategori, atau request ID
-- **Unduh** — export ke `.log`
+- **Jeda/Lanjut** — hentikan stream sementara
+- **Filter level** — ALL / INFO / SUCCESS / WARNING / ERROR / DEBUG
+- **Filter source** — ALL / MITM / KIRO / GATEWAY / ROUTER
+- **Cari** — cari teks, kategori, atau request ID
+- **Salin** — copy seluruh log ke clipboard
+- **Bersihkan Tampilan** / **Hapus Log**
 - Secret (API key, Bearer token) **otomatis di-redact** di sisi server sebelum log ditulis
 
 ### 5. 🛡️ Auto Health Monitor & Failover
@@ -307,10 +312,13 @@ npm --prefix tests run test   # Unit tests
 Build CLI package (untuk distribusi):
 
 ```bash
-cd cli
-npm run build        # next build + copy standalone → cli/app
-npm run link:global  # register `multiver` command locally
+npm run cli:build       # next build + copy standalone → cli/app
+cd cli && npm run link:global  # register `multiver` command locally
 ```
+
+> **Catatan Windows:** bila server Multiver sedang jalan saat build,
+> folder `cli/app` terkunci. Build tetap berhasil (overwrite in place),
+> tapi hasilnya baru dipakai setelah server di-restart.
 
 ---
 
@@ -322,20 +330,27 @@ npm run link:global  # register `multiver` command locally
 multiver update
 ```
 
-Perintah ini melakukan semuanya otomatis:
-1. Cek versi terbaru dari npm registry
-2. Hentikan semua proses Multiver yang masih jalan (termasuk MITM)
-3. `npm i -g multiver@<versi-terbaru> --prefer-online`
+Perintah ini melakukan semuanya otomatis (mode deteksi otomatis):
+
+**Mode git** (bila dijalankan dari clone repo — cara instalasi utama):
+1. Cek commit terbaru di `origin/main`
+2. Hentikan semua proses Multiver yang masih jalan (termasuk MITM via PID file + port)
+3. `git pull --ff-only` (hard reset ke origin bila divergen) + `npm install` + `npm run build`
 4. Jalankan ulang Multiver di port yang sama
 
-> Saat Multiver sedang berjalan dan ada versi baru, menu utama otomatis
+**Mode npm registry** (fallback, bila terinstal dari registry):
+1. Cek versi terbaru dari npm registry
+2. `npm i -g multiver@<versi-terbaru> --prefer-online`
+3. Jalankan ulang Multiver di port yang sama
+
+> Saat Multiver sedang berjalan dan ada commit baru, menu utama otomatis
 > menampilkan **⬆ Update to vX**. Pilih itu — update langsung jalan tanpa
 > salin-tempel perintah manual.
 
 Flags tambahan:
 
 ```bash
-multiver update --force        # Paksa update walau versi sama/lebih rendah
+multiver update --force        # Paksa update walau sudah di commit terbaru
 multiver update --no-relaunch  # Update tanpa menjalankan ulang
 ```
 
@@ -345,14 +360,15 @@ multiver update --no-relaunch  # Update tanpa menjalankan ulang
 cd Multiver
 git pull
 npm install
-npm run build
+npm run cli:build        # next build + copy standalone → cli/app
+node cli/link-global.js  # daftarkan ulang `multiver` global
 ```
 
 ### Cek versi saja
 
 ```bash
 multiver --version          # versi terpasang
-multiver update             # cek + update bila ada versi baru
+multiver update             # cek + update bila ada commit baru
 ```
 
 ---
@@ -361,8 +377,10 @@ multiver update             # cek + update bila ada versi baru
 
 **Q: Kenapa `multiver update` gagal / "npm registry tidak terjangkau"?**
 
-A: Cek koneksi internet, lalu coba `multiver update --force`. Bila tetap gagal,
-update manual dari source (lihat **📦 Update / Upgrade** di atas).
+A: Bila dijalankan dari clone repo, `multiver update` memakai **mode git** (bukan npm)
+dan tidak butuh registry. Cek koneksi internet + `git remote -v`, lalu coba
+`multiver update --force`. Bila tetap gagal, update manual dari source
+(lihat **📦 Update / Upgrade** di atas).
 
 **Q: Kenapa `npm install -g multiver` error 404?**
 
@@ -386,8 +404,8 @@ Semua model tetap masuk antrean eksekusi, hanya concurrency yang dibatasi.
 
 **Q: Kenapa log konsol saya cuma show 1 baris?**
 
-A: Filter level sedang di "ALL"? Coba klik **Pause** lalu **Lanjut** untuk re-sync.
-Jika masih, cek `/api/logs?limit=200` langsung.
+A: Filter level sedang di "ALL"? Coba klik **Jeda** lalu **Lanjut** untuk re-sync.
+Jika masih, cek `/api/console-log?limit=200` langsung.
 
 ---
 
