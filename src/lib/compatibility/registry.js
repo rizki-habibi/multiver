@@ -1,12 +1,16 @@
 // Provider & Model Registry + Compatibility Matrix.
 // Semua data diambil dari sumber nyata: open-sse PROVIDERS (transport/format),
-// PROVIDER_MODELS (daftar model), getCapabilitiesForModel (kapabilitas per model),
-// services/usage/* (dukungan quota/usage). Tidak ada nilai yang di-hardcode.
+// PROVIDER_MODELS (daftar model, di-key per alias), getCapabilitiesForModel
+// (kapabilitas per model, di-key per provider id), services/usage/* (dukungan
+// quota/usage). QUOTA_PROVIDERS di bawah satu-satunya daftar manual: cerminan
+// key USAGE_HANDLERS di open-sse/services/usage.js, yang di-impor secara statis
+// sehingga tidak bisa diperiksa secara dinamis tanpa memuat seluruh modul.
 import { PROVIDERS, PROVIDER_MODELS } from "../../../open-sse/providers/index.js";
 import { getCapabilitiesForModel } from "../../../open-sse/providers/capabilities.js";
 import REGISTRY from "../../../open-sse/providers/registry/index.js";
 
-// Provider yang punya handler usage di open-sse/services/usage → quota_supported nyata.
+// Provider yang punya handler usage di open-sse/services/usage.js USAGE_HANDLERS.
+// Jika menambah handler usage baru, tambahkan id provider di sini juga.
 const QUOTA_PROVIDERS = new Set([
   "antigravity", "claude", "codebuddy-cn", "codex", "commandcode", "deepseek",
   "github", "glm", "google", "grok-cli", "groq", "kimi", "kiro", "minimax",

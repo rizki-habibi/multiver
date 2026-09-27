@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
 import { APP_CONFIG, UPDATER_CONFIG } from "@/shared/constants/config";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
@@ -23,13 +23,12 @@ const debugItems = [
   { href: "/dashboard/translator", label: "Penerjemah", icon: "translate" },
 ];
 
-// Operasional: MITM, Konsol Log, Log Gateway, dan Diagnostik kini hidup di tab
-// halaman Penggunaan — satu tempat, tidak terpisah. Hanya Kompatibilitas yang
-// tetap halaman tersendiri.
+// Operasional: MITM, Konsol Log, dan Diagnostik hidup di tab halaman Penggunaan.
+// "Log Gateway" menuju tab yang sama dengan "Konsol Log" (tab gateway tidak ada);
+// Konsol Log sudah menampilkan log gateway + MITM, jadi tidak ada menu yang menyesatkan.
 const operationalItems = [
   { href: "/dashboard/usage?tab=mitm", label: "Kiro MITM", icon: "security" },
   { href: "/dashboard/usage?tab=console", label: "Konsol Log", icon: "console" },
-  { href: "/dashboard/usage?tab=gateway", label: "Log Gateway", icon: "terminal" },
   { href: "/dashboard/usage?tab=diagnostics", label: "Diagnostik", icon: "health_and_safety" },
   { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
 ];
@@ -40,6 +39,7 @@ const systemItems = [
 
 export default function Sidebar({ onClose }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -66,6 +66,13 @@ export default function Sidebar({ onClose }) {
   }, []);
 
   const isActive = (href) => {
+    // Operational items use ?tab=… — match base path + tab so the menu actually
+    // highlights instead of silently falling back to Penggunaan.
+    const tab = searchParams?.get("tab");
+    const queryIdx = href.indexOf("?");
+    if (queryIdx >= 0) {
+      return href.slice(0, queryIdx) === pathname && href.slice(queryIdx + 1).split("=")[1] === tab;
+    }
     if (href === "/dashboard/endpoint") {
       return pathname === "/dashboard" || pathname.startsWith("/dashboard/endpoint");
     }
@@ -93,6 +100,7 @@ export default function Sidebar({ onClose }) {
         setIsDisconnected(true);
       }
     }, 1000);
+    return () => clearInterval(timer);
   };
 
   const handleCancelUpdate = () => {

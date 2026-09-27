@@ -9,6 +9,11 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Managed-config detection. Installations written before the 20222 SSOT still
+// point at the legacy 20128 port and must keep being recognized.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getSmeltConfigPath = () => path.join(os.homedir(), ".smelt", "config.json");
 const getSmeltDir = () => path.dirname(getSmeltConfigPath());
 
@@ -32,7 +37,7 @@ const hasMultiverConfig = (settings) => {
   if (!settings) return false;
   return (
     settings._managedBy === "Multiver" ||
-    (typeof settings.baseUrl === "string" && settings.baseUrl.length > 0 && settings.baseUrl.includes("20128"))
+    (typeof settings.baseUrl === "string" && settings.baseUrl.length > 0 && isManagedBaseUrl(settings.baseUrl))
   );
 };
 
@@ -90,7 +95,7 @@ export async function POST(request) {
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       existing = JSON.parse(raw);
-    } catch {}
+    } catch { }
 
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
     const updated = {

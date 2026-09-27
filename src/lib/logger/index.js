@@ -105,6 +105,18 @@ export function createRequestId(prefix = "req") {
   return `${prefix}_${stamp}_${rand}`;
 }
 
+// Caller-controlled metadata must never carry raw secrets to /api/logs.
+function sanitizeMeta(meta, depth = 0) {
+  if (meta == null || typeof meta !== "object" || depth > 3) return meta;
+  if (Array.isArray(meta)) return meta.map((v) => sanitizeMeta(v, depth + 1));
+  const out = {};
+  for (const [k, v] of Object.entries(meta)) {
+    out[k] = SENSITIVE_HEADER_NAMES.has(String(k).toLowerCase()) ? "********"
+      : (v && typeof v === "object") ? sanitizeMeta(v, depth + 1) : v;
+  }
+  return out;
+}
+
 function push(level, category, message, meta) {
   if (level < currentLevel()) return;
 
@@ -118,7 +130,8 @@ function push(level, category, message, meta) {
     requestId: meta?.requestId || null,
     provider: meta?.provider || null,
     model: meta?.model || null,
-    meta: meta ?? null,
+    // meta is caller-controlled: redact so a stray secret never reaches /api/logs.
+    meta: meta ? redactSecrets(JSON.stringify(sanitizeMeta(meta))) : null,
   };
 
   state.ring.push(entry);

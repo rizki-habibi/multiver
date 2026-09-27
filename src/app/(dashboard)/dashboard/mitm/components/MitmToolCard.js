@@ -66,7 +66,11 @@ export default function MitmToolCard({
       if (data.cache === false) {
         setWarning("Alias tersimpan di database, tetapi cache aliases.json gagal diperbarui");
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      // Surface the failure: silently dropping a save leaves the user believing
+      // their model mapping is live when it never reached the server.
+      setWarning(`Gagal menyimpan pemetaan: ${e.message || e}`);
+    }
   }, [tool.id]);
 
   const handleMappingBlur = (alias, value) => {
@@ -120,7 +124,9 @@ export default function MitmToolCard({
       setShowPasswordModal(false);
       setSudoPassword("");
       onDnsChange?.(data);
-    } catch { /* ignore */ } finally {
+    } catch (e) {
+      setWarning(`Gagal mengubah DNS: ${e.message || e}`);
+    } finally {
       setLoading(false);
       setPendingDnsAction(null);
     }
@@ -128,7 +134,7 @@ export default function MitmToolCard({
 
   const handleConfirmPassword = () => {
     if (!sudoPassword.trim()) {
-      setModalError("Sudo password is required");
+      setModalError("Kata sandi sudo wajib diisi");
       return;
     }
     doDnsAction(pendingDnsAction, sudoPassword);
@@ -156,14 +162,14 @@ export default function MitmToolCard({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-medium text-sm">{tool.name}</h3>
                 {!serverRunning ? (
-                  <Badge variant="default" size="sm">Server off</Badge>
+                  <Badge variant="default" size="sm">Server mati</Badge>
                 ) : dnsActive ? (
-                  <Badge variant="success" size="sm">Active</Badge>
+                  <Badge variant="success" size="sm">Aktif</Badge>
                 ) : (
-                  <Badge variant="warning" size="sm">DNS off</Badge>
+                  <Badge variant="warning" size="sm">DNS mati</Badge>
                 )}
               </div>
-              <p className="text-xs text-text-muted sm:truncate">Intercept {tool.name} requests via MITM proxy</p>
+              <p className="text-xs text-text-muted sm:truncate">Sadap request {tool.name} melalui MITM proxy</p>
             </div>
           </div>
           <span className={`material-symbols-outlined text-text-muted text-[20px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>
@@ -177,7 +183,7 @@ export default function MitmToolCard({
             {mitmHosts.length > 0 && (
               <div className="mt-2 rounded-md border border-border bg-surface/50 px-2 py-1.5">
                 <p className="text-[10px] font-medium tracking-wide text-text-main/80 mb-1">
-                  Edit hosts file manually to add the following entries:
+                  Edit hosts file secara manual untuk menambah entri berikut:
                 </p>
                 <ul className="list-none space-y-0.5 font-mono text-[10px] text-text-muted break-all">
                   {mitmHosts.map((h) => (
@@ -188,10 +194,10 @@ export default function MitmToolCard({
             )}
             {/* Info */}
             <div className="flex flex-col gap-0.5 text-[11px] text-text-muted px-1">
-              <p>Toggle DNS to redirect {tool.name} traffic through Multiver via MITM.</p>
+              <p>Aktifkan DNS untuk mengarahkan traffic {tool.name} melalui Multiver via MITM.</p>
               {!dnsActive && (
                 <p className="text-amber-600 text-[10px] mt-1">
-                  ⚠️ Enable DNS to edit model mappings
+                  ⚠️ Aktifkan DNS untuk mengedit pemetaan model
                 </p>
               )}
             </div>
@@ -220,7 +226,7 @@ export default function MitmToolCard({
                             saveMappings({ ...modelMappings, [model.alias]: "" });
                           }}
                           className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-red-500 rounded transition-colors"
-                          title="Clear"
+                          title="Bersihkan"
                         >
                           <span className="material-symbols-outlined text-[14px]">close</span>
                         </button>
@@ -231,7 +237,7 @@ export default function MitmToolCard({
                       disabled={!hasActiveProviders || !dnsActive}
                       className={`rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 ${hasActiveProviders && dnsActive ? "bg-surface border-border hover:border-primary cursor-pointer" : "opacity-50 cursor-not-allowed border-border"}`}
                     >
-                      Select
+                      Pilih
                     </button>
                   </div>
                 ))}
@@ -239,7 +245,7 @@ export default function MitmToolCard({
             )}
 
             {tool.defaultModels?.length === 0 && (
-              <p className="text-xs text-text-muted px-1">Model mappings will be available soon.</p>
+              <p className="text-xs text-text-muted px-1">Pemetaan model akan segera tersedia.</p>
             )}
 
             {/* Start / Stop DNS button */}
@@ -251,7 +257,7 @@ export default function MitmToolCard({
                   className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">stop_circle</span>
-                  Stop DNS
+                  Hentikan DNS
                 </button>
               ) : (
                 <button
@@ -260,7 +266,7 @@ export default function MitmToolCard({
                   className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">play_circle</span>
-                  Start DNS
+                  Mulai DNS
                 </button>
               )}
 
@@ -280,14 +286,14 @@ export default function MitmToolCard({
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="mx-4 flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-surface p-5 shadow-xl sm:p-6">
-            <h3 className="font-semibold text-text-main">Sudo Password Required</h3>
+            <h3 className="font-semibold text-text-main">Kata Sandi Sudo Dibutuhkan</h3>
             <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <span className="material-symbols-outlined text-yellow-500 text-[20px]">warning</span>
-              <p className="text-xs text-text-muted">Required to modify /etc/hosts and flush DNS cache</p>
+              <p className="text-xs text-text-muted">Dibutuhkan untuk mengubah /etc/hosts dan flush cache DNS</p>
             </div>
             <Input
               type="password"
-              placeholder="Enter sudo password"
+              placeholder="Masukkan kata sandi sudo"
               value={sudoPassword}
               onChange={(e) => setSudoPassword(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleConfirmPassword(); }}
@@ -300,10 +306,10 @@ export default function MitmToolCard({
             )}
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => { setShowPasswordModal(false); setSudoPassword(""); setModalError(null); }} disabled={loading}>
-                Cancel
+                Batal
               </Button>
               <Button variant="primary" size="sm" onClick={handleConfirmPassword} loading={loading}>
-                Confirm
+                Konfirmasi
               </Button>
             </div>
           </div>
@@ -319,7 +325,7 @@ export default function MitmToolCard({
           selectedModel={currentEditingAlias ? modelMappings[currentEditingAlias] : null}
           activeProviders={activeProviders}
           modelAliases={modelAliases}
-          title={`Select model for ${currentEditingAlias}`}
+          title={`Pilih model untuk ${currentEditingAlias}`}
         />
       )}
     </>

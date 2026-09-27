@@ -9,6 +9,10 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Managed-config detection. Legacy installs still point at 20128.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getPiModelsJsonPath = () => {
   const agentPath = path.join(os.homedir(), ".pi", "agent", "models.json");
   return agentPath;
@@ -42,7 +46,7 @@ const hasMultiverConfig = (settings) => {
   const p = settings.providers["Multiver"];
   if (p && p.baseUrl) return true;
   for (const prov of Object.values(settings.providers)) {
-    if (prov.baseUrl && prov.baseUrl.includes("20128")) return true;
+    if (isManagedBaseUrl(prov.baseUrl)) return true;
   }
   return false;
 };

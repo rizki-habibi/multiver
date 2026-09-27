@@ -72,6 +72,14 @@ function writeAll(logs) {
   fs.renameSync(tmp, LOG_FILE);
 }
 
+// Serialize appends: the gateway and the MITM child process both write this
+// file, and a lockless read-modify-write would lose entries on contention.
+let appendQueue = Promise.resolve();
+function serializeAppend(fn) {
+  appendQueue = appendQueue.then(fn, fn);
+  return appendQueue;
+}
+
 export function appendMitmConsoleLog(input = {}) {
   const entry = sanitize({
     timestamp: new Date().toISOString(),
@@ -94,10 +102,12 @@ export function appendMitmConsoleLog(input = {}) {
     error: input.error || null,
     meta: input.meta && typeof input.meta === "object" ? input.meta : null,
   });
-  const logs = readAll();
-  logs.push(entry);
-  writeAll(logs);
-  return entry;
+  return serializeAppend(() => {
+    const logs = readAll();
+    logs.push(entry);
+    writeAll(logs);
+    return entry;
+  });
 }
 
 export function clearMitmConsoleLogs() {

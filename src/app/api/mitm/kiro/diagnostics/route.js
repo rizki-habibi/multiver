@@ -233,7 +233,6 @@ async function checkProvider(port) {
 
 async function checkLogging() {
   try {
-    const { logger } = await import("@/lib/logger");
     const { getRecentLogs } = await import("@/lib/logger");
     const logs = getRecentLogs(1);
     return {

@@ -72,9 +72,6 @@ const MODEL_PATTERNS = {
   ],
 };
 
-// Models that must NEVER be re-routed — always passthrough to the real upstream.
-const MODEL_NO_MAP = {};
-
 // URL substrings whose request/response should NOT be dumped to file (telemetry, polling, empty)
 const LOG_BLACKLIST_URL_PARTS = [
   "recordCodeAssistMetrics",
@@ -133,4 +130,4 @@ function extractModel(url, body) {
   }
 }
 
-module.exports = { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, MODEL_NO_MAP, LOG_BLACKLIST_URL_PARTS, getToolForHost, isChatRequest, extractModel };
+module.exports = { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, LOG_BLACKLIST_URL_PARTS, getToolForHost, isChatRequest, extractModel };

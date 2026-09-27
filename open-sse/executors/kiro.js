@@ -5,6 +5,7 @@ import {
   KIRO_ENDPOINT_FALLBACK_STATUSES,
   resolveKiroModel,
 } from "../config/kiroConstants.js";
+import { INTERNAL_REQUEST_HEADER } from "../config/appConstants.js";
 import { v4 as uuidv4 } from "uuid";
 import { refreshKiroToken } from "../services/tokenRefresh.js";
 import { SSE_DONE, SSE_HEADERS } from "../utils/sseConstants.js";
@@ -241,7 +242,7 @@ export class KiroExecutor extends BaseExecutor {
       "Amz-Sdk-Invocation-Id": uuidv4(),
       // Loop protection: MITM server skips any request carrying this header,
       // so a Kiro turn forwarded by Multiver can never be re-intercepted.
-      "x-request-source": "local",
+      [INTERNAL_REQUEST_HEADER.name]: INTERNAL_REQUEST_HEADER.value,
     };
     if (url.includes("://codewhisperer.")) {
       headers["X-Amz-Target"] = KIRO_CODEWHISPERER_TARGET;

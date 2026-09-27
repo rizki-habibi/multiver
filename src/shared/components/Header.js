@@ -54,7 +54,7 @@ const getPageInfo = (pathname) => {
   if (pathname.includes("/usage")) {
     const tab = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("tab");
     const TAB_INFO = {
-      console: { title: "Konsol Log", desc: "Real-time MITM execution log with redacted secrets", icon: "console" },
+      console: { title: "Konsol Log", desc: "Log eksekusi realtime dengan secret teredaksi", icon: "console" },
       mitm: { title: "Kiro MITM", desc: "Sadap lalu lintas Kiro IDE dan rutekan melalui Multiver", icon: "security" },
       diagnostics: { title: "Diagnostik", desc: "Pemeriksaan nyata kondisi runtime", icon: "health_and_safety" },
     };
@@ -67,13 +67,6 @@ const getPageInfo = (pathname) => {
       breadcrumbs: [],
     };
   }
-  if (pathname.includes("/auth-files"))
-    return {
-      title: "Berkas Autentikasi",
-      description: "Petakan kredensial penyedia yang tersimpan di database lokal",
-      icon: "vpn_key",
-      breadcrumbs: [],
-    };
   if (pathname.includes("/quota"))
     return {
       title: "Pelacak Kuota",
@@ -113,7 +106,7 @@ const getPageInfo = (pathname) => {
   if (pathname.includes("/translator"))
     return {
       title: "Translator",
-      description: "Debug translation flow between formats",
+      description: "Debug alur penerjemahan antar format",
       icon: "translate",
       breadcrumbs: [],
     };

@@ -10,6 +10,10 @@ import { parseTOML, stringifyTOML } from "confbox";
 
 const execAsync = promisify(exec);
 
+// Managed-config detection. Legacy installs still point at 20128.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getCodewhaleDir = () => path.join(os.homedir(), ".codewhale");
 const getCodewhaleConfigPath = () => path.join(getCodewhaleDir(), "config.toml");
 
@@ -31,7 +35,7 @@ const checkCodewhaleInstalled = async () => {
 
 const hasMultiverConfig = (content) => {
   if (!content) return false;
-  return content.includes("managed by Multiver") || content.includes("localhost:20128");
+  return content.includes("managed by Multiver") || isManagedBaseUrl(content);
 };
 
 const readConfig = async () => {
@@ -57,7 +61,7 @@ export async function GET() {
     let config = null;
     try {
       if (content) config = parseTOML(content);
-    } catch {}
+    } catch { }
 
     return NextResponse.json({
       installed: true,
@@ -91,7 +95,7 @@ export async function POST(request) {
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       existing = parseTOML(raw);
-    } catch {}
+    } catch { }
 
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
 

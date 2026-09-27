@@ -15,10 +15,10 @@ export default function MitmTab() {
   const [mitmStatus, setMitmStatus] = useState({ running: false, certExists: false, dnsStatus: {}, hasCachedPassword: false });
 
   useEffect(() => {
-    fetch("/api/providers").then(r => r.json()).then(d => setConnections(d.connections || [])).catch(() => {});
-    fetch("/api/keys").then(r => r.json()).then(d => setApiKeys(d.keys || [])).catch(() => {});
-    fetch("/api/models/alias").then(r => r.json()).then(d => setModelAliases(d.aliases || {})).catch(() => {});
-    fetch("/api/settings").then(r => r.json()).then(d => setCloudEnabled(d.cloudEnabled || false)).catch(() => {});
+    fetch("/api/providers").then(r => r.json()).then(d => setConnections(d.connections || [])).catch(() => { });
+    fetch("/api/keys").then(r => r.json()).then(d => setApiKeys(d.keys || [])).catch(() => { });
+    fetch("/api/models/alias").then(r => r.json()).then(d => setModelAliases(d.aliases || {})).catch(() => { });
+    fetch("/api/settings").then(r => r.json()).then(d => setCloudEnabled(d.cloudEnabled || false)).catch(() => { });
   }, []);
 
   const getActiveProviders = () => connections.filter(c => c.isActive !== false);
@@ -35,7 +35,7 @@ export default function MitmTab() {
       <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
         <span className="material-symbols-outlined text-[16px] text-yellow-500 mt-0.5 shrink-0">warning</span>
         <p className="text-xs text-red-600 dark:text-yellow-400 leading-relaxed">
-          ⚠️ Kiro MITM intercepts HTTPS traffic of Kiro IDE via local CA to redirect requests to your providers. May violate ToS → account ban. Use at your own risk.
+          ⚠️ Kiro MITM menyadap lalu lintas HTTPS Kiro IDE melalui CA lokal untuk mengarahkan request ke penyedia Anda. Dapat melanggar ToS → akun terblokir. Risiko ditanggung sendiri.
         </p>
       </div>
 

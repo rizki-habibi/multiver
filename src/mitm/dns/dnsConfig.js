@@ -117,8 +117,8 @@ function checkDNSEntry(host = null) {
   try {
     const hostsContent = fs.readFileSync(HOSTS_FILE, "utf8");
     if (host) return hostsContent.includes(host);
-    // Legacy: check all antigravity hosts (backward compat)
-    return TOOL_HOSTS.antigravity.every(h => hostsContent.includes(h));
+    // No default tool since the Kiro-only refactor — every caller passes a host.
+    return false;
   } catch {
     return false;
   }

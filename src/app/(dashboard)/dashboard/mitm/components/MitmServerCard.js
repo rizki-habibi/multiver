@@ -140,17 +140,17 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[20px]">security</span>
-              <span className="font-semibold text-sm text-text-main">MITM Server</span>
+              <span className="font-semibold text-sm text-text-main">Server MITM</span>
               {isRunning ? (
-                <Badge variant="success" size="sm">Running</Badge>
+                <Badge variant="success" size="sm">Berjalan</Badge>
               ) : (
-                <Badge variant="default" size="sm">Stopped</Badge>
+                <Badge variant="default" size="sm">Berhenti</Badge>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-1 text-xs text-text-muted" data-i18n-skip="true">
               {[
-                { label: "Cert", ok: status?.certExists },
-                { label: "Trusted", ok: status?.certTrusted },
+                { label: "Sertifikat", ok: status?.certExists },
+                { label: "Dipercaya", ok: status?.certTrusted },
                 { label: "Server", ok: isRunning },
               ].map(({ label, ok }) => (
                 <span key={label} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded ${ok ? "text-green-600" : "text-text-muted"}`}>
@@ -166,17 +166,17 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
           {/* Purpose & How it works */}
           <div className="px-2 py-2 rounded-lg bg-surface/50 border border-border/50 flex flex-col gap-2">
             <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">Purpose:</span> Use Antigravity IDE & GitHub Copilot → with ANY provider/model from Multiver
+              <span className="font-medium text-text-main">Tujuan:</span> Pakai Kiro IDE dengan provider/model apa pun dari Multiver
             </p>
             <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">How it works:</span> Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → Multiver → response to Antigravity/Copilot
+              <span className="font-medium text-text-main">Cara kerja:</span> Request Kiro IDE → DNS dialihkan ke localhost:443 → MITM proxy menyadap → Multiver → respons kembali ke Kiro
             </p>
           </div>
 
           {/* Base URL + API Key — same row pattern as Claude Code / cli-tools */}
           <div className="flex flex-col gap-2">
             <div className="grid gap-1 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-              <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">Multiver Base URL</span>
+              <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">URL Dasar Multiver</span>
               <span className="material-symbols-outlined hidden text-text-muted text-[14px] sm:inline">arrow_forward</span>
               <input
                 type="text"
@@ -189,14 +189,14 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
             </div>
             {!isRunning && (
               <div className="grid gap-1 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">API Key</span>
+                <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">Kunci API</span>
                 <span className="material-symbols-outlined hidden text-text-muted text-[14px] sm:inline">arrow_forward</span>
                 <input
                   type="text"
                   list="mitm-api-keys"
                   value={selectedApiKey}
                   onChange={(e) => setSelectedApiKey(e.target.value)}
-                  placeholder={cloudEnabled ? "Enter or pick API key" : "sk_Multiver (default)"}
+                  placeholder={cloudEnabled ? "Masukkan atau pilih kunci API" : "sk_Multiver (default)"}
                   className="flex-1 min-w-0 px-2 py-1.5 bg-surface rounded border border-border text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary/50"
                 />
                 {apiKeys?.length > 0 && (
@@ -219,7 +219,7 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-medium text-yellow-600 transition-colors hover:bg-yellow-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                Trust Cert
+                Pasang Sertifikat
               </button>
             )}
             {isRunning ? (
@@ -229,21 +229,21 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">stop_circle</span>
-                Stop Server
+                Hentikan Server
               </button>
             ) : (
               <button
                 onClick={() => handleAction("start")}
                 disabled={loading || !status || (serverIsWindows && !isAdmin)}
-                title={serverIsWindows && !isAdmin ? "Administrator required" : undefined}
+                title={serverIsWindows && !isAdmin ? "Butuh Administrator" : undefined}
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">play_circle</span>
-                Start Server
+                Mulai Server
               </button>
             )}
             {isRunning && (
-              <p className="text-xs text-text-muted">Enable DNS per tool below to activate interception</p>
+              <p className="text-xs text-text-muted">Aktifkan DNS per tool di bawah untuk memulai penyadapan</p>
             )}
           </div>
 
@@ -259,7 +259,7 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
           {serverIsWindows && !isAdmin && (
             <div className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-red-500/10 text-red-600 border border-red-500/20">
               <span className="material-symbols-outlined text-[14px]">shield_lock</span>
-              <span>Administrator required — restart Multiver as Administrator to use MITM</span>
+              <span>Administrator dibutuhkan — jalankan Multiver sebagai Administrator untuk memakai MITM</span>
             </div>
           )}
         </div>
@@ -269,14 +269,14 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="mx-4 flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-surface p-5 shadow-xl sm:p-6">
-            <h3 className="font-semibold text-text-main">Sudo Password Required</h3>
+            <h3 className="font-semibold text-text-main">Kata Sandi Sudo Dibutuhkan</h3>
             <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <span className="material-symbols-outlined text-yellow-500 text-[20px]">warning</span>
-              <p className="text-xs text-text-muted">Required for SSL certificate and server startup</p>
+              <p className="text-xs text-text-muted">Dibutuhkan untuk sertifikat SSL dan startup server</p>
             </div>
             <Input
               type="password"
-              placeholder="Enter sudo password"
+              placeholder="Masukkan kata sandi sudo"
               value={sudoPassword}
               onChange={(e) => setSudoPassword(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleConfirmPassword(); }}
@@ -289,10 +289,10 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
             )}
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => { setShowPasswordModal(false); setSudoPassword(""); setModalError(null); }} disabled={loading}>
-                Cancel
+                Batal
               </Button>
               <Button variant="primary" size="sm" onClick={handleConfirmPassword} loading={loading}>
-                Confirm
+                Konfirmasi
               </Button>
             </div>
           </div>
@@ -303,23 +303,23 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
       {port443Conflict && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border border-border bg-surface p-5 shadow-xl sm:p-6">
-            <h3 className="font-semibold text-text-main">Port 443 Already In Use</h3>
+            <h3 className="font-semibold text-text-main">Port 443 Sedang Dipakai</h3>
             <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <span className="material-symbols-outlined text-yellow-500 text-[20px]">warning</span>
               <div className="flex flex-col gap-1 text-xs text-text-muted">
-                <p>Port 443 is currently used by another process:</p>
+                <p>Port 443 sedang dipakai proses lain:</p>
                 <p className="font-mono text-text-main" data-i18n-skip="true">
                   {port443Conflict.owner.name} (PID {port443Conflict.owner.pid})
                 </p>
-                <p>Kill this process to start MITM Server?</p>
+                <p>Hentikan proses ini untuk memulai Server MITM?</p>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => { setPort443Conflict(null); setLoading(false); }} disabled={loading}>
-                Cancel
+                Batal
               </Button>
               <Button variant="primary" size="sm" onClick={handleKillAndStart} loading={loading}>
-                Kill & Start
+                Hentikan & Mulai
               </Button>
             </div>
           </div>

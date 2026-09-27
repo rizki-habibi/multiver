@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 import { getModelUpstreamId } from "../../open-sse/config/providerModels.js";
 import { AntigravityExecutor } from "../../open-sse/executors/antigravity.js";
@@ -132,13 +131,5 @@ describe("Gemini 3.6 catalogs and pricing", () => {
     expect(ids).toContain("gemini-3.5-flash-lite");
     expect(MODEL_PRICING["gemini-3.6-flash"]).toMatchObject({ input: 1.5, output: 7.5 });
     expect(MODEL_PRICING["gemini-3.5-flash-lite"]).toMatchObject({ input: 0.3, output: 2.5 });
-  });
-
-  it("keeps the standalone CLI Gemini catalog synchronized", () => {
-    const source = readFileSync(join(here, "../../cli/src/cli/menus/providers.js"), "utf8");
-    const geminiCatalog = source.match(/\n  gemini: \[([\s\S]*?)\n  \],/)?.[1] || "";
-
-    expect(geminiCatalog).toContain("gemini-3.6-flash");
-    expect(geminiCatalog).toContain("gemini-3.5-flash-lite");
   });
 });

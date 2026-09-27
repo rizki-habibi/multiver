@@ -10,6 +10,10 @@ import { parseTOML, stringifyTOML } from "confbox";
 
 const execAsync = promisify(exec);
 
+// Managed-config detection. Legacy installs still point at 20128.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getJcodeConfigDir = () => path.join(os.homedir(), ".jcode");
 const getConfigPath = () => path.join(getJcodeConfigDir(), "config.toml");
 
@@ -52,7 +56,7 @@ const hasMultiverConfig = (config) => {
   if (providers["Multiver"]) return true;
 
   for (const [name, provider] of Object.entries(providers)) {
-    if (provider.base_url && provider.base_url.includes("localhost:20128")) {
+    if (isManagedBaseUrl(provider.base_url)) {
       return true;
     }
   }
@@ -82,7 +86,7 @@ const readProviderEnv = async () => {
         let value = trimmed.slice(eqIndex + 1).trim();
 
         if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
+          (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
 

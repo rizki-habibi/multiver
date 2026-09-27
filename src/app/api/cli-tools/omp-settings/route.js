@@ -10,6 +10,11 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 const PROVIDER_ID = "Multiver";
+
+// Managed-config detection. Legacy installs still point at 20128.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getOmpDir = () => path.join(os.homedir(), ".omp", "agent");
 const getOmpDbPath = () => path.join(getOmpDir(), "agent.db");
 const getOmpModelsYmlPath = () => path.join(getOmpDir(), "models.yml");
@@ -45,7 +50,7 @@ const readModelsYml = async () => {
 
 const hasMultiverInYml = (content) => {
   if (!content) return false;
-  return content.includes("Multiver:") || content.includes("localhost:20128");
+  return content.includes("Multiver:") || isManagedBaseUrl(content);
 };
 
 // Build standard Multiver provider block for models.yml

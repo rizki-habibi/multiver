@@ -9,6 +9,10 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Managed-config detection. Legacy installs still point at 20128.
+const isManagedBaseUrl = (url) =>
+  typeof url === "string" && (url.includes("localhost:20222") || url.includes("localhost:20128"));
+
 const getCrushConfigPath = () => {
   const configDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
   return path.join(configDir, "crush", "crush.json");
@@ -37,7 +41,7 @@ const hasMultiverConfig = (settings) => {
   const p = settings.providers["Multiver"];
   if (p && p.base_url) return true;
   for (const prov of Object.values(settings.providers)) {
-    if (prov.base_url && prov.base_url.includes("20128")) return true;
+    if (isManagedBaseUrl(prov.base_url)) return true;
   }
   return false;
 };
