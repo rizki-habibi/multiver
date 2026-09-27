@@ -23,11 +23,14 @@ const debugItems = [
   { href: "/dashboard/translator", label: "Penerjemah", icon: "translate" },
 ];
 
+// Operasional: MITM, Konsol Log, Log Gateway, dan Diagnostik kini hidup di tab
+// halaman Penggunaan — satu tempat, tidak terpisah. Hanya Kompatibilitas yang
+// tetap halaman tersendiri.
 const operationalItems = [
-  { href: "/dashboard/mitm", label: "Kiro MITM", icon: "security" },
-  { href: "/dashboard/console-log", label: "Konsol Log", icon: "console" },
-  { href: "/dashboard/logs", label: "Log Gateway", icon: "terminal" },
-  { href: "/dashboard/diagnostics", label: "Diagnostik", icon: "health_and_safety" },
+  { href: "/dashboard/usage?tab=mitm", label: "Kiro MITM", icon: "security" },
+  { href: "/dashboard/usage?tab=console", label: "Konsol Log", icon: "console" },
+  { href: "/dashboard/usage?tab=gateway", label: "Log Gateway", icon: "terminal" },
+  { href: "/dashboard/usage?tab=diagnostics", label: "Diagnostik", icon: "health_and_safety" },
   { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
 ];
 

@@ -51,14 +51,22 @@ const getPageInfo = (pathname) => {
       icon: "layers",
       breadcrumbs: [],
     };
-  if (pathname.includes("/usage"))
+  if (pathname.includes("/usage")) {
+    const tab = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("tab");
+    const TAB_INFO = {
+      console: { title: "Konsol Log", desc: "Real-time MITM execution log with redacted secrets", icon: "console" },
+      mitm: { title: "Kiro MITM", desc: "Sadap lalu lintas Kiro IDE dan rutekan melalui Multiver", icon: "security" },
+      diagnostics: { title: "Diagnostik", desc: "Pemeriksaan nyata kondisi runtime", icon: "health_and_safety" },
+    };
+    const info = TAB_INFO[tab];
+    if (info) return { title: info.title, description: info.desc, icon: info.icon, breadcrumbs: [] };
     return {
       title: "Penggunaan & Analitik",
-      description:
-        "Pantau penggunaan API, konsumsi token, dan log permintaan",
+      description: "Pantau penggunaan API, konsumsi token, log permintaan, MITM, dan diagnostik",
       icon: "bar_chart",
       breadcrumbs: [],
     };
+  }
   if (pathname.includes("/auth-files"))
     return {
       title: "Berkas Autentikasi",
@@ -71,27 +79,6 @@ const getPageInfo = (pathname) => {
       title: "Pelacak Kuota",
       description: "Lacak dan kelola batas kuota API Anda",
       icon: "data_usage",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/mitm"))
-    return {
-      title: "Kiro MITM",
-      description: "Sadap lalu lintas Kiro IDE dan rutekan melalui Multiver",
-      icon: "security",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/console-log"))
-    return {
-      title: "Konsol Log",
-      description: "Real-time MITM execution log with redacted secrets",
-      icon: "console",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/logs"))
-    return {
-      title: "Log Gateway",
-      description: "Log request gateway Multiver",
-      icon: "terminal",
       breadcrumbs: [],
     };
   if (pathname.includes("/token-saver"))

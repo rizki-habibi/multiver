@@ -2,10 +2,12 @@
 
 import { Suspense, useState, lazy } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { UsageStats, RequestLogger, CardSkeleton, SegmentedControl } from "@/shared/components";
+import { UsageStats, CardSkeleton, SegmentedControl } from "@/shared/components";
 import RequestDetailsTab from "./components/RequestDetailsTab";
-import ConsoleTab from "./components/ConsoleTab";
+import ConsoleLogTab from "./components/ConsoleLogTab";
 import KeyValidationTab from "./components/KeyValidationTab";
+import MitmTab from "./components/MitmTab";
+import DiagnosticsTab from "./components/DiagnosticsTab";
 
 const PERIODS = [
   { value: "today", label: "Hari ini" },
@@ -31,7 +33,7 @@ function UsageContent() {
   const [period, setPeriod] = useState("today");
 
   const tabFromUrl = searchParams.get("tab");
-  const validTabs = ["overview", "details", "console", "keys"];
+  const validTabs = ["overview", "details", "console", "mitm", "diagnostics", "keys"];
   const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview";
 
   const handleTabChange = (value) => {
@@ -49,7 +51,9 @@ function UsageContent() {
           options={[
             { value: "overview", label: "Ikhtisar" },
             { value: "details", label: "Detail" },
-            { value: "console", label: "Konsol" },
+            { value: "console", label: "Konsol Log" },
+            { value: "mitm", label: "Kiro MITM" },
+            { value: "diagnostics", label: "Diagnostik" },
             { value: "keys", label: "Validasi Kunci" },
           ]}
           value={activeTab}
@@ -73,7 +77,9 @@ function UsageContent() {
         </Suspense>
       )}
       {activeTab === "details" && <RequestDetailsTab />}
-      {activeTab === "console" && <ConsoleTab />}
+      {activeTab === "console" && <ConsoleLogTab />}
+      {activeTab === "mitm" && <MitmTab />}
+      {activeTab === "diagnostics" && <DiagnosticsTab />}
       {activeTab === "keys" && <KeyValidationTab />}
     </div>
   );

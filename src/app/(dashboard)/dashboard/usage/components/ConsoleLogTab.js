@@ -18,7 +18,7 @@ function badgeClass(level) {
   }
 }
 
-export default function ConsoleLogClient() {
+export default function ConsoleLogTab() {
   const [logs, setLogs] = useState([]);
   const [visibleLogs, setVisibleLogs] = useState([]);
   const [level, setLevel] = useState("all");
@@ -32,13 +32,10 @@ export default function ConsoleLogClient() {
 
   const fetchLogs = useCallback(async () => {
     const params = new URLSearchParams({
-      level,
-      source,
-      tool,
-      search,
+      level, source, tool, search,
       limit: String(CONSOLE_LOG_CONFIG.maxLines || 100),
     });
-    const res = await fetch(`/api/console-log?${params.toString()}`, { cache: "no-store" });
+    const res = await fetch(`/api/console-log?${params}`, { cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
     setLogs(data.logs || []);
@@ -61,7 +58,7 @@ export default function ConsoleLogClient() {
   }, [fetchLogs, fetchStatus]);
 
   useEffect(() => {
-    if (!autoRefresh) return undefined;
+    if (!autoRefresh) return;
     const timer = setInterval(() => {
       fetchLogs().catch(() => { });
       fetchStatus().catch(() => { });
@@ -117,10 +114,10 @@ export default function ConsoleLogClient() {
           <div className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
             <p className="font-semibold">Kiro belum terhubung ke Multiver</p>
             <p>
-              Jalankan sebagai Administrator, mulai MITM di halaman{" "}
-              <a href="/dashboard/mitm" className="underline font-medium">Kiro MITM</a>, pastikan CA terpasang dan DNS Kiro aktif,
+              Jalankan sebagai Administrator, mulai MITM di tab{" "}
+              <a href="/dashboard/usage?tab=mitm" className="underline font-medium">Kiro MITM</a>, pastikan CA terpasang dan DNS Kiro aktif,
               lalu buka Kiro IDE. Cek{" "}
-              <a href="/dashboard/diagnostics" className="underline font-medium">Diagnostik</a> bila masih gagal.
+              <a href="/dashboard/usage?tab=diagnostics" className="underline font-medium">Diagnostik</a> bila masih gagal.
             </p>
           </div>
         </Card>
@@ -128,10 +125,10 @@ export default function ConsoleLogClient() {
 
       <Card className="p-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Log Konsol</h2>
+          <h2 className="text-lg font-semibold">Konsol Log</h2>
           <div className="flex items-center gap-3 text-xs">
             <span className={statusBadge.mitm}>● MITM {status.mitm}</span>
-            <span className={statusBadge.gateway}>● Gateway 20222 {status.gateway}</span>
+            <span className={statusBadge.gateway}>● Gateway {status.gateway}</span>
           </div>
         </div>
 
