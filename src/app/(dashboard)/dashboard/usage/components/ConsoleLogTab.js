@@ -143,11 +143,11 @@ export default function ConsoleLogTab() {
             {TOOLS.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari log..." className="max-w-xs" />
-          <Button size="sm" onClick={() => fetchLogs().catch(() => { })}>Refresh</Button>
-          <Button size="sm" variant="ghost" onClick={() => setAutoRefresh((v) => !v)}>{autoRefresh ? "Pause" : "Resume"}</Button>
-          <Button size="sm" variant="ghost" onClick={copyLogs}>Copy</Button>
-          <Button size="sm" variant="ghost" onClick={clearDisplay}>Clear Display</Button>
-          <Button size="sm" variant="ghost" onClick={clearLogs}>Clear Logs</Button>
+          <Button size="sm" onClick={() => fetchLogs().catch(() => { })}>Segarkan</Button>
+          <Button size="sm" variant="ghost" onClick={() => setAutoRefresh((v) => !v)}>{autoRefresh ? "Jeda" : "Lanjut"}</Button>
+          <Button size="sm" variant="ghost" onClick={copyLogs}>Salin</Button>
+          <Button size="sm" variant="ghost" onClick={clearDisplay}>Bersihkan Tampilan</Button>
+          <Button size="sm" variant="ghost" onClick={clearLogs}>Hapus Log</Button>
         </div>
       </Card>
 
@@ -196,7 +196,7 @@ export default function ConsoleLogTab() {
 
       {selected && (
         <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-2">Detail Log</h3>
+          <h3 className="text-sm font-semibold mb-2">Rincian Log</h3>
           <div className="grid gap-1 text-xs">
             <div>Request ID: {selected.requestId || "-"}</div>
             <div>Host: {selected.host || "-"}</div>

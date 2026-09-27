@@ -28,9 +28,9 @@ export default function APIPageClient({ machineId }) {
   const [requireApiKey, setRequireApiKey] = useState(false);
   const [requireLogin, setRequireLogin] = useState(true);
   const [hasPassword, setHasPassword] = useState(true);
- const [tunnelDashboardAccess, setTunnelDashboardAccess] = useState(false);
+  const [tunnelDashboardAccess, setTunnelDashboardAccess] = useState(false);
 
- // Cloudflare Tunnel state
+  // Cloudflare Tunnel state
   const [tunnelChecking, setTunnelChecking] = useState(true);
   const [tunnelEnabled, setTunnelEnabled] = useState(false);
   const [tunnelReachable, setTunnelReachable] = useState(false);
@@ -737,9 +737,8 @@ export default function APIPageClient({ machineId }) {
           />
           {/* Cloudflare Tunnel */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tunnelEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
-            }`}>Tunnel</span>
+            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${tunnelEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+              }`}>Tunnel</span>
             {tunnelEnabled && !tunnelLoading && tunnelReachable ? (
               <>
                 <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
@@ -829,9 +828,8 @@ export default function APIPageClient({ machineId }) {
           </div>
           {/* Tailscale */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tsEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
-            }`}>Tailscale</span>
+            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${tsEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+              }`}>Tailscale</span>
             {tsEnabled && !tsLoading && tsReachable ? (
               <>
                 <Input value={`${tsUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
@@ -918,7 +916,7 @@ export default function APIPageClient({ machineId }) {
           <div className="mt-4">
             <SecurityWarning
               message={unsafeReason}
-              action={{ label: "Open settings", href: "/dashboard/profile" }}
+              action={{ label: "Buka pengaturan", href: "/dashboard/profile" }}
             />
           </div>
         )}
@@ -1136,7 +1134,7 @@ export default function APIPageClient({ machineId }) {
               icon={copied === "created_key" ? "check" : "content_copy"}
               onClick={() => copy(createdKey, "created_key")}
             >
-              {copied === "created_key" ? "Copied!" : "Copy"}
+              {copied === "created_key" ? "Disalin!" : "Salin"}
             </Button>
           </div>
           <Button onClick={() => setCreatedKey(null)} fullWidth>

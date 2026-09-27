@@ -113,7 +113,7 @@ export default function PxpipeClient() {
             Token Saver settings
           </a>
           <Button size="sm" variant="ghost" onClick={refresh} disabled={loading}>
-            {loading ? "Refreshing…" : "Refresh"}
+            {loading ? "Menyegarkan…" : "Segarkan"}
           </Button>
         </div>
       </div>
@@ -140,11 +140,10 @@ export default function PxpipeClient() {
               <button
                 key={tab.id}
                 onClick={() => setWindowId(tab.id)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  windowId === tab.id
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${windowId === tab.id
                     ? "bg-primary text-white shadow-sm"
                     : "text-text-muted hover:text-text hover:bg-bg-hover"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -242,13 +241,12 @@ export default function PxpipeClient() {
                   </td>
                   <td className="py-1.5">
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${
-                        ev.applied
+                      className={`text-xs px-2 py-0.5 rounded ${ev.applied
                           ? "bg-success/15 text-success"
                           : ev.reason === "transform_error" || ev.reason === "timeout"
                             ? "bg-danger/15 text-danger"
                             : "bg-warning/15 text-warning"
-                      }`}
+                        }`}
                       title={ev.detail || ""}
                     >
                       {ev.applied ? "Compressed" : REASON_LABELS[ev.reason] || ev.reason}

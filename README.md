@@ -314,7 +314,32 @@ npm run link:global  # register `multiver` command locally
 
 ---
 
-## 📦 Upgrade
+## 📦 Update / Upgrade
+
+### Cara otomatis (direkomendasikan)
+
+```bash
+multiver update
+```
+
+Perintah ini melakukan semuanya otomatis:
+1. Cek versi terbaru dari npm registry
+2. Hentikan semua proses Multiver yang masih jalan (termasuk MITM)
+3. `npm i -g multiver@<versi-terbaru> --prefer-online`
+4. Jalankan ulang Multiver di port yang sama
+
+> Saat Multiver sedang berjalan dan ada versi baru, menu utama otomatis
+> menampilkan **⬆ Update to vX**. Pilih itu — update langsung jalan tanpa
+> salin-tempel perintah manual.
+
+Flags tambahan:
+
+```bash
+multiver update --force        # Paksa update walau versi sama/lebih rendah
+multiver update --no-relaunch  # Update tanpa menjalankan ulang
+```
+
+### Cara manual (dari source)
 
 ```bash
 cd Multiver
@@ -323,11 +348,21 @@ npm install
 npm run build
 ```
 
-Atau dari CLI menu → "Update to vX" → salin perintah → jalankan di terminal.
+### Cek versi saja
+
+```bash
+multiver --version          # versi terpasang
+multiver update             # cek + update bila ada versi baru
+```
 
 ---
 
 ## ❓ FAQ
+
+**Q: Kenapa `multiver update` gagal / "npm registry tidak terjangkau"?**
+
+A: Cek koneksi internet, lalu coba `multiver update --force`. Bila tetap gagal,
+update manual dari source (lihat **📦 Update / Upgrade** di atas).
 
 **Q: Kenapa `npm install -g multiver` error 404?**
 

@@ -60,7 +60,7 @@ function CloudSyncContent() {
     const ok = searchParams.get("connected");
     if (err) setError(String(err));
     if (ok) {
-      setInfo("Account connected successfully");
+      setInfo("Akun berhasil terhubung");
       load();
     }
   }, [searchParams, load]);
@@ -78,9 +78,9 @@ function CloudSyncContent() {
       const res = await fetch(`/api/cloud?provider=${providerId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to disconnect");
+        setError(data.error || "Gagal memutuskan");
       } else {
-        setInfo("Account disconnected");
+        setInfo("Akun diputus");
       }
       await load();
     } catch (e) {
@@ -97,8 +97,8 @@ function CloudSyncContent() {
     try {
       const res = await fetch(`/api/cloud/sync?provider=${providerId}`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Backup failed");
-      else setInfo(`Backup uploaded (${data.files} file${data.files === 1 ? "" : "s"})`);
+      if (!res.ok) setError(data.error || "Cadangan gagal");
+      else setInfo(`Cadangan diunggah (${data.files} berkas`);
       await load();
     } catch (e) {
       setError(e.message);
@@ -115,8 +115,8 @@ function CloudSyncContent() {
     try {
       const res = await fetch(`/api/cloud/sync?provider=gdrive`, { method: "PATCH" });
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Restore failed");
-      else setInfo(`Settings restored from cloud (saved ${data.restoredAt})`);
+      if (!res.ok) setError(data.error || "Pemulihan gagal");
+      else setInfo(`Pengaturan dipulihkan dari awan (disimpan ${data.restoredAt})`);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -157,7 +157,7 @@ function CloudSyncContent() {
       const data = await res.json();
       if (!res.ok) setError(data.error || "Failed to connect");
       else {
-        setInfo("WebDAV account connected");
+        setInfo("Akun WebDAV terhubung");
         setWebdavOpen(false);
       }
       await load();

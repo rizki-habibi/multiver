@@ -664,7 +664,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               <span className="material-symbols-outlined text-[18px]">
                 {copied === `combo-${combo.id}` ? "check" : "content_copy"}
               </span>
-              <span className="text-[10px] leading-tight">Copy</span>
+              <span className="text-[10px] leading-tight">Salin</span>
             </button>
             <button
               onClick={onEdit}

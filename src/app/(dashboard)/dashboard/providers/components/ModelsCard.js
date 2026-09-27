@@ -39,7 +39,7 @@ export function ModelRow({ model, fullModel, copied, onCopy, testStatus, isCusto
             <span className="material-symbols-outlined text-sm">{copied === `model-${model.id}` ? "check" : "content_copy"}</span>
           </button>
           <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-            {copied === `model-${model.id}` ? "Copied!" : "Copy"}
+            {copied === `model-${model.id}` ? "Disalin!" : "Salin"}
           </span>
         </div>
         {isFree && <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">FREE</span>}
@@ -201,9 +201,9 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
   const allBuiltIn = getModelsByProviderId(providerId);
   const builtInModels = kindFilter
     ? allBuiltIn.filter((m) => {
-        if (m.kinds) return m.kinds.includes(kindFilter);
-        return getModelKind(m, "llm") === kindFilter;
-      })
+      if (m.kinds) return m.kinds.includes(kindFilter);
+      return getModelKind(m, "llm") === kindFilter;
+    })
     : allBuiltIn;
 
   // Custom models for this provider + kind, dedupe vs built-in
@@ -252,7 +252,7 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
               fullModel={`${providerAlias}/${model.id}`}
               copied={copied}
               onCopy={copy}
-              onSetAlias={() => {}}
+              onSetAlias={() => { }}
               onDeleteAlias={() => handleDeleteCustomModel(model.id)}
               testStatus={modelTestResults[model.id]}
               onTest={() => handleTestModel(model.id)}

@@ -8,14 +8,14 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
   const borderColor = testStatus === "ok"
     ? "border-green-500/40"
     : testStatus === "error"
-    ? "border-red-500/40"
-    : "border-border";
+      ? "border-red-500/40"
+      : "border-border";
 
   const iconColor = testStatus === "ok"
     ? "#22c55e"
     : testStatus === "error"
-    ? "#ef4444"
-    : undefined;
+      ? "#ef4444"
+      : undefined;
 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-lg border ${borderColor} hover:bg-sidebar/50`}>
@@ -39,7 +39,7 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
               </span>
             </button>
             <span className="pointer-events-none absolute top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-              {copied === `model-${modelId}` ? "Copied!" : "Copy"}
+              {copied === `model-${modelId}` ? "Disalin!" : "Salin"}
             </span>
           </div>
           {onTest && (

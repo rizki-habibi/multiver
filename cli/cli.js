@@ -67,12 +67,22 @@ const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRunt
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
 
-// Subcommands (`multiver xai video …`) run against an already-running gateway
-// and bypass the launcher flow (no runtime self-heal, no server spawn).
+// Subcommands (`multiver xai video …`, `multiver update …`) run against an
+// already-running gateway / global install and bypass the launcher flow.
 if (args[0] === "xai" && args[1] === "video") {
   const { run } = require("./src/cli/commands/xaiVideo");
   run(args.slice(2))
     .then((code) => process.exit(code))
+    .catch((err) => {
+      console.error(`❌ ${err?.message || err}`);
+      process.exit(1);
+    });
+  return;
+}
+
+if (args[0] === "update") {
+  const { run } = require("./src/cli/commands/update");
+  Promise.resolve(run(args.slice(1)))
     .catch((err) => {
       console.error(`❌ ${err?.message || err}`);
       process.exit(1);
@@ -745,11 +755,13 @@ function startServer(updatePromise) {
           const { clearScreen } = require("./src/cli/utils/display");
           clearScreen();
           console.log(`\n⬆  Update v${pkg.version} → v${latestVersion}\n`);
-          console.log(`Run this after exit:\n`);
-          console.log(`   \x1b[33m${INSTALL_CMD_LATEST}\x1b[0m\n`);
+          console.log("Auto-update berjalan otomatis...\n");
           cleanup();
           await killAllAppProcesses(port);
           await killProcessOnPort(port);
+          // Auto-update: stop → npm i -g → relaunch (tanpa salin-tempel manual)
+          const { run: runUpdate } = require("./src/cli/commands/update");
+          try { await runUpdate(["--no-relaunch"]); } catch (e) { console.error(`❌ ${e.message}`); }
           setTimeout(() => process.exit(0), 200);
           return;
         } else if (choice === "web") {

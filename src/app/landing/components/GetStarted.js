@@ -66,7 +66,7 @@ export default function GetStarted() {
                   <span className="text-green-400">$</span>
                   <span className="text-white">npx Multiver</span>
                   <span className="ml-auto text-gray-500 text-xs opacity-0 group-hover:opacity-100">
-                    {copied === "landing" ? "✓ Copied" : "Copy"}
+                    {copied === "landing" ? "✓ Disalin" : "Salin"}
                   </span>
                 </div>
 

@@ -6,14 +6,14 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
   const borderColor = testStatus === "ok"
     ? "border-green-500/40"
     : testStatus === "error"
-    ? "border-red-500/40"
-    : "border-border";
+      ? "border-red-500/40"
+      : "border-border";
 
   const iconColor = testStatus === "ok"
     ? "#22c55e"
     : testStatus === "error"
-    ? "#ef4444"
-    : undefined;
+      ? "#ef4444"
+      : undefined;
 
   return (
     <div className={`group min-w-0 max-w-full rounded-lg border px-3 py-2 ${borderColor} hover:bg-sidebar/50`}>
@@ -57,7 +57,7 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
             </span>
           </button>
           <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-            {copied === `model-${model.id}` ? "Copied!" : "Copy"}
+            {copied === `model-${model.id}` ? "Disalin!" : "Salin"}
           </span>
         </div>
         {isCustom ? (

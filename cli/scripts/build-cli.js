@@ -228,7 +228,13 @@ function buildCliPackage() {
   // Step 2: Clean old app/cli/app if exists
   console.log("2️⃣  Cleaning old app/cli/app...");
   if (fs.existsSync(cliAppDir)) {
-    fs.rmSync(cliAppDir, { recursive: true, force: true });
+    try {
+      fs.rmSync(cliAppDir, { recursive: true, force: true });
+    } catch (e) {
+      // Windows: a running server (or antivirus) may hold cli/app open. Overwriting
+      // in place still produces a correct bundle — copyRecursive below overwrites files.
+      console.warn(`⚠️  Cannot remove cli/app (${e.code || e.message}); will overwrite in place`);
+    }
   }
   console.log("✅ Cleaned\n");
 

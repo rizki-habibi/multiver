@@ -604,7 +604,7 @@ export default function TokenSaverClient() {
               <p className="text-xs text-error mt-1">{extrasActionError}</p>
             )}
             {restartingProxy && (
-              <p className="text-xs text-text-muted mt-1">Restarting proxy&</p>
+              <p className="text-xs text-text-muted mt-1">Memulai ulang proxy…</p>
             )}
             {(extrasActionLoading || removingExtra) && installLog && (
               <pre className="mt-2 max-h-32 overflow-auto rounded bg-surface-2 p-2 text-[10px] leading-tight text-text-muted whitespace-pre-wrap">
@@ -864,7 +864,7 @@ export default function TokenSaverClient() {
                     copy(`pip install "headroom-ai[proxy]"`)
                   }
                 >
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? "Disalin" : "Salin"}
                 </Button>
               </div>
             </div>

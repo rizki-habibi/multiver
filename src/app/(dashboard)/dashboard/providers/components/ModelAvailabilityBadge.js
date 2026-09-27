@@ -124,7 +124,7 @@ export default function ModelAvailabilityBadge() {
             <button
               onClick={fetchStatus}
               className="p-1 rounded-lg hover:bg-surface text-text-muted hover:text-text-main transition-colors"
-              title="Refresh"
+              title="Segarkan"
             >
               <span className="material-symbols-outlined text-[14px]">refresh</span>
             </button>
