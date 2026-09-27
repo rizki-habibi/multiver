@@ -24,6 +24,7 @@ import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
+import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog";
 import { logger as centralLogger, createRequestId, redactSecrets } from "@/lib/logger";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
@@ -327,6 +328,17 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     }
     log.warn("CHAT", "Format model tidak valid", { model: modelStr });
     centralLogger.warn("MODEL", `Format model tidak valid: ${modelStr}`, { requestId, model: modelStr });
+    appendMitmConsoleLog({
+      level: "error",
+      source: "GATEWAY",
+      event: "gateway.error",
+      message: `Format model tidak valid: ${modelStr}`,
+      requestId,
+      model: modelStr,
+      route: "GATEWAY",
+      status: "HTTP_400",
+      error: "Format model tidak valid",
+    }).catch(() => { });
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Format model tidak valid");
   }
 
@@ -433,10 +445,37 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
     if (result.success) {
       centralLogger.info("RESPONSE", `Request completed`, { requestId, provider, model });
+      appendMitmConsoleLog({
+        level: "success",
+        source: "GATEWAY",
+        event: "gateway.response",
+        message: `Request completed — ${provider}/${model}`,
+        requestId,
+        model: modelStr,
+        mappedModel: `${provider}/${model}`,
+        route: "GATEWAY",
+        status: "SUCCESS",
+      }).catch(() => { });
       return result.response;
     }
 
     centralLogger.error("ERROR", `[${provider}/${model}] ${result.status} ${redactSecrets(result.error || "")}`, { requestId, provider, model });
+
+    // Log Konsol pengguna: error provider dengan sebab asli (bukan hanya kode status).
+    // ponytail: redaksi secret dipercayakan ke mitmConsoleLog; di sini hanya teruskan teks.
+    appendMitmConsoleLog({
+      level: "error",
+      source: "GATEWAY",
+      event: "gateway.error",
+      message: `Provider error — ${provider}/${model} HTTP ${result.status}`,
+      requestId,
+      model: modelStr,
+      mappedModel: `${provider}/${model}`,
+      route: "GATEWAY",
+      status: `HTTP_${result.status}`,
+      error: result.error || null,
+      reason: result.error ? String(result.error).slice(0, 500) : null,
+    }).catch(() => { });
 
     // Antigravity 409/429: refresh live quota to get exact resetAt before locking
     let quotaResetMs = null;

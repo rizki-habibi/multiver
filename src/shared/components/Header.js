@@ -7,6 +7,7 @@ import PropTypes from "prop-types";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
 import ThemeToggle from "@/shared/components/ThemeToggle";
+import NineRemoteButton from "@/shared/components/NineRemoteButton";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
@@ -275,6 +276,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
           </div>
         )}
         <HeaderSearch />
+        <NineRemoteButton />
         <ThemeToggle />
         <HeaderMenu onLogout={handleLogout} />
       </div>

@@ -111,6 +111,21 @@ export default function ConsoleLogClient() {
 
   return (
     <div className="flex flex-col gap-4">
+      {status.mitm !== "RUNNING" || status.gateway !== "Online" ? (
+        <Card className="p-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/30">
+          <span className="material-symbols-outlined text-[16px] text-amber-600 mt-0.5 shrink-0">warning</span>
+          <div className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <p className="font-semibold">Kiro belum terhubung ke Multiver</p>
+            <p>
+              Jalankan sebagai Administrator, mulai MITM di halaman{" "}
+              <a href="/dashboard/mitm" className="underline font-medium">Kiro MITM</a>, pastikan CA terpasang dan DNS Kiro aktif,
+              lalu buka Kiro IDE. Cek{" "}
+              <a href="/dashboard/diagnostics" className="underline font-medium">Diagnostik</a> bila masih gagal.
+            </p>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="p-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Log Konsol</h2>
@@ -155,6 +170,11 @@ export default function ConsoleLogClient() {
                 {log.requestId ? <span>[{log.requestId}]</span> : null}
               </div>
               <p className="mt-1">{log.message}</p>
+              {log.reason ? (
+                <p className="mt-1 break-all whitespace-pre-wrap text-red-600 dark:text-red-400">
+                  {String(log.reason).slice(0, 400)}
+                </p>
+              ) : null}
               <p className="mt-1 text-text-muted">
                 {log.model ? `model=${log.model} ` : ""}
                 {log.mappedModel ? `mapped=${log.mappedModel} ` : ""}
