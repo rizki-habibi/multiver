@@ -13,6 +13,7 @@ import {
   initDbHooks,
 } from "@/mitm/manager";
 import { getSettings, updateSettings } from "@/lib/localDb";
+import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog";
 
 import { NETWORK_CONFIG, getMultiverBaseUrl } from "@/shared/constants/config";
 
@@ -127,6 +128,16 @@ export async function POST(request) {
 
     const result = await startServer(apiKey, pwd, !!forceKillPort443);
     if (!isWin) setCachedPassword(pwd);
+    try {
+      appendMitmConsoleLog({
+        level: "success",
+        source: "MITM",
+        tool: "kiro",
+        event: "mitm.started",
+        message: "MITM server started",
+        status: "RUNNING",
+      });
+    } catch { /* ignore log errors */ }
 
     return NextResponse.json({ success: true, running: result.running, pid: result.pid });
   } catch (error) {
@@ -154,6 +165,16 @@ export async function DELETE(request) {
 
     await stopServer(pwd);
     if (!isWin && sudoPassword) setCachedPassword(sudoPassword);
+    try {
+      appendMitmConsoleLog({
+        level: "info",
+        source: "MITM",
+        tool: "kiro",
+        event: "mitm.stopped",
+        message: "MITM server stopped",
+        status: "STOPPED",
+      });
+    } catch { /* ignore log errors */ }
 
     return NextResponse.json({ success: true, running: false });
   } catch (error) {
@@ -183,8 +204,28 @@ export async function PATCH(request) {
 
     if (action === "enable") {
       await enableToolDNS(tool, pwd);
+      try {
+        appendMitmConsoleLog({
+          level: "info",
+          source: "MITM",
+          tool,
+          event: "mitm.route",
+          message: "DNS MITM enabled",
+          status: "DNS_ON",
+        });
+      } catch { /* ignore */ }
     } else if (action === "disable") {
       await disableToolDNS(tool, pwd);
+      try {
+        appendMitmConsoleLog({
+          level: "warning",
+          source: "MITM",
+          tool,
+          event: "mitm.route",
+          message: "DNS MITM disabled",
+          status: "DNS_OFF",
+        });
+      } catch { /* ignore */ }
     } else if (action === "trust-cert") {
       await trustCert(pwd);
       if (!isWin && sudoPassword) setCachedPassword(sudoPassword);

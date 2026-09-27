@@ -79,6 +79,20 @@ const getPageInfo = (pathname) => {
       icon: "security",
       breadcrumbs: [],
     };
+  if (pathname.includes("/console-log"))
+    return {
+      title: "Konsol Log",
+      description: "Real-time MITM execution log with redacted secrets",
+      icon: "console",
+      breadcrumbs: [],
+    };
+  if (pathname.includes("/logs"))
+    return {
+      title: "Log Gateway",
+      description: "Log request gateway Multiver",
+      icon: "terminal",
+      breadcrumbs: [],
+    };
   if (pathname.includes("/token-saver"))
     return {
       title: "Penghemat Token",

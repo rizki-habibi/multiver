@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getMitmAlias, setMitmAliasAll } from "@/models";
 import { getMitmStatus } from "@/mitm/manager";
 import { writeAliasForTool } from "@/lib/mitmAliasCache";
+import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog";
 
 // GET - Get MITM aliases for a tool
 export async function GET(request) {
@@ -44,8 +45,27 @@ export async function PUT(request) {
     }
 
     await setMitmAliasAll(tool, filtered);
-    writeAliasForTool(tool, filtered);
-    return NextResponse.json({ success: true, aliases: filtered });
+    const cache = writeAliasForTool(tool, filtered);
+    try {
+      appendMitmConsoleLog({
+        level: cache?.cache ? "success" : "warning",
+        source: "MITM",
+        tool,
+        event: cache?.cache ? "mitm.alias.saved" : "mitm.alias.cache",
+        message: cache?.cache ? "Alias tersimpan ke DB + cache" : "Alias tersimpan ke DB, tapi cache gagal ditulis",
+        status: cache?.cache ? "SUCCESS" : "WARNING",
+        reason: cache?.cache ? null : "CACHE_WRITE_FAILED",
+        error: cache?.cache ? null : cache?.error || null,
+        meta: { aliasCount: Object.keys(filtered).length },
+      });
+    } catch { /* do not fail alias save on log write */ }
+    return NextResponse.json({
+      success: !!cache?.cache,
+      database: true,
+      cache: !!cache?.cache,
+      aliases: filtered,
+      ...(cache?.cache ? {} : { warning: cache?.error || "Failed to write aliases cache" }),
+    });
   } catch (error) {
     console.log("Error saving MITM aliases:", error.message);
     return NextResponse.json({ error: "Failed to save aliases" }, { status: 500 });

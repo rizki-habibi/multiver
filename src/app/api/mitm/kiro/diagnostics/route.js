@@ -46,6 +46,8 @@ export async function GET() {
     return NextResponse.json({
       overall,
       state,
+      trafficDetected: (runtimeStats.intercepted || 0) > 0,
+      stateNote: (runtimeStats.intercepted || 0) > 0 ? "Kiro traffic detected" : "Waiting for Kiro traffic",
       summary,
       checks,
       stats: runtimeStats,

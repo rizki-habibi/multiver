@@ -64,5 +64,11 @@ export async function getMitmAlias(toolName) {
 }
 
 export async function setMitmAliasAll(toolName, mappings) {
+  if (!toolName || typeof toolName !== "string") {
+    throw new Error("toolName is required");
+  }
+  if (mappings != null && (typeof mappings !== "object" || Array.isArray(mappings))) {
+    throw new Error("mappings must be an object");
+  }
   await mitmKv.set(toolName, mappings || {});
 }
