@@ -11,13 +11,35 @@ hasil masing-masing model, dan membiarkan Anda membandingkannya.
 
 ---
 
-## 🚀 Instalasi (Windows)
+## 🚀 Instalasi
 
-### Cara 1 — Dari folder lokal (paling cepat)
+### Cara 1 — npm global (siap pakai, direkomendasikan)
 
 ```bash
-git clone https://github.com/decolua/Multiver.git
-cd Multiver
+npm install -g multiver
+multiver
+```
+
+Selesai. Perintah `multiver` langsung jalan — server mulai di
+`http://localhost:20222/dashboard`. Pertama kali jalan, runtime dependency
+(SQLite) otomatis diunduh ke `~/.multiver/runtime`.
+
+### Cara 2 — Dari tarball lokal (tanpa registry)
+
+Bila registry belum tersedia / offline:
+
+```bash
+# di folder repo (setelah npm run cli:build)
+npm pack --prefix cli                    # hasil: cli/multiver-<versi>.tgz
+npm install -g cli/multiver-10.0.0.tgz
+multiver
+```
+
+### Cara 3 — Dari source (development)
+
+```bash
+git clone https://github.com/rizki-habibi/multiver.git
+cd multiver
 npm install
 node cli/link-global.js
 ```
@@ -26,24 +48,7 @@ Perintah `node cli/link-global.js` mendaftarkan perintah `multiver` ke npm globa
 publikasi ke registry npm (lokal saja). Jika gagal, otomatis membuat shim
 `multiver.cmd` / `multiver.ps1` di npm prefix (`C:\Users\<user>\AppData\Roaming\npm`).
 
-> **Catatan:** `npm install -g multiver` menghasilkan **404 Not Found** karena paket ini
-> **tidak dipublikasikan ke npm registry**. Gunakan `link-global.js` atau clone langsung.
-
-### Cara 2 — Jalankan langsung tanpa instalasi global
-
-```bash
-npm install
-node cli/cli.js
-```
-
-### Cara 3 — Mode development
-
-```bash
-npm install
-npm run dev
-```
-
-Server dimulai di `http://localhost:20222`.
+> Juga bisa langsung tanpa instalasi global: `node cli/cli.js`
 
 ### Menjalankan
 
@@ -384,8 +389,15 @@ dan tidak butuh registry. Cek koneksi internet + `git remote -v`, lalu coba
 
 **Q: Kenapa `npm install -g multiver` error 404?**
 
-A: Paket ini tidak dipublikasikan ke npm registry. Gunakan `node cli/link-global.js`
-setelah clone repo. Ini mendaftarkan `multiver` sebagai global command dari folder lokal.
+A: Registry npm membutuhkan paket dipublikasikan dulu. Bila belum, gunakan
+**Cara 2** (tarball) atau **Cara 3** (source) di bagian Instalasi — hasilnya sama.
+
+Jika registrynya sudah ada tapi masih 404, cache npm menahan versi lama:
+
+```bash
+npm cache clean --force
+npm install -g multiver
+```
 
 **Q: MAX vs Fusion bedanya apa?**
 
