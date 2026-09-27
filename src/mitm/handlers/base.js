@@ -171,10 +171,20 @@ async function pipeTransformedEventStream(routerRes, res, transformFn, state) {
   const reader = routerRes.body.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: false });
   let buffer = "";
+  let aborted = false;
+
+  // Client disconnect → stop reading upstream so Log Konsol tidak berakhir dengan "success" palsu.
+  const onFinish = () => {
+    aborted = true;
+    try { reader.cancel().catch(() => { }); } catch { }
+  };
+  res.on("close", onFinish);
+  res.on("error", onFinish);
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
+    if (aborted) break;
 
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
@@ -221,6 +231,8 @@ async function pipeTransformedEventStream(routerRes, res, transformFn, state) {
     }
   } catch { /* ignore flush errors */ }
 
+  res.off("close", onFinish);
+  res.off("error", onFinish);
   res.end();
 }
 

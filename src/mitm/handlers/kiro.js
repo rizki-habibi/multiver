@@ -11,7 +11,7 @@ function dbg(msg) {
   if (!IS_DEV) return;
   try {
     fs.appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${msg}\n`);
-  } catch {}
+  } catch { }
 }
 
 // ─── CRC32 (standard, polynomial 0xEDB88320 — same as AWS EventStream) ───────
@@ -526,7 +526,7 @@ async function intercept(req, res, bodyBuffer, mappedModel, _passthrough, contex
       // that don't contain model info - pass them through directly to avoid JSON.parse crash
       throw new Error(`Binary EventStream format detected (${bodyBuffer.length}B) - request should use passthrough instead of intercept`);
     }
-    
+
     const body = JSON.parse(bodyBuffer.toString());
 
     // 1 + 2: CodeWhisperer → OpenAI messages + tools
@@ -561,12 +561,19 @@ async function intercept(req, res, bodyBuffer, mappedModel, _passthrough, contex
     });
     const routerRes = await fetchRouter(openaiBody, "/v1/chat/completions", req.headers);
     if (!routerRes.ok) {
+      // ponytail: body dibatasi 2KB agar error upstream terbaca di Log Konsol tanpa membengkakkan file log.
+      let gatewayDetail = null;
+      try {
+        gatewayDetail = (await routerRes.text()).slice(0, 2000);
+      } catch { gatewayDetail = null; }
+      const reason = parseUpstreamError(gatewayDetail);
+
       emitMitmLog({
         level: "error",
         source: "MITM",
         tool: context.tool || "kiro",
         event: "mitm.error",
-        message: "Gateway returned non-2xx response",
+        message: reason ? `HTTP ${routerRes.status} — ${reason}` : `Gateway returned HTTP ${routerRes.status}`,
         requestId,
         model: context.model || null,
         mappedModel,
@@ -574,13 +581,46 @@ async function intercept(req, res, bodyBuffer, mappedModel, _passthrough, contex
         gateway: context.gateway || null,
         status: `HTTP_${routerRes.status}`,
         durationMs: Date.now() - startedAt,
+        error: gatewayDetail || routerRes.statusText || null,
+        meta: gatewayDetail ? { upstreamBody: gatewayDetail } : null,
       });
+
+      if (!res.headersSent) res.writeHead(routerRes.status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        error: {
+          message: reason || `Gateway returned HTTP ${routerRes.status}`,
+          type: "upstream_error",
+          status: routerRes.status,
+          upstream: gatewayDetail || null,
+        },
+      }));
+      return;
     }
 
     // 4 + 5: Re-encode response as AWS EventStream binary using standard pipeline
     const state = initKiroState(mappedModel);
 
     await pipeTransformedEventStream(routerRes, res, convertOpenAIToKiro, state);
+
+    // ponytail: `res.writableEnded` true → klien putus di tengah stream; bukan sukses.
+    if (res.writableEnded || res.destroyed) {
+      emitMitmLog({
+        level: "warning",
+        source: "MITM",
+        tool: context.tool || "kiro",
+        event: "mitm.aborted",
+        message: "Koneksi klien terputus sebelum respons selesai",
+        requestId,
+        model: context.model || null,
+        mappedModel,
+        route: "MULTIVER",
+        gateway: context.gateway || null,
+        status: "CLIENT_DISCONNECTED",
+        durationMs: Date.now() - startedAt,
+      });
+      return;
+    }
+
     emitMitmLog({
       level: "success",
       source: "MITM",
@@ -616,14 +656,31 @@ async function intercept(req, res, bodyBuffer, mappedModel, _passthrough, contex
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
     }
-    res.end(JSON.stringify({ 
-      error: { 
-        message: error.message, 
+    res.end(JSON.stringify({
+      error: {
+        message: error.message,
         type: "mitm_error",
         handler: "kiro"
-      } 
+      }
     }));
   }
+}
+
+// Extract a human-readable reason from an upstream error body (OpenAI-style JSON or plain text).
+// ponytail: handles only the shapes Multiver gateway emits; extend when new error formats appear.
+function parseUpstreamError(body) {
+  if (!body) return null;
+  const text = String(body).trim();
+  if (!text) return null;
+
+  try {
+    const json = JSON.parse(text);
+    const msg = json?.error?.message || json?.error || json?.message || json?.detail;
+    if (msg) return String(msg).slice(0, 500);
+    if (json) return JSON.stringify(json).slice(0, 500);
+  } catch { /* not JSON */ }
+
+  return text.slice(0, 500);
 }
 
 // Detect AWS EventStream binary format

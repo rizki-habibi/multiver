@@ -56,15 +56,15 @@ export default function ConsoleLogClient() {
   }, []);
 
   useEffect(() => {
-    fetchLogs().catch(() => {});
-    fetchStatus().catch(() => {});
+    fetchLogs().catch(() => { });
+    fetchStatus().catch(() => { });
   }, [fetchLogs, fetchStatus]);
 
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const timer = setInterval(() => {
-      fetchLogs().catch(() => {});
-      fetchStatus().catch(() => {});
+      fetchLogs().catch(() => { });
+      fetchStatus().catch(() => { });
     }, CONSOLE_LOG_CONFIG.pollIntervalMs || 1500);
     return () => clearInterval(timer);
   }, [autoRefresh, fetchLogs, fetchStatus]);
@@ -131,7 +131,7 @@ export default function ConsoleLogClient() {
             {TOOLS.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari log..." className="max-w-xs" />
-          <Button size="sm" onClick={() => fetchLogs().catch(() => {})}>Refresh</Button>
+          <Button size="sm" onClick={() => fetchLogs().catch(() => { })}>Refresh</Button>
           <Button size="sm" variant="ghost" onClick={() => setAutoRefresh((v) => !v)}>{autoRefresh ? "Pause" : "Resume"}</Button>
           <Button size="sm" variant="ghost" onClick={copyLogs}>Copy</Button>
           <Button size="sm" variant="ghost" onClick={clearDisplay}>Clear Display</Button>
@@ -162,6 +162,16 @@ export default function ConsoleLogClient() {
                 {log.status ? `status=${log.status} ` : ""}
                 {Number.isFinite(log.durationMs) ? `duration=${log.durationMs}ms` : ""}
               </p>
+              {log.error ? (
+                <p className="mt-1 break-all whitespace-pre-wrap text-red-600 dark:text-red-400">
+                  {String(log.error).slice(0, 400)}
+                </p>
+              ) : null}
+              {log.meta?.upstreamBody ? (
+                <p className="mt-1 break-all whitespace-pre-wrap text-amber-600 dark:text-amber-400">
+                  {String(log.meta.upstreamBody).slice(0, 400)}
+                </p>
+              ) : null}
             </button>
           ))}
         </div>
