@@ -1,5 +1,7 @@
 # MULTIVER MAX
 
+> **Versi 11.1.0** — perbaikan routing fallback, kompatibilitas Anthropic, Konsol Log, status Kiro/MITM, dan antarmuka Penghemat Token.
+
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
 ![Version](https://img.shields.io/badge/version-11.0.0-0969DA)
@@ -438,6 +440,67 @@ cd cli && npm run link:global  # register `multiver` command locally
 
 ---
 
+## 🔧 Perbaikan Provider & Routing (v11.1.0)
+
+Versi ini memperbaiki beberapa pola kegagalan yang terlihat pada log gateway:
+
+| Status | Arti | Tindakan Multiver |
+|---|---|---|
+| **400** | Permintaan/model tidak cocok dengan endpoint | Tidak dianggap masalah akun; dikembalikan sebagai kesalahan permintaan |
+| **401** | Kredensial tidak sah/kedaluwarsa | Akun/provider dilewati dan fallback dilanjutkan |
+| **402** | Pembayaran/kuota berbayar diperlukan | Provider dilewati sementara; gunakan provider lain yang tersedia |
+| **403** | Akses/kuota ditolak | Provider dilewati sementara; periksa izin atau kuota |
+| **502** | Upstream/gateway provider gagal menjawab | Fallback dilanjutkan dan model diberi jeda kesehatan singkat |
+| **503/504** | Layanan upstream sementara tidak tersedia | Fallback dilanjutkan tanpa menunggu lama |
+
+### Atria / Anthropic Compatible
+
+Jika log berbunyi:
+
+`anthropic-compatible-.../Atria-Dawn-Preview HTTP 502`
+
+artinya request sudah masuk ke node **Anthropic Compatible**, tetapi layanan di belakang node tersebut mengembalikan **502**. Ini bukan bukti bahwa MITM Kiro atau gateway Multiver tidak tersambung.
+
+Periksa pada node Atria:
+
+1. Base URL harus menunjuk ke API Messages yang benar, biasanya **base URL tanpa `/messages`** karena Multiver menambahkan `/messages`.
+2. API key harus masih aktif.
+3. Model ID harus persis seperti yang diterima layanan Atria.
+4. Tes node melalui **Penyedia → Validasi** sebelum memasukkannya ke kombinasi.
+5. Jika validasi juga 502, masalah berada pada endpoint/upstream Atria atau jaringan menuju endpoint tersebut, bukan pada fallback Kiro.
+
+Multiver 11.1.0 juga tidak lagi memaksakan `x-api-key` **dan** `Authorization: Bearer` sekaligus pada node Anthropic Compatible. Default-nya memakai `x-api-key`; mode Bearer hanya dipakai bila node dikonfigurasi eksplisit.
+
+### Kiro MITM: arti status
+
+Status **RUNNING** berarti proses MITM hidup. Status **TERHUBUNG** hanya diberikan setelah traffic Kiro benar-benar terintercept.
+
+Alur yang benar:
+
+`Kiro → DNS/hosts → MITM :443 → Multiver :20222 → combo/provider → Kiro`
+
+Jika tertulis **MITM BERJALAN / MENUNGGU**, buka Kiro dan kirim satu prompt. Jika tetap tidak berubah menjadi **TERHUBUNG**, buka **Penggunaan → Kiro MITM → Diagnostik** dan periksa CA, DNS, port 443, serta traffic.
+
+### Konsol Log
+
+Konsol sekarang menggunakan satu panel terminal gelap seperti CMD, dengan:
+
+- filter tingkat log;
+- filter sumber;
+- filter alat;
+- pencarian;
+- jeda/lanjut;
+- salin log;
+- hapus log;
+- warna status untuk INFO, SUKSES, PERINGATAN, ERROR;
+- status **MITM / Gateway / Kiro** pada bagian atas.
+
+Jika filter terlihat tidak berubah, klik **Segarkan** setelah memilih filter. Filter server membaca nilai yang sama dengan kolom `level`, `source`, dan `tool` pada log.
+
+### Penghemat Token
+
+Nama dan tombol utama Penghemat Token telah diterjemahkan ke Bahasa Indonesia. **RTK internal tetap opsional melalui sakelar**, sedangkan Headroom, Caveman, Ponytail, dan PXPIPE tetap merupakan fitur terpisah.
+
 ## 📦 Update / Upgrade
 
 ### Cara otomatis (direkomendasikan)
@@ -537,6 +600,15 @@ Jika masih, cek `/api/console-log?limit=200` langsung.
 ---
 
 ## 📜 Changelog
+
+### v11.1.0
+
+- Perbaikan cooldown dan pemutus sementara untuk provider 5xx agar combo tidak terus menghantam provider yang sedang bermasalah.
+- Perbaikan autentikasi Anthropic Compatible agar tidak mengirim `x-api-key` dan `Authorization: Bearer` bersamaan secara default.
+- Konsol Log menjadi satu panel terminal gelap dengan status Kiro yang membedakan proses MITM aktif dari traffic Kiro yang benar-benar terhubung.
+- Status akhir combo menjelaskan jumlah model yang gagal dan penyebab terakhir.
+- Penghemat Token diterjemahkan lebih konsisten ke Bahasa Indonesia.
+- URL changelog repository diperbaiki ke repository resmi `rizki-habibi/multiver`.
 
 ### v11.0.0
 
