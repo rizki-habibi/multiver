@@ -73,6 +73,11 @@ export const ERROR_RULES = [
   { status: 403, cooldownMs: COOLDOWN.long },
   { status: 404, cooldownMs: COOLDOWN.long },
   { status: 429, backoff: true },
+  // 5xx upstream failures are usually transient. Keep the cooldown short so
+  // one unhealthy gateway does not poison the whole combo for 30 seconds.
+  { status: 502, cooldownMs: 2000 },
+  { status: 504, cooldownMs: 2000 },
+  { status: 500, cooldownMs: 2000 },
 ];
 
 // Backward compat: COOLDOWN_MS object (used by index.js re-export)
