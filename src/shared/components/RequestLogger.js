@@ -40,10 +40,10 @@ export default function RequestLogger() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Request Logs</h2>
+        <h2 className="text-xl font-semibold">Log Permintaan</h2>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-text-muted flex items-center gap-2 cursor-pointer">
-            <span>Auto Refresh (3s)</span>
+            <span>Refresh Otomatis (3d)</span>
             <div
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${autoRefresh ? "bg-primary" : "bg-bg-subtle border border-border"
@@ -61,19 +61,19 @@ export default function RequestLogger() {
       <Card className="overflow-hidden bg-black/5 dark:bg-black/20">
         <div className="p-0 overflow-x-auto max-h-[600px] overflow-y-auto font-mono text-xs">
           {loading && logs.length === 0 ? (
-            <div className="p-8 text-center text-text-muted">Loading logs...</div>
+            <div className="p-8 text-center text-text-muted">Memuat log…</div>
           ) : logs.length === 0 ? (
-            <div className="p-8 text-center text-text-muted">No logs recorded yet.</div>
+            <div className="p-8 text-center text-text-muted">Belum ada log tercatat.</div>
           ) : (
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead className="sticky top-0 bg-bg-subtle border-b border-border z-10">
                 <tr>
-                  <th className="px-3 py-2 border-r border-border">DateTime</th>
+                  <th className="px-3 py-2 border-r border-border">Waktu</th>
                   <th className="px-3 py-2 border-r border-border">Model</th>
-                  <th className="px-3 py-2 border-r border-border">Provider</th>
-                  <th className="px-3 py-2 border-r border-border">Account</th>
-                  <th className="px-3 py-2 border-r border-border">In</th>
-                  <th className="px-3 py-2 border-r border-border">Out</th>
+                  <th className="px-3 py-2 border-r border-border">Penyedia</th>
+                  <th className="px-3 py-2 border-r border-border">Akun</th>
+                  <th className="px-3 py-2 border-r border-border">Masuk</th>
+                  <th className="px-3 py-2 border-r border-border">Keluar</th>
                   <th className="px-3 py-2">Status</th>
                 </tr>
               </thead>
@@ -100,8 +100,8 @@ export default function RequestLogger() {
                       <td className="px-3 py-1.5 border-r border-border text-right text-primary">{parts[4]}</td>
                       <td className="px-3 py-1.5 border-r border-border text-right text-success">{parts[5]}</td>
                       <td className={`px-3 py-1.5 font-bold ${isSuccess ? 'text-success' :
-                          isFailed ? 'text-error' :
-                            'text-primary animate-pulse'
+                        isFailed ? 'text-error' :
+                          'text-primary animate-pulse'
                         }`}>
                         {status}
                       </td>
@@ -114,7 +114,7 @@ export default function RequestLogger() {
         </div>
       </Card>
       <div className="text-[10px] text-text-muted italic">
-        Logs are loaded from the request history database.
+        Log dimuat dari database riwayat permintaan.
       </div>
     </div>
   );

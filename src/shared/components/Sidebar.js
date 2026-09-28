@@ -14,6 +14,7 @@ const navItems = [
   { href: "/dashboard/endpoint", label: "Titik Akhir & Kunci", icon: "api" },
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
   { href: "/dashboard/combos", label: "Kombinasi & Adaptor Vision", icon: "layers" },
+  { href: "/dashboard/conversations", label: "Riwayat Percakapan", icon: "chat" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
   { href: "/dashboard/quota", label: "Pelacak Kuota", icon: "data_usage" },
   { href: "/dashboard/token-saver", label: "Penghemat Token", icon: "savings" },
@@ -23,8 +24,13 @@ const debugItems = [
   { href: "/dashboard/translator", label: "Penerjemah", icon: "translate" },
 ];
 
+
+
 const operationalItems = [
-  { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
+  { href: "/dashboard/usage?tab=console", label: "Konsol Log", icon: "terminal" },
+  { href: "/dashboard/usage?tab=mitm", label: "Kiro MITM", icon: "hub" },
+  { href: "/dashboard/usage?tab=diagnostics", label: "Diagnostik", icon: "health_and_safety" },
+  { href: "/dashboard/usage?tab=keys", label: "Validasi Kunci", icon: "key" },
 ];
 
 const systemItems = [
@@ -69,6 +75,9 @@ export default function Sidebar({ onClose }) {
     }
     if (href === "/dashboard/endpoint") {
       return pathname === "/dashboard" || pathname.startsWith("/dashboard/endpoint");
+    }
+    if (href === "/dashboard/conversations") {
+      return pathname.startsWith("/dashboard/conversations");
     }
     return pathname.startsWith(href);
   };

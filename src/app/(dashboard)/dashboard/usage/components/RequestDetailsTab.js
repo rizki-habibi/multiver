@@ -196,7 +196,7 @@ export default function RequestDetailsTab() {
               )}
               style={{ colorScheme: 'auto' }}
             >
-              <option value="">All Providers</option>
+              <option value="">Semua Penyedia</option>
               {providers.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name}
@@ -206,7 +206,7 @@ export default function RequestDetailsTab() {
           </div>
 
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Start Date</label>
+            <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Tanggal Mulai</label>
             <input
               id="start-date-filter"
               type="datetime-local"
@@ -220,7 +220,7 @@ export default function RequestDetailsTab() {
           </div>
 
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="end-date-filter" className="text-sm font-medium text-text-main">End Date</label>
+            <label htmlFor="end-date-filter" className="text-sm font-medium text-text-main">Tanggal Selesai</label>
             <input
               id="end-date-filter"
               type="datetime-local"
@@ -241,7 +241,7 @@ export default function RequestDetailsTab() {
               disabled={!filters.provider && !filters.startDate && !filters.endDate}
               className="w-full"
             >
-              Clear Filters
+              Bersihkan Filter
             </Button>
           </div>
         </div>
@@ -255,12 +255,12 @@ export default function RequestDetailsTab() {
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Cap Waktu</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Penyedia</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Cached</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Cache Creation</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Output Tokens</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Latency</th>
-                <th className="text-center p-4 text-sm font-semibold text-text-main">Action</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Token Input</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Cache</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Dibuat di Cache</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Token Output</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Latensi</th>
+                <th className="text-center p-4 text-sm font-semibold text-text-main">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -346,7 +346,7 @@ export default function RequestDetailsTab() {
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Request Details"
+        title="Detail Permintaan"
         width="lg"
       >
         {selectedDetail && (
@@ -357,11 +357,11 @@ export default function RequestDetailsTab() {
                 <span className="break-all font-mono text-text-main">{selectedDetail.id}</span>
               </div>
               <div>
-                <span className="text-text-muted">Timestamp:</span>{" "}
+                <span className="text-text-muted">Waktu:</span>{" "}
                 <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-text-muted">Provider:</span>{" "}
+                <span className="text-text-muted">Penyedia:</span>{" "}
                 <span className="text-text-main font-medium">{getProviderName(selectedDetail.provider, providerNameCache)}</span>
               </div>
               <div>
@@ -378,20 +378,20 @@ export default function RequestDetailsTab() {
                 </span>
               </div>
               <div>
-                <span className="text-text-muted">Latency:</span>{" "}
+                <span className="text-text-muted">Latensi:</span>{" "}
                 <span className="text-text-main font-mono">
                   TTFT {selectedDetail.latency?.ttft || 0}ms / Total {selectedDetail.latency?.total || 0}ms
                 </span>
               </div>
               <div>
-                <span className="text-text-muted">Input Tokens:</span>{" "}
+                <span className="text-text-muted">Token Input:</span>{" "}
                 <span className="text-text-main font-mono">
                   {getInputTokens(selectedDetail.tokens).toLocaleString()}
                 </span>
               </div>
               {getCachedTokens(selectedDetail.tokens) > 0 && (
                 <div>
-                  <span className="text-text-muted">Cached Tokens:</span>{" "}
+                  <span className="text-text-muted">Token Cache:</span>{" "}
                   <span className="text-text-main font-mono">
                     {getCachedTokens(selectedDetail.tokens).toLocaleString()}
                   </span>
@@ -399,14 +399,14 @@ export default function RequestDetailsTab() {
               )}
               {getCacheCreationTokens(selectedDetail.tokens) > 0 && (
                 <div>
-                  <span className="text-text-muted">Cache Creation:</span>{" "}
+                  <span className="text-text-muted">Pembuatan Cache:</span>{" "}
                   <span className="text-text-main font-mono">
                     {getCacheCreationTokens(selectedDetail.tokens).toLocaleString()}
                   </span>
                 </div>
               )}
               <div>
-                <span className="text-text-muted">Output Tokens:</span>{" "}
+                <span className="text-text-muted">Token Output:</span>{" "}
                 <span className="text-text-main font-mono">
                   {selectedDetail.tokens?.completion_tokens?.toLocaleString() || 0}
                 </span>
@@ -424,31 +424,31 @@ export default function RequestDetailsTab() {
                       ? "bg-green-500/15 text-green-600"
                       : "bg-amber-500/15 text-amber-600"
                   )}>
-                    {selectedDetail.pxpipe.applied ? "Activated" : "Skipped"}
+                    {selectedDetail.pxpipe.applied ? "Aktif" : "Dilewati"}
                   </span>
                 </div>
                 {selectedDetail.pxpipe.applied ? (
                   <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                     <div>
-                      <span className="text-text-muted block text-xs">Original (est.)</span>
-                      <span className="font-mono">{(selectedDetail.pxpipe.tokensBeforeEst || 0).toLocaleString()} tokens</span>
+                      <span className="text-text-muted block text-xs">Asli (est.)</span>
+                      <span className="font-mono">{(selectedDetail.pxpipe.tokensBeforeEst || 0).toLocaleString()} token</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Compressed (est.)</span>
-                      <span className="font-mono">{(selectedDetail.pxpipe.tokensAfterEst || 0).toLocaleString()} tokens</span>
+                      <span className="text-text-muted block text-xs">Terkompresi (est.)</span>
+                      <span className="font-mono">{(selectedDetail.pxpipe.tokensAfterEst || 0).toLocaleString()} token</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Saved</span>
+                      <span className="text-text-muted block text-xs">Hemat</span>
                       <span className="font-mono text-green-600">{selectedDetail.pxpipe.savedPct || 0}%</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Images</span>
+                      <span className="text-text-muted block text-xs">Gambar</span>
                       <span className="font-mono">{selectedDetail.pxpipe.imageCount || 0} ({selectedDetail.pxpipe.durationMs || 0}ms)</span>
                     </div>
                   </div>
                 ) : (
                   <p className="text-sm text-text-muted">
-                    Reason: <span className="font-mono">{selectedDetail.pxpipe.reason}</span>
+                    Alasan: <span className="font-mono">{selectedDetail.pxpipe.reason}</span>
                     {selectedDetail.pxpipe.detail ? ` — ${selectedDetail.pxpipe.detail}` : ""}
                   </p>
                 )}
@@ -456,14 +456,14 @@ export default function RequestDetailsTab() {
             )}
 
             <div className="space-y-4">
-              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">
+              <CollapsibleSection title="1. Permintaan Klien (Input)" defaultOpen={true} icon="input">
                 <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                   {JSON.stringify(selectedDetail.request, null, 2)}
                 </pre>
               </CollapsibleSection>
 
               {selectedDetail.providerRequest && (
-                <CollapsibleSection title="2. Provider Request (Translated)" icon="translate">
+                <CollapsibleSection title="2. Permintaan Provider (Terjemahan)" icon="translate">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {JSON.stringify(selectedDetail.providerRequest, null, 2)}
                   </pre>
@@ -471,7 +471,7 @@ export default function RequestDetailsTab() {
               )}
 
               {selectedDetail.providerResponse && (
-                <CollapsibleSection title="3. Provider Response (Raw)" icon="data_object">
+                <CollapsibleSection title="3. Respons Provider (Mentah)" icon="data_object">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {typeof selectedDetail.providerResponse === 'object'
                       ? JSON.stringify(selectedDetail.providerResponse, null, 2)
@@ -481,12 +481,12 @@ export default function RequestDetailsTab() {
                 </CollapsibleSection>
               )}
 
-              <CollapsibleSection title="4. Client Response (Final)" defaultOpen={true} icon="output">
+              <CollapsibleSection title="4. Respons Klien (Final)" defaultOpen={true} icon="output">
                 {selectedDetail.response?.thinking && (
                   <div className="mb-4">
                     <h4 className="font-semibold text-text-main mb-2 flex items-center gap-2 text-xs uppercase tracking-wide opacity-70">
                       <span className="material-symbols-outlined text-[16px]">psychology</span>
-                      Thinking Process
+                      Proses Berpikir
                     </h4>
                     <pre className="max-h-[200px] max-w-full overflow-auto rounded-lg border border-amber-200 bg-amber-50 p-3 font-mono text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100 sm:p-4">
                       {selectedDetail.response.thinking}
@@ -495,10 +495,10 @@ export default function RequestDetailsTab() {
                 )}
 
                 <h4 className="font-semibold text-text-main mb-2 text-xs uppercase tracking-wide opacity-70">
-                  Content
+                  Konten
                 </h4>
                 <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
-                  {selectedDetail.response?.content || "[No content]"}
+                  {selectedDetail.response?.content || "[Tidak ada konten]"}
                 </pre>
               </CollapsibleSection>
             </div>

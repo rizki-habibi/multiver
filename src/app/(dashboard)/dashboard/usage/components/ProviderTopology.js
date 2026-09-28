@@ -18,10 +18,6 @@ import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/prov
 const FE_ACTIVE_TIMEOUT_MS = 60000;
 const FE_ACTIVE_TICK_MS = 1000;
 
-// Kame + electric particles along active edges
-const KAME_PARTICLE_COUNT = 6;
-const SPARK_COUNT = 5;
-
 function getProviderConfig(providerId) {
   return AI_PROVIDERS[providerId] || { color: "#6b7280", name: providerId };
 }
@@ -79,12 +75,9 @@ function ProviderNode({ data }) {
         {label}
       </span>
 
-      {/* Active indicator */}
+      {/* Active indicator — titik statis, tanpa ping */}
       {active && (
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: color }} />
-          <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: color }} />
-        </span>
+        <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
       )}
     </div>
   );
@@ -99,11 +92,10 @@ function RouterNode({ data }) {
   const powering = (data.activeCount || 0) > 0;
   return (
     <div
-      className={`relative z-[1] flex items-center justify-center px-5 py-3 rounded-xl border-2 min-w-[130px] ${
-        powering
-          ? "topology-router-core border-yellow-300 bg-gradient-to-br from-primary/30 via-yellow-400/20 to-cyan-400/25"
-          : "border-primary bg-primary/5 shadow-md"
-      }`}
+      className={`relative z-[1] flex items-center justify-center px-5 py-3 rounded-xl border-2 min-w-[130px] ${powering
+        ? "topology-router-core border-yellow-300 bg-gradient-to-br from-primary/30 via-yellow-400/20 to-cyan-400/25"
+        : "border-primary bg-primary/5 shadow-md"
+        }`}
     >
       <Handle type="source" position={Position.Top} id="top" className="!bg-transparent !border-0 !w-0 !h-0" />
       <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-transparent !border-0 !w-0 !h-0" />
@@ -133,115 +125,10 @@ RouterNode.propTypes = {
   data: PropTypes.object.isRequired,
 };
 
-// Active: electric kame beam (multi-layer stroke + sparks). Idle/last/error: solid BaseEdge.
-function TopologyEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  style = {},
-  data,
-}) {
-  const [edgePath] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-  const active = !!data?.active;
-  const stroke = style.stroke || "var(--color-border)";
-  const filterId = `topo-electric-${id}`;
-
-  if (!active) {
-    return <BaseEdge id={id} path={edgePath} style={{ ...style, stroke }} />;
-  }
-
-  return (
-    <g className="topology-edge-electric">
-      <defs>
-        <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="2" result="noise">
-            <animate attributeName="baseFrequency" values="0.8;1.4;0.8" dur="0.25s" repeatCount="indefinite" />
-          </feTurbulence>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </defs>
-      {/* Outer electric halo */}
-      <path
-        d={edgePath}
-        fill="none"
-        stroke="#22d3ee"
-        strokeWidth={10}
-        strokeOpacity={0.35}
-        strokeLinecap="round"
-        filter={`url(#${filterId})`}
-        className="topology-edge-halo"
-      />
-      {/* Mid plasma */}
-      <path
-        d={edgePath}
-        fill="none"
-        stroke="#4ade80"
-        strokeWidth={5}
-        strokeOpacity={0.85}
-        strokeLinecap="round"
-        filter={`url(#${filterId})`}
-        className="topology-edge-plasma"
-      />
-      {/* Hot white core */}
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={{ stroke: "#f8fafc", strokeWidth: 2.2, opacity: 1 }}
-        className="topology-edge-kame"
-      />
-      {/* Energy orbs */}
-      {Array.from({ length: KAME_PARTICLE_COUNT }, (_, i) => (
-        <circle
-          key={`${id}-p-${i}`}
-          r={i % 2 === 0 ? 4 : 2.5}
-          fill={i % 3 === 0 ? "#fde047" : i % 3 === 1 ? "#67e8f9" : "#fff"}
-          opacity={0.95}
-          style={{ filter: "drop-shadow(0 0 4px #22d3ee)" }}
-        >
-          <animateMotion
-            dur={`${0.4 + i * 0.08}s`}
-            repeatCount="indefinite"
-            path={edgePath}
-            begin={`${i * 0.09}s`}
-          />
-        </circle>
-      ))}
-      {/* Electric sparks (short-lived blink along path) */}
-      {Array.from({ length: SPARK_COUNT }, (_, i) => (
-        <circle
-          key={`${id}-s-${i}`}
-          r={1.8}
-          fill="#e0f2fe"
-          opacity={0}
-        >
-          <animate
-            attributeName="opacity"
-            values="0;1;0;0;1;0"
-            dur={`${0.35 + (i % 3) * 0.1}s`}
-            begin={`${i * 0.07}s`}
-            repeatCount="indefinite"
-          />
-          <animateMotion
-            dur={`${0.28 + i * 0.05}s`}
-            repeatCount="indefinite"
-            path={edgePath}
-            begin={`${i * 0.11}s`}
-          />
-        </circle>
-      ))}
-    </g>
-  );
+// Edge statis: warna tebal saat aktif, tipis saat idle. Tanpa animasi/filter/particle.
+function TopologyEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {} }) {
+  const [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  return <BaseEdge id={id} path={edgePath} style={style} />;
 }
 
 TopologyEdge.propTypes = {
@@ -256,40 +143,68 @@ TopologyEdge.propTypes = {
   data: PropTypes.object,
 };
 
-const nodeTypes = { provider: ProviderNode, router: RouterNode };
+function ClientNode() {
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border-2 border-primary/60 bg-primary/5">
+      <span className="material-symbols-outlined text-[18px] text-primary">device_hub</span>
+      <span className="text-sm font-medium text-primary">Klien / User</span>
+    </div>
+  );
+}
+
+const nodeTypes = { client: ClientNode, provider: ProviderNode, router: RouterNode };
 const edgeTypes = { topology: TopologyEdge };
 
-// Place N nodes evenly along an ellipse around the router center.
+// Alur linear 3 lapis: Klien → Multiver Gateway → Provider.
+// Bukan elips: kiri-kanan jelas, ease membaca alur request.
 function buildLayout(providers, activeSet, lastSet, errorSet) {
-  const nodeW = 180;
-  const nodeH = 30;
-  const routerW = 120;
-  const routerH = 44;
-  const nodeGap = 24;
-
-  const count = providers.length;
-
-  // Compute rx so arc spacing between nodes >= nodeW + nodeGap
-  const minRx = ((nodeW + nodeGap) * count) / (2 * Math.PI);
-  const rx = Math.max(320, minRx);
-  const ry = Math.max(200, rx * 0.55); // ellipse ratio ~0.55
-  if (count === 0) {
-    return {
-      nodes: [{ id: "router", type: "router", position: { x: 0, y: 0 }, data: { activeCount: 0 }, draggable: false }],
-      edges: [],
-    };
-  }
+  const CLIENT_X = 0;
+  const ROUTER_X = 260;
+  const PROVIDER_X = 560;
+  const CLIENT_Y = 0;
+  const ROW_H = 84;
+  const NODE_W = 190;
 
   const nodes = [];
   const edges = [];
 
+  // Layer 1 — sumber request
+  nodes.push({
+    id: "client",
+    type: "client",
+    position: { x: CLIENT_X, y: CLIENT_Y - 22 },
+    data: {},
+    draggable: false,
+  });
+
+  // Layer 2 — gateway
   nodes.push({
     id: "router",
     type: "router",
-    position: { x: -routerW / 2, y: -routerH / 2 },
+    position: { x: ROUTER_X, y: CLIENT_Y - 30 },
     data: { activeCount: activeSet.size },
     draggable: false,
   });
+
+  edges.push({
+    id: "e-client-router",
+    type: "topology",
+    source: "client",
+    sourceHandle: "right",
+    target: "router",
+    targetHandle: "left",
+    animated: false,
+    data: { active: activeSet.size > 0 },
+    style: activeSet.size > 0
+      ? { stroke: "#22d3ee", strokeWidth: 3.5, opacity: 1 }
+      : { stroke: "var(--color-border)", strokeWidth: 1.5, opacity: 0.4 },
+  });
+
+  if (providers.length === 0) return { nodes, edges };
+
+  // Layer 3 — daftar provider, ditumpuk vertikal di kanan router
+  const totalH = (providers.length - 1) * ROW_H;
+  const firstY = CLIENT_Y - totalH / 2;
 
   const edgeStyle = (active, last, error) => {
     if (error) return { stroke: "#ef4444", strokeWidth: 2.5, opacity: 0.9 };
@@ -300,40 +215,24 @@ function buildLayout(providers, activeSet, lastSet, errorSet) {
 
   providers.forEach((p, i) => {
     const config = getProviderConfig(p.provider);
-    const active = activeSet.has(p.provider?.toLowerCase());
-    const last = !active && lastSet.has(p.provider?.toLowerCase());
-    const error = !active && errorSet.has(p.provider?.toLowerCase());
+    const key = p.provider?.toLowerCase();
+    const active = activeSet.has(key);
+    const last = !active && lastSet.has(key);
+    const error = !active && errorSet.has(key);
     const nodeId = `provider-${p.provider}`;
-    const data = {
-      label: (config.name !== p.provider ? config.name : null) || p.nodeName || p.name || p.provider,
-      color: config.color || "#6b7280",
-      imageUrl: getProviderImageUrl(p.provider),
-      textIcon: config.textIcon || (p.provider || "?").slice(0, 2).toUpperCase(),
-      active,
-    };
-
-    // Distribute evenly starting from top (−π/2), clockwise
-    const angle = -Math.PI / 2 + (2 * Math.PI * i) / count;
-    const cx = rx * Math.cos(angle);
-    const cy = ry * Math.sin(angle);
-
-    // Pick router handle closest to the node direction
-    let sourceHandle, targetHandle;
-    if (Math.abs(angle + Math.PI / 2) < Math.PI / 4 || Math.abs(angle - 3 * Math.PI / 2) < Math.PI / 4) {
-      sourceHandle = "top"; targetHandle = "bottom";
-    } else if (Math.abs(angle - Math.PI / 2) < Math.PI / 4) {
-      sourceHandle = "bottom"; targetHandle = "top";
-    } else if (cx > 0) {
-      sourceHandle = "right"; targetHandle = "left";
-    } else {
-      sourceHandle = "left"; targetHandle = "right";
-    }
+    const y = firstY + i * ROW_H;
 
     nodes.push({
       id: nodeId,
       type: "provider",
-      position: { x: cx - nodeW / 2, y: cy - nodeH / 2 },
-      data,
+      position: { x: PROVIDER_X, y: y - 22 },
+      data: {
+        label: (config.name !== p.provider ? config.name : null) || p.nodeName || p.name || p.provider,
+        color: config.color || "#6b7280",
+        imageUrl: getProviderImageUrl(p.provider),
+        textIcon: config.textIcon || (p.provider || "?").slice(0, 2).toUpperCase(),
+        active,
+      },
       draggable: false,
     });
 
@@ -341,17 +240,17 @@ function buildLayout(providers, activeSet, lastSet, errorSet) {
       id: `e-${nodeId}`,
       type: "topology",
       source: "router",
-      sourceHandle,
+      sourceHandle: "right",
       target: nodeId,
-      targetHandle,
-      // Built-in animated uses stroke-dasharray (CPU-heavy); use particle beam instead
+      targetHandle: "left",
       animated: false,
       data: { active },
       style: edgeStyle(active, last, error),
     });
   });
 
-  return { nodes, edges };
+  // Racks invisible agar elbow router→provider tidak menumpuk di titik yang sama
+  return { nodes, edges, width: PROVIDER_X + NODE_W, height: totalH + 200 };
 }
 
 export default function ProviderTopology({ providers = [], activeRequests = [], lastProvider = "", errorProvider = "" }) {
@@ -440,7 +339,7 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
     <div ref={containerRef} className="h-[320px] w-full min-w-0 rounded-lg border border-border bg-bg-subtle/30 sm:h-[480px]">
       {providers.length === 0 ? (
         <div className="h-full flex items-center justify-center text-text-muted text-sm">
-          No providers connected
+          Tidak ada provider terhubung
         </div>
       ) : (
         <ReactFlow

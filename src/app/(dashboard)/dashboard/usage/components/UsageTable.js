@@ -9,11 +9,11 @@ const fmt = (n) => new Intl.NumberFormat().format(n || 0);
 const fmtCost = (n) => `$${(n || 0).toFixed(2)}`;
 
 function fmtTime(iso) {
-  if (!iso) return "Never";
+  if (!iso) return "Belum pernah";
   const diffMins = Math.floor((Date.now() - new Date(iso)) / 60000);
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+  if (diffMins < 1) return "Baru saja";
+  if (diffMins < 60) return `${diffMins} mnt lalu`;
+  if (diffMins < 1440) return `${Math.floor(diffMins / 60)} jam lalu`;
   return new Date(iso).toLocaleDateString();
 }
 
@@ -138,17 +138,17 @@ export default function UsageTable({
   const valueColumns = useMemo(() => {
     if (viewMode === "tokens") {
       return [
-        { field: "promptTokens", label: "Input Tokens" },
-        { field: "cachedTokens", label: "Cached" },
-        { field: "completionTokens", label: "Output Tokens" },
-        { field: "totalTokens", label: "Total Tokens" },
+        { field: "promptTokens", label: "Token Input" },
+        { field: "cachedTokens", label: "Cache" },
+        { field: "completionTokens", label: "Token Output" },
+        { field: "totalTokens", label: "Total Token" },
       ];
     }
     return [
-      { field: "promptTokens", label: "Input Cost" },
-      { field: "cachedCost", label: "Cached Cost" },
-      { field: "completionTokens", label: "Output Cost" },
-      { field: "cost", label: "Total Cost" },
+      { field: "promptTokens", label: "Biaya Input" },
+      { field: "cachedCost", label: "Biaya Cache" },
+      { field: "completionTokens", label: "Biaya Output" },
+      { field: "cost", label: "Total Biaya" },
     ];
   }, [viewMode]);
 

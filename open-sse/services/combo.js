@@ -639,8 +639,8 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_DEFAULTS = {
-  perModelTimeoutMs: 120000,
-  maxConcurrency: 6,
+  perModelTimeoutMs: 30000,
+  maxConcurrency: 12,
   maxRetries: 0,
   enableJudge: false,
   preserveFailedResults: true,

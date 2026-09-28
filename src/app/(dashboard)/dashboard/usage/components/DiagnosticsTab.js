@@ -57,8 +57,8 @@ export default function DiagnosticsTab() {
       {(state || overall) && (
         <div className="flex flex-wrap gap-3">
           {[
-            { label: "MITM State", value: state, color: state === "RUNNING" ? COLOR.PASS : state === "DEGRADED" ? COLOR.WARN : COLOR.FAIL },
-            { label: "Overall", value: overall, color: COLOR[overall] || "#6b7280" },
+            { label: "Status MITM", value: state, color: state === "RUNNING" ? COLOR.PASS : state === "DEGRADED" ? COLOR.WARN : COLOR.FAIL },
+            { label: "Keseluruhan", value: overall, color: COLOR[overall] || "#6b7280" },
           ].map((b) => b.value ? (
             <Card key={b.label} padding="sm" className="min-w-[140px]">
               <div className="text-xl font-bold" style={{ color: b.color }}>{b.value}</div>

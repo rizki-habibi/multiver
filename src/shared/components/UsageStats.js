@@ -32,12 +32,12 @@ function timeAgo(timestamp) {
 // Auto-update time display every second without re-rendering parent
 function TimeAgo({ timestamp }) {
   const [, setTick] = useState(0);
-  
+
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(timer);
   }, []);
-  
+
   return <>{timeAgo(timestamp)}</>;
 }
 
@@ -46,7 +46,7 @@ function RecentRequests({ requests = [] }) {
     <Card className="flex min-w-0 flex-col overflow-hidden" padding="sm" style={{ height: 480 }}>
       {/* Header */}
       <div className="px-1 py-2 border-b border-border shrink-0">
-        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">Recent Requests</span>
+        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">Permintaan Terbaru</span>
       </div>
 
       {!requests.length ? (
@@ -59,7 +59,7 @@ function RecentRequests({ requests = [] }) {
                 <th className="py-1.5 text-left font-semibold text-text-muted w-2"></th>
                 <th className="py-1.5 text-left font-semibold text-text-muted">Model</th>
                 <th className="py-1.5 text-right font-semibold text-text-muted whitespace-nowrap">In / Out</th>
-                <th className="py-1.5 text-right font-semibold text-text-muted">When</th>
+                <th className="py-1.5 text-right font-semibold text-text-muted">Waktu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -251,7 +251,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           .map((p) => ({ provider: p.id, name: p.name }));
         setProviders([...unique, ...noAuthProviders]);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Fetch filtered stats via REST when period changes
@@ -272,7 +272,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           setStats((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         setLoading(false);
         setFetching(false);
