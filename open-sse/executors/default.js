@@ -174,10 +174,15 @@ export class DefaultExecutor extends BaseExecutor {
       const baseUrl = credentials?.providerSpecificData?.baseUrl || "";
       const isOfficialAnthropic = baseUrl === "" || baseUrl.includes("api.anthropic.com");
       if (!isOfficialAnthropic) {
-        // Some third-party Anthropic-compatible gateways require Bearer auth in
-        // addition to x-api-key. Send both (x-api-key already set above) so
-        // gateways that read either header succeed.
-        if (credentials.apiKey && !headers["Authorization"]) {
+        // Do not send both x-api-key and Authorization by default. Several
+        // Anthropic-compatible gateways reject mixed authentication, while the
+        // Anthropic Messages convention (and Atria Messages API) uses x-api-key.
+        // A custom node may opt into Bearer via providerSpecificData.authMode.
+        const authMode = String(credentials?.providerSpecificData?.authMode || "x-api-key").toLowerCase();
+        if (credentials.apiKey && authMode === "bearer") {
+          delete headers["x-api-key"];
+          headers["Authorization"] = `Bearer ${credentials.apiKey}`;
+        } else if (credentials.apiKey && authMode === "both" && !headers["Authorization"]) {
           headers["Authorization"] = `Bearer ${credentials.apiKey}`;
         }
         delete headers["anthropic-dangerous-direct-browser-access"];
