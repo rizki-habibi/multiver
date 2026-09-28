@@ -214,6 +214,40 @@ ENABLE_REQUEST_LOGS=true
 
 ---
 
+## ❓ FAQ
+
+**Q: Kenapa `multiver update` gagal / "npm registry tidak terjangkau"?**
+
+A: Cek koneksi internet, lalu coba `multiver update --force`. Bila tetap gagal,
+update manual dari source (lihat bagian **🔄 Update ke Versi Terbaru** di atas).
+
+**Q: Kenapa `npm install -g multiver` error 404?**
+
+A: Paket ini belum dipublikasikan ke npm registry. Gunakan `node cli/link-global.js`
+setelah clone repo. Ini mendaftarkan `multiver` sebagai global command dari folder lokal.
+
+**Q: MAX vs Fusion bedanya apa?**
+
+A: **MAX** menjalankan semua model dan **menyimpan semua jawaban**. **Fusion** menjalankan
+semua model lalu satu **Judge** menyatukan jadi satu jawaban. MAX + Judge (optional)
+mengembalikan kedua-duanya: individual results + hasil judge.
+
+**Q: Berapa cost MAX?**
+
+A: N call (1 per model). Fusion: N+1 (model + judge). MAX + Judge: N+1.
+
+**Q: MAX bisa untuk 50-100 model?**
+
+A: Bisa, tapi gunakan `Max Concurrent Models` (default 12) untuk batasi koneksi paralel.
+Semua model tetap masuk antrean eksekusi, hanya concurrency yang dibatasi.
+
+**Q: Kenapa log konsol saya cuma show 1 baris?**
+
+A: Filter level sedang di "SEMUA LEVEL"? Coba klik **Jeda** lalu **Lanjut** untuk re-sync.
+Jika masih, cek `/api/console-log?limit=200` langsung.
+
+---
+
 ## 📄 License
 
 MIT — lihat file LICENSE.
