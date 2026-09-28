@@ -1,7 +1,5 @@
 # MULTIVER MAX
 
-> **Versi 11.1.0** — perbaikan routing fallback, kompatibilitas Anthropic, Konsol Log, status Kiro/MITM, dan antarmuka Penghemat Token.
-
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
 ![Version](https://img.shields.io/badge/version-11.0.0-0969DA)
@@ -440,67 +438,6 @@ cd cli && npm run link:global  # register `multiver` command locally
 
 ---
 
-## 🔧 Perbaikan Provider & Routing (v11.1.0)
-
-Versi ini memperbaiki beberapa pola kegagalan yang terlihat pada log gateway:
-
-| Status | Arti | Tindakan Multiver |
-|---|---|---|
-| **400** | Permintaan/model tidak cocok dengan endpoint | Tidak dianggap masalah akun; dikembalikan sebagai kesalahan permintaan |
-| **401** | Kredensial tidak sah/kedaluwarsa | Akun/provider dilewati dan fallback dilanjutkan |
-| **402** | Pembayaran/kuota berbayar diperlukan | Provider dilewati sementara; gunakan provider lain yang tersedia |
-| **403** | Akses/kuota ditolak | Provider dilewati sementara; periksa izin atau kuota |
-| **502** | Upstream/gateway provider gagal menjawab | Fallback dilanjutkan dan model diberi jeda kesehatan singkat |
-| **503/504** | Layanan upstream sementara tidak tersedia | Fallback dilanjutkan tanpa menunggu lama |
-
-### Atria / Anthropic Compatible
-
-Jika log berbunyi:
-
-`anthropic-compatible-.../Atria-Dawn-Preview HTTP 502`
-
-artinya request sudah masuk ke node **Anthropic Compatible**, tetapi layanan di belakang node tersebut mengembalikan **502**. Ini bukan bukti bahwa MITM Kiro atau gateway Multiver tidak tersambung.
-
-Periksa pada node Atria:
-
-1. Base URL harus menunjuk ke API Messages yang benar, biasanya **base URL tanpa `/messages`** karena Multiver menambahkan `/messages`.
-2. API key harus masih aktif.
-3. Model ID harus persis seperti yang diterima layanan Atria.
-4. Tes node melalui **Penyedia → Validasi** sebelum memasukkannya ke kombinasi.
-5. Jika validasi juga 502, masalah berada pada endpoint/upstream Atria atau jaringan menuju endpoint tersebut, bukan pada fallback Kiro.
-
-Multiver 11.1.0 juga tidak lagi memaksakan `x-api-key` **dan** `Authorization: Bearer` sekaligus pada node Anthropic Compatible. Default-nya memakai `x-api-key`; mode Bearer hanya dipakai bila node dikonfigurasi eksplisit.
-
-### Kiro MITM: arti status
-
-Status **RUNNING** berarti proses MITM hidup. Status **TERHUBUNG** hanya diberikan setelah traffic Kiro benar-benar terintercept.
-
-Alur yang benar:
-
-`Kiro → DNS/hosts → MITM :443 → Multiver :20222 → combo/provider → Kiro`
-
-Jika tertulis **MITM BERJALAN / MENUNGGU**, buka Kiro dan kirim satu prompt. Jika tetap tidak berubah menjadi **TERHUBUNG**, buka **Penggunaan → Kiro MITM → Diagnostik** dan periksa CA, DNS, port 443, serta traffic.
-
-### Konsol Log
-
-Konsol sekarang menggunakan satu panel terminal gelap seperti CMD, dengan:
-
-- filter tingkat log;
-- filter sumber;
-- filter alat;
-- pencarian;
-- jeda/lanjut;
-- salin log;
-- hapus log;
-- warna status untuk INFO, SUKSES, PERINGATAN, ERROR;
-- status **MITM / Gateway / Kiro** pada bagian atas.
-
-Jika filter terlihat tidak berubah, klik **Segarkan** setelah memilih filter. Filter server membaca nilai yang sama dengan kolom `level`, `source`, dan `tool` pada log.
-
-### Penghemat Token
-
-Nama dan tombol utama Penghemat Token telah diterjemahkan ke Bahasa Indonesia. **RTK internal tetap opsional melalui sakelar**, sedangkan Headroom, Caveman, Ponytail, dan PXPIPE tetap merupakan fitur terpisah.
-
 ## 📦 Update / Upgrade
 
 ### Cara otomatis (direkomendasikan)
@@ -603,12 +540,35 @@ Jika masih, cek `/api/console-log?limit=200` langsung.
 
 ### v11.1.0
 
-- Perbaikan cooldown dan pemutus sementara untuk provider 5xx agar combo tidak terus menghantam provider yang sedang bermasalah.
-- Perbaikan autentikasi Anthropic Compatible agar tidak mengirim `x-api-key` dan `Authorization: Bearer` bersamaan secara default.
-- Konsol Log menjadi satu panel terminal gelap dengan status Kiro yang membedakan proses MITM aktif dari traffic Kiro yang benar-benar terhubung.
-- Status akhir combo menjelaskan jumlah model yang gagal dan penyebab terakhir.
-- Penghemat Token diterjemahkan lebih konsisten ke Bahasa Indonesia.
-- URL changelog repository diperbaiki ke repository resmi `rizki-habibi/multiver`.
+- **fix(gateway): combo "max" memanggil model non-chat** — combo seperti
+  `auto_free_router` memancarkan request chat ke model gambar/musik/tts/terjemah
+  (`kira-3.0-image`, `lyria-3-pro-preview`, `command-a-translate-08-2025`) yang
+  selalu menolak dengan HTTP 400/402 dan memenuhi Konsol Log dengan error
+  menyesatkan. Panel MAX kini difilter: hanya model chat-capable yang dipanggil,
+  model non-chat dilewati dengan satu baris peringatan.
+- **fix(gateway): fallback tak terbatas pada 401/402/403** — `handleComboChat`
+  memperlakukan 401/402/403 seolah transient (cooldown lalu dicoba ulang). Padahal
+  kredensial/quota tidak pulih dalam satu request → combo loop "semua akun terkunci"
+  sampai klien disconnect. Sekarang 400/401/402/403 langsung lanjut ke model
+  berikutnya tanpa cooldown ulang.
+- **fix(gateway): batas percobaan akun** — `handleChat` loop `while(true)` tanpa
+  batas atas. Sekarang maksimum 5 percobaan per request, lalu mengembalikan 503
+  dengan pesan jelas (bukan hang sampai `CLIENT_DISCONNECTED`).
+- **Konsol Log ala terminal CMD** — satu bidang hitam pekat (`#0c0c0c`), warna
+  tetap per level (merah = error, kuning = warning, hijau = success, biru = info,
+  ungu = debug), jendela fixed 520px dengan auto-scroll ala `tail -f`, dan
+  **keterangan arti tiap kode status** (`HTTP_402 → Kuota habis / perlu pembayaran`).
+- **Konsol Log: status koneksi Kiro** — indikator ketiga `● Kiro: Tersambung /
+  Belum tersambung` berbasis jumlah permintaan yang benar-benar disadap MITM,
+  bukan sekadar status proses MITM menyala.
+- **Konsol Log: filter diperbaiki** — filter level/source/tool/pencarian kini
+  diterapkan di client juga (sebelumnya hanya di server), dan jumlah baris
+  ditampilkan di bilah judul terminal.
+- **Penghemat Token: semua label Indonesia** — "Token Saver" → "Penghemat Token",
+  "Compress tool output" → "Kompres keluaran alat", "Setup/Manage" → "Pasang/Kelola",
+  "Install/Uninstall/Restart/Repair/Recheck/Done" → "Pasang/Hapus/Mulai Ulang/
+  Perbaiki/Periksa Ulang/Selesai", serta pesan status (Berjalan/Berhenti/Belum
+  dipasang/Sehat) dan teks bantuan.
 
 ### v11.0.0
 

@@ -171,7 +171,7 @@ export default function TokenSaverClient() {
     try {
       const res = await fetch("/api/headroom/start", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to start proxy");
+      if (!res.ok) throw new Error(data.error || "Gagal memulai proxy");
       await refreshHeadroomStatus();
     } catch (e) {
       setHeadroomActionError(e.message);
@@ -234,7 +234,7 @@ export default function TokenSaverClient() {
         body: JSON.stringify({ extras: pendingExtras }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Install failed");
+      if (!res.ok) throw new Error(data.error || "Pemasangan gagal");
       setHeadroomExtras((s) => ({
         ...s,
         version: data.version ?? s.version,
@@ -260,7 +260,7 @@ export default function TokenSaverClient() {
         body: JSON.stringify({ extras: [extra] }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Remove failed");
+      if (!res.ok) throw new Error(data.error || "Penghapusan gagal");
       setHeadroomExtras((s) => ({
         ...s,
         version: data.version ?? s.version,
@@ -279,8 +279,8 @@ export default function TokenSaverClient() {
     // Warn about the heavy ~1GB torch download before installing [ml].
     if (pendingExtras.includes("ml")) {
       setExtrasConfirm({
-        title: "Install [ml]",
-        message: "[ml] downloads ~1 GB (torch + huggingface-hub). Continue?",
+        title: "Pasang [ml]",
+        message: "[ml] mengunduh ~1 GB (torch + huggingface-hub). Lanjutkan?",
         confirmText: "Pasang",
         variant: "primary",
         onConfirm: installExtrasConfirmed,
@@ -294,7 +294,7 @@ export default function TokenSaverClient() {
     setExtrasConfirm({
       title: `Remove [${extra}]`,
       message: `Remove [${extra}] and its packages?`,
-      confirmText: "Hapus",
+      confirmText: "Remove",
       variant: "danger",
       onConfirm: () => removeExtraConfirmed(extra),
     });
@@ -313,7 +313,7 @@ export default function TokenSaverClient() {
     try {
       const res = await fetch("/api/headroom/restart", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Restart failed");
+      if (!res.ok) throw new Error(data.error || "Gagal memulai ulang");
       await refreshHeadroomStatus();
     } catch (e) {
       setExtrasActionError(e.message);
@@ -426,11 +426,11 @@ export default function TokenSaverClient() {
 
   const headroomRunning = !!headroomStatus.running;
   const headroomStatusLabel = headroomStatus.loading
-    ? "Memeriksa..."
+    ? "Memeriksa…"
     : headroomRunning
       ? "Berjalan"
       : headroomStatus.localUrl !== false && !headroomStatus.installed
-        ? "Belum terpasang"
+        ? "Belum dipasang"
         : headroomStatus.localUrl !== false
           ? "Berhenti"
           : "Eksternal";
@@ -441,13 +441,13 @@ export default function TokenSaverClient() {
 
   const pxpipeHealthy = pxpipeHealth?.healthy === true;
   const pxpipeStatusLabel = pxpipeStatus.loading
-    ? "Memeriksa..."
+    ? "Memeriksa…"
     : pxpipeStatus.installing
-      ? "Memasang..."
+      ? "Memasang…"
       : !pxpipeStatus.installed
-        ? "Belum terpasang"
+        ? "Belum dipasang"
         : pxpipeHealthy
-          ? "Healthy"
+          ? "Sehat"
           : pxpipeStatus.running
             ? "Berjalan"
             : "Berhenti";
@@ -464,13 +464,13 @@ export default function TokenSaverClient() {
             <span className="material-symbols-outlined text-primary">
               bolt
             </span>
-            Token Saver
+            Penghemat Token
           </h2>
         </div>
         <div className="flex items-center justify-between pt-2 pb-4 border-b border-border gap-4">
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              Compress tool output{" "}
+              Kompres keluaran alat{" "}
               <a
                 href="https://github.com/rtk-ai/rtk"
                 target="_blank"
@@ -481,7 +481,7 @@ export default function TokenSaverClient() {
               </a>
             </p>
             <p className="text-sm text-text-muted">
-              git/grep/ls/tree/logs ? 60-90% fewer input tokens
+              git/grep/ls/tree/logs → 60-90% lebih sedikit token masukan
             </p>
           </div>
           <Toggle
@@ -493,7 +493,7 @@ export default function TokenSaverClient() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 flex-wrap">
               <p className="font-medium">
-                Compress context{" "}
+                Kompres konteks{" "}
                 <a
                   href="https://github.com/chopratejas/headroom"
                   target="_blank"
@@ -513,11 +513,11 @@ export default function TokenSaverClient() {
                 onClick={() => setShowHeadroomInstallModal(true)}
                 className="text-xs text-primary underline hover:opacity-80"
               >
-                {headroomRunning ? "Kelola" : "Atur"}
+                {headroomRunning ? "Kelola" : "Pasang"}
               </button>
             </div>
             <p className="text-sm text-text-muted mt-1">
-              Compress prompts via /v1/compress before routing to the model
+              Kompres permintaan lewat /v1/compress sebelum diteruskan ke model
             </p>
           </div>
           <Toggle
@@ -529,7 +529,7 @@ export default function TokenSaverClient() {
           <div className="mb-3 ml-1 pl-3 pb-4 border-l-2 border-border">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-text-muted">
-                Compression extras
+                Ekstra kompresi
                 {headroomExtras.version ? ` · v${headroomExtras.version}` : ""}:
               </span>
               {headroomExtras.available.map((extra) => {
@@ -537,8 +537,8 @@ export default function TokenSaverClient() {
                 const pending = pendingExtras.includes(extra);
                 const extraTitle =
                   extra === "code"
-                    ? "tree-sitter AST compression for code responses"
-                    : "Kompress-v2 HF model for prose/agentic traces (~+1GB)";
+                    ? "kompresi AST tree-sitter untuk keluaran kode"
+                    : "model HF Kompress-v2 untuk teks/agentic (~+1GB)";
 
                 if (installed) {
                   const active = extra === "code" ? codeAware : kompress;
@@ -560,9 +560,9 @@ export default function TokenSaverClient() {
                         onClick={() => handleRemoveExtra(extra)}
                         disabled={removingExtra === extra}
                         className="ml-1 text-error underline hover:opacity-80 disabled:opacity-50"
-                        title={`Uninstall [${extra}]`}
+                        title={`Hapus [${extra}]`}
                       >
-                        {removingExtra === extra ? "Menghapus..." : "Hapus"}
+                        {removingExtra === extra ? "Menghapus…" : "Hapus"}
                       </button>
                     </div>
                   );
@@ -584,7 +584,7 @@ export default function TokenSaverClient() {
                       onChange={() => togglePendingExtra(extra)}
                     />
                     <span className="font-medium">[{extra}]</span>
-                    <span className="opacity-70">not installed</span>
+                    <span className="opacity-70">belum dipasang</span>
                   </label>
                 );
               })}
@@ -595,8 +595,8 @@ export default function TokenSaverClient() {
                   className="text-xs px-2.5 py-1 rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {extrasActionLoading
-                    ? "Memasang..."
-                    : `Install [proxy,${pendingExtras.join(",")}]`}
+                    ? "Memasang…"
+                    : `Pasang [proxy,${pendingExtras.join(",")}]`}
                 </button>
               )}
             </div>
@@ -612,20 +612,20 @@ export default function TokenSaverClient() {
               </pre>
             )}
             <p className="text-xs text-text-muted mt-1">
-              Installing adds the package; use <code>on</code>/<code>off</code>{" "}
-              to activate it (restarts the proxy). Default install is{" "}
-              <code>[proxy]</code> only (SmartCrusher for JSON). Adding{" "}
-              <code>[code]</code> enables AST compression
-              (Python/JS/TS/Go/Rust/Java/C/C++/Perl). Adding <code>[ml]</code>{" "}
-              enables the Kompress-v2 HF model for prose/agentic traces but
-              adds ~1 GB (torch + huggingface-hub).
+              Memasang hanya menambah paket; pakai <code>on</code>/<code>off</code>{" "}
+              untuk mengaktifkannya (memulai ulang proxy). Pemasangan default{" "}
+              hanya <code>[proxy]</code> (SmartCrusher untuk JSON). Menambah{" "}
+              <code>[code]</code> mengaktifkan kompresi AST
+              (Python/JS/TS/Go/Rust/Java/C/C++/Perl). Menambah <code>[ml]</code>{" "}
+              mengaktifkan model HF Kompress-v2 untuk teks/agentic, tetapi
+              menambah ~1 GB (torch + huggingface-hub).
             </p>
           </div>
         )}
         <div className="flex items-center justify-between pt-4 border-t border-border gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              Compress LLM output{" "}
+              Kompres keluaran LLM{" "}
               <a
                 href="https://github.com/JuliusBrussee/caveman"
                 target="_blank"
@@ -636,7 +636,7 @@ export default function TokenSaverClient() {
               </a>
             </p>
             <p className="text-sm text-text-muted">
-              Terse-style system prompt ? ~65% fewer output tokens (up to 87%)
+              System prompt gaya Terse → ~65% lebih sedikit token keluaran (maks 87%)
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -674,7 +674,7 @@ export default function TokenSaverClient() {
         <div className="flex items-center justify-between pt-4 mt-4 border-t border-border gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              Lazy senior dev{" "}
+              Developer senior malas{" "}
               <a
                 href="https://github.com/DietrichGebert/ponytail"
                 target="_blank"
@@ -685,8 +685,8 @@ export default function TokenSaverClient() {
               </a>
             </p>
             <p className="text-sm text-text-muted">
-              Bias the model toward minimal code: YAGNI, reuse stdlib,
-              deletion over addition
+              Condongkan model ke kode minimal: YAGNI, pakai stdlib,
+              hapus daripada tambah
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -727,7 +727,7 @@ export default function TokenSaverClient() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <p className="font-medium">
-                  Compress prompts as images{" "}
+                  Kompres permintaan jadi gambar{" "}
                   <a
                     href="https://github.com/teamchong/pxpipe"
                     target="_blank"
@@ -745,19 +745,19 @@ export default function TokenSaverClient() {
                   onClick={() => setShowPxpipeModal(true)}
                   className="text-xs text-primary underline hover:opacity-80"
                 >
-                  {pxpipeStatus.installed ? "Kelola" : "Atur"}
+                  {pxpipeStatus.installed ? "Kelola" : "Pasang"}
                 </button>
                 <button
                   onClick={() => setShowPxpipeModal(true)}
                   className="text-xs text-primary underline hover:opacity-80"
                 >
-                  Dashboard
+                  Dasbor
                 </button>
               </div>
               <p className="text-sm text-text-muted mt-1">
-                Transforms large textual context into optimized images before
-                sending to the LLM. Ideal for huge prompts, tool outputs and long
-                conversations.
+                Mengubah konteks teks besar menjadi gambar teroptimasi sebelum
+                dikirim ke LLM. Cocok untuk permintaan raksasa, keluaran alat,
+                dan percakapan panjang.
               </p>
             </div>
             <Toggle
@@ -771,7 +771,7 @@ export default function TokenSaverClient() {
 
       <Modal
         isOpen={showHeadroomInstallModal}
-        title={headroomRunning ? "Headroom" : "Setup Headroom"}
+        title={headroomRunning ? "Headroom" : "Pasang Headroom"}
         onClose={() => setShowHeadroomInstallModal(false)}
       >
         <div className="flex flex-col gap-4">
@@ -790,11 +790,11 @@ export default function TokenSaverClient() {
               rel="noreferrer"
               className="w-full rounded border border-border px-4 py-2 text-center text-sm hover:bg-surface-2"
             >
-              Open Headroom Dashboard
+              Buka Dasbor Headroom
             </a>
           )}
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">Proxy URL</p>
+            <p className="text-sm font-medium">URL Proxy</p>
             <Input
               value={headroomUrl}
               onChange={(e) => setHeadroomUrl(e.target.value)}
@@ -803,12 +803,12 @@ export default function TokenSaverClient() {
               className="font-mono text-sm"
             />
             <p className="text-xs text-text-muted">
-              Use a local proxy for Start/Stop, or an external Docker sidecar
-              like http://headroom:8787.
+              Gunakan proxy lokal untuk Mulai/Hentikan, atau sidecar Docker
+              eksternal seperti http://headroom:8787.
             </p>
           </div>
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">Timeout (ms)</p>
+            <p className="text-sm font-medium">Batas waktu (ms)</p>
             <Input
               value={String(headroomTimeoutMs)}
               onChange={(e) => setHeadroomTimeoutMs(e.target.value)}
@@ -817,7 +817,7 @@ export default function TokenSaverClient() {
               className="font-mono text-sm"
             />
             <p className="text-xs text-text-muted">
-              Request timeout in milliseconds. Defaults to 3000 ms.
+              Batas waktu permintaan dalam milidetik. Default 3000 ms.
             </p>
           </div>
           {headroomManaged ? (
@@ -827,11 +827,11 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Stopping&" : "Hentikan Headroom"}
+              {headroomActionLoading ? "Menghentikan…" : "Hentikan Headroom"}
             </Button>
           ) : headroomRunning ? (
             <p className="text-sm text-success">
-              Headroom proxy is reachable. You can enable the token saver.
+              Proxy Headroom terjangkau. Anda bisa mengaktifkan penghemat token.
             </p>
           ) : headroomCanStart ? (
             <Button
@@ -839,20 +839,20 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Memulai..." : "Start Headroom"}
+              {headroomActionLoading ? "Memulai…" : "Mulai Headroom"}
             </Button>
           ) : !headroomLocalUrl ? (
             <p className="text-sm text-warning">
-              Start Headroom separately at the configured URL, then recheck.
+              Mulai Headroom terpisah di URL yang dikonfigurasi, lalu periksa ulang.
             </p>
           ) : !headroomStatus.python ? (
             <p className="text-sm text-warning">
-              Python = 3.10 required for local managed mode. Install Python
-              first, or use an external proxy URL.
+              Python = 3.10 diperlukan untuk mode lokal terkelola. Pasang Python
+              lebih dulu, atau gunakan URL proxy eksternal.
             </p>
           ) : (
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">Install then click Start:</p>
+              <p className="text-sm font-medium">Pasang lalu klik Mulai:</p>
               <div className="flex items-center gap-2">
                 <pre className="flex-1 rounded bg-black/5 dark:bg-white/5 p-2 text-xs font-mono overflow-x-auto">
                   {`pip install "headroom-ai[proxy]"`}
@@ -878,13 +878,13 @@ export default function TokenSaverClient() {
               variant="ghost"
               fullWidth
             >
-              Recheck
+              Periksa Ulang
             </Button>
             <Button
               onClick={() => setShowHeadroomInstallModal(false)}
               fullWidth
             >
-              Done
+              Selesai
             </Button>
           </div>
         </div>
@@ -892,13 +892,13 @@ export default function TokenSaverClient() {
 
       <Modal
         isOpen={false}
-        title={pxpipeStatus.installed ? "PXPIPE" : "Setup PXPIPE"}
+        title={pxpipeStatus.installed ? "PXPIPE" : "Pasang PXPIPE"}
         onClose={() => setShowPxpipeModal(false)}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">
-            Compress prompts using multimodal encoding. Runs in-process  no
-            extra server or environment variables required.
+            Kompres permintaan dengan enkode multimodal. Berjalan dalam proses —
+            tidak butuh server atau variabel lingkungan tambahan.
           </p>
           <div className="flex items-center justify-between text-sm">
             <span>Status</span>
@@ -909,7 +909,7 @@ export default function TokenSaverClient() {
           </div>
           {pxpipeHealth?.checks?.length > 0 && (
             <div className="flex flex-col gap-1 rounded border border-border p-3">
-              <p className="text-sm font-medium mb-1">Health check</p>
+              <p className="text-sm font-medium mb-1">Pemeriksaan kesehatan</p>
               {pxpipeHealth.checks.map((check) => (
                 <div key={check.id} className="flex items-center justify-between text-xs">
                   <span className={check.ok ? "text-success" : "text-warning"}>
@@ -927,17 +927,17 @@ export default function TokenSaverClient() {
           )}
           {!pxpipeStatus.installed ? (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-warning">PXPIPE is not installed.</p>
+              <p className="text-sm text-warning">PXPIPE belum dipasang.</p>
               <Button
                 onClick={() => pxpipeAction("install")}
                 fullWidth
                 disabled={pxpipeActionLoading || pxpipeStatus.installing}
               >
-                {pxpipeActionLoading || pxpipeStatus.installing ? "Memasang..." : "Pasang"}
+                {pxpipeActionLoading || pxpipeStatus.installing ? "Memasang…" : "Pasang"}
               </Button>
               <p className="text-xs text-text-muted">
-                Installs the npm package <code className="font-mono">pxpipe-proxy</code> into
-                the Multiver data directory. May take a few minutes.
+                Memasang paket npm <code className="font-mono">pxpipe-proxy</code> ke
+                direktori data Multiver. Bisa memakan beberapa menit.
               </p>
             </div>
           ) : (
@@ -945,27 +945,27 @@ export default function TokenSaverClient() {
               {pxpipeStatus.running ? (
                 <>
                   <Button onClick={() => pxpipeAction("restart")} variant="ghost" disabled={pxpipeActionLoading}>
-                    Restart
+                    Mulai Ulang
                   </Button>
                   <Button onClick={() => pxpipeAction("stop")} variant="ghost" disabled={pxpipeActionLoading}>
-                    Stop
+                    Hentikan
                   </Button>
                 </>
               ) : (
                 <Button onClick={() => pxpipeAction("start")} disabled={pxpipeActionLoading}>
-                  {pxpipeActionLoading ? "Memulai..." : "Mulai"}
+                  {pxpipeActionLoading ? "Memulai…" : "Mulai"}
                 </Button>
               )}
               <Button onClick={() => pxpipeAction("install")} variant="ghost" disabled={pxpipeActionLoading}>
-                Repair
+                Perbaiki
               </Button>
               <Button onClick={() => pxpipeAction("logs")} variant="ghost" disabled={pxpipeActionLoading}>
-                Open Logs
+                Buka Log
               </Button>
             </div>
           )}
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">Minimum prompt size (chars)</p>
+            <p className="text-sm font-medium">Ukuran permintaan minimum (karakter)</p>
             <Input
               value={String(pxpipeMinChars)}
               onChange={(e) => setPxpipeMinChars(e.target.value)}
@@ -974,7 +974,7 @@ export default function TokenSaverClient() {
               className="font-mono text-sm"
             />
             <p className="text-xs text-text-muted">
-              Requests smaller than this bypass PXPIPE and are sent as-is.
+              Permintaan lebih kecil dari ini melewati PXPIPE dan dikirim apa adanya.
             </p>
           </div>
           {pxpipeActionError && (
@@ -986,10 +986,10 @@ export default function TokenSaverClient() {
               variant="ghost"
               fullWidth
             >
-              Recheck
+              Periksa Ulang
             </Button>
             <Button onClick={() => setShowPxpipeModal(false)} fullWidth>
-              Done
+              Selesai
             </Button>
           </div>
         </div>

@@ -87,34 +87,6 @@ export function reorderByCapabilities(models, required) {
  */
 const comboRotationState = new Map();
 
-// Short-lived model health circuit breaker. A provider returning 502/503/504
-// repeatedly should not be hammered on every new request while healthy models
-// are available. This is process-local by design; a restart clears it.
-const modelHealthCooldown = new Map();
-const MODEL_HEALTH_COOLDOWN_MS = 15000;
-
-function modelHealthKey(model) {
-  return String(model || "").trim().toLowerCase();
-}
-
-function getModelCooldown(model) {
-  const until = modelHealthCooldown.get(modelHealthKey(model)) || 0;
-  if (until <= Date.now()) {
-    modelHealthCooldown.delete(modelHealthKey(model));
-    return 0;
-  }
-  return until - Date.now();
-}
-
-function markModelTransientFailure(model, status) {
-  if (![500, 502, 503, 504].includes(Number(status))) return;
-  modelHealthCooldown.set(modelHealthKey(model), Date.now() + MODEL_HEALTH_COOLDOWN_MS);
-}
-
-function markModelHealthy(model) {
-  modelHealthCooldown.delete(modelHealthKey(model));
-}
-
 // Trailing run of items after the last assistant/model turn = the current user
 // turn. It may span several messages (e.g. text + image split across blocks),
 // so we return all of them. History media (older turns) must not pin the combo
@@ -327,22 +299,14 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
-    const cooldownRemaining = getModelCooldown(modelStr);
-    if (cooldownRemaining > 0) {
-      log.warn("COMBO", `Melewati model ${modelStr}: sementara tidak sehat (${Math.ceil(cooldownRemaining / 1000)}s)`, {
-        status: "MODEL_COOLDOWN",
-      });
-      continue;
-    }
-    log.info("COMBO", `Mencoba model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
+    log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
 
       // Success (2xx) - return response
       if (result.ok) {
-        markModelHealthy(modelStr);
-        log.info("COMBO", `Model ${modelStr} berhasil`);
+        log.info("COMBO", `Model ${modelStr} succeeded`);
         return result;
       }
 
@@ -368,12 +332,20 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       }
 
       // Check if should fallback to next model
-      markModelTransientFailure(modelStr, result.status);
       const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
 
-      if (!shouldFallback) {
-        log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
-        return result;
+      // 401/402/403 = kredensial/quota, 400 = permintaan ditolak. Tidak guna
+      // mencoba model ini lagi dalam permintaan ini; langsung ke model berikutnya
+      // tanpa cooldown ulang (menghindari loop "semua akun terkunci").
+      if (!shouldFallback || result.status === 400 || result.status === 401 || result.status === 402 || result.status === 403) {
+        if (!shouldFallback) {
+          log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
+          return result;
+        }
+        log.warn("COMBO", `Model ${modelStr} gagal (HTTP ${result.status}) → lanjut model berikutnya`, { status: result.status });
+        lastError = errorText || String(result.status);
+        if (!lastStatus) lastStatus = result.status;
+        continue;
       }
 
       // For transient errors (503/502/504), wait for cooldown before falling through
@@ -388,9 +360,8 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       // Fallback to next model
       lastError = errorText || String(result.status);
       if (!lastStatus) lastStatus = result.status;
-      log.warn("COMBO", `Model ${modelStr} gagal, mencoba berikutnya`, { status: result.status });
+      log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
-      // Catch unexpected exceptions to ensure fallback continues
       lastError = error.message || String(error);
       if (!lastStatus) lastStatus = 500;
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
@@ -403,11 +374,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   // or have no active credentials. 503 is more accurate and retryable by clients.
   const allDisabled = lastError && lastError.toLowerCase().includes("no credentials");
   const status = allDisabled ? 503 : (lastStatus || 503);
-  const attempted = rotatedModels.length;
-  const msg = lastError
-    ? `Semua ${attempted} model dalam kombinasi gagal. Penyebab terakhir: ${lastError}`
-    : `Semua ${attempted} model dalam kombinasi sedang tidak tersedia.`;
-
+  const msg = lastError || "All combo models unavailable";
   if (earliestRetryAfter) {
     const retryHuman = formatRetryAfter(earliestRetryAfter);
     log.warn("COMBO", `All models failed | ${msg} (${retryHuman})`);
@@ -738,6 +705,35 @@ function extractPanelUsage(json) {
  * @param {Object} [options.tuning] - Override MAX_DEFAULTS
  * @returns {Promise<Response>} JSON response with individual_results
  */
+// Deteksi model non-chat: minta chat ke model gambar/musik/tts/terjemah
+// selalu gagal di hulu dan hanya memenuhi log dengan error menyesatkan.
+// Sumber: capabilities katalog + nama model khas (suffix/prefix).
+const NON_CHAT_SUFFIXES = [
+  "-image", "-img", "-vision-image", "-photo", "-music", "-audio",
+  "-tts", "-speech", "-voice", "-video", "-translate", "-trans",
+  "-whisper", "-stt", "-embed", "-embedding", "-preview-image",
+];
+const NON_CHAT_NAME_HINTS = [
+  "lyria", "imagen", "veo", "sora", "kling", "runway", "luma",
+  "dall-e", "dalle", "flux", "sd3", "sd-", "stable-diffusion", "playground",
+  "midjourney", "recraft", "ideogram", "chitu", "seedream", "nano-banana",
+  "gpt-4o-audio", "tts-1", "whisper", "embedding", "command-r-translate",
+];
+
+function isChatCapableModel(modelStr) {
+  const id = String(modelStr || "");
+  const base = id.includes("/") ? id.slice(id.lastIndexOf("/") + 1) : id;
+  const lower = base.toLowerCase();
+
+  for (const suf of NON_CHAT_SUFFIXES) {
+    if (lower.endsWith(suf)) return false;
+  }
+  for (const hint of NON_CHAT_NAME_HINTS) {
+    if (lower.includes(hint)) return false;
+  }
+  return true;
+}
+
 export async function handleMaxChat({ body, models, handleSingleModel, log, comboName, tuning }) {
   const panel = Array.isArray(models) ? models.filter(Boolean) : [];
   if (panel.length === 0) {
@@ -747,13 +743,28 @@ export async function handleMaxChat({ body, models, handleSingleModel, log, comb
     );
   }
 
+  // Filter model non-chat dari panel: minta chat ke model gambar/musik/tts/
+  // terjemah pasti gagal (HTTP 400/402) dan hanya menghasilkan log error
+  // yang menyesatkan. Deteksi via capabilities + nama model khas.
+  const chatPanel = panel.filter((m) => isChatCapableModel(m));
+  const dropped = panel.filter((m) => !isChatCapableModel(m));
+  if (dropped.length > 0) {
+    log?.warn?.("MAX", `Combo "${comboName}": ${dropped.length} model non-chat dilewati: ${dropped.join(", ")}`);
+  }
+  if (chatPanel.length === 0) {
+    return new Response(
+      JSON.stringify({ error: { message: `Combo "${comboName}" tidak punya model chat — semua anggotanya model gambar/musik/tts/terjemah` } }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   // Single model combo: no parallelism needed, answer directly.
-  if (panel.length === 1) {
-    return handleSingleModel(body, panel[0]);
+  if (chatPanel.length === 1) {
+    return handleSingleModel(body, chatPanel[0]);
   }
 
   const cfg = { ...MAX_DEFAULTS, ...(tuning || {}) };
-  log.info("MAX", `Combo "${comboName}" | all=${panel.length} [${panel.join(", ")}] | concurrency=${cfg.maxConcurrency} | judge=${cfg.enableJudge}`);
+  log.info("MAX", `Combo "${comboName}" | all=${chatPanel.length} [${chatPanel.join(", ")}] | concurrency=${cfg.maxConcurrency} | judge=${cfg.enableJudge}`);
 
   // Emit MAX_REQUEST_STARTED (best-effort, never breaks execution)
   let emit = () => { };
@@ -765,7 +776,7 @@ export async function handleMaxChat({ body, models, handleSingleModel, log, comb
   }
 
   const requestId = `max_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  await emit("MAX_REQUEST_STARTED", { requestId, total_models: panel.length, models: panel });
+  await emit("MAX_REQUEST_STARTED", { requestId, total_models: chatPanel.length, models: chatPanel });
 
   // Panel body: tools stripped (we want prose per model), non-streaming.
   const { tools, tool_choice, stream_options, ...rest } = body;
@@ -922,7 +933,7 @@ export async function handleMaxChat({ body, models, handleSingleModel, log, comb
   // Fan out: all models queued, concurrency limited. allSettled-style — one failure
   // never cancels the others.
   const results = await Promise.all(
-    panel.map((model, index) => limiter.run(() => runOne(model, index)))
+    chatPanel.map((model, index) => limiter.run(() => runOne(model, index)))
   );
 
   const total = results.length;
@@ -945,7 +956,7 @@ export async function handleMaxChat({ body, models, handleSingleModel, log, comb
   // Optional judge: synthesize one answer from all successful responses.
   // Individual results remain available in `results`.
   if (cfg.enableJudge && succeeded.length >= 2) {
-    const judge = (tuning?.judgeModel && String(tuning.judgeModel).trim()) || panel[0];
+    const judge = (tuning?.judgeModel && String(tuning.judgeModel).trim()) || chatPanel[0];
     const answers = succeeded.map((r) => ({ model: r.model, text: r.response }));
     const judgeReq = appendUserTurn(body, buildJudgePrompt(answers));
     log.info("MAX", `Judge synthesizing ${answers.length} answers with ${judge}`);

@@ -360,12 +360,19 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   // Extract userAgent from request
   const userAgent = request?.headers?.get("user-agent") || "";
 
-  // Try with available accounts (fallback on errors)
+  // Try with available accounts (fallback on errors) – limit attempts
+  const MAX_RETRY_ATTEMPTS = 5;
   const excludeConnectionIds = new Set();
   let lastError = null;
   let lastStatus = null;
+  let attemptCount = 0;
 
   while (true) {
+    attemptCount++;
+    if (attemptCount > MAX_RETRY_ATTEMPTS) {
+      log.warn("CHAT", `Max attempts (${MAX_RETRY_ATTEMPTS}) exceeded for ${provider}/${model}`);
+      return unavailableResponse(HTTP_STATUS.SERVICE_UNAVAILABLE, `All ${provider} accounts failed after ${attemptCount} attempts`, null, null);
+    }
     const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
 
     // All accounts unavailable
