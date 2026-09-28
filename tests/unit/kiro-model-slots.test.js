@@ -39,6 +39,35 @@ describe("Kiro MITM model slots", () => {
     expect(models.get("gpt-5.6-terra")).toMatchObject({ alias: "gpt-5.6-terra", contextLength: 272000, rateMultiplier: 1.2 });
     expect(models.get("gpt-5.6-luna")).toMatchObject({ alias: "gpt-5.6-luna", contextLength: 272000, rateMultiplier: 0.6 });
   });
+
+  it("offers a mappable slot for GLM 5", () => {
+    const glm = kiro.defaultModels.find((m) => m.id === "glm-5");
+    expect(glm).toBeTruthy();
+    expect(glm.alias).toBe("glm-5");
+  });
+
+  it("keeps MiniMax M2.5 and M2.1 as separate slots", () => {
+    const models = new Map(kiro.defaultModels.map((m) => [m.id, m]));
+    expect(models.get("MiniMax-M2.5")).toMatchObject({ alias: "minimax-m2.5" });
+    expect(models.get("minimax-m2.1")).toMatchObject({ alias: "minimax-m2.1" });
+  });
+
+  it("gives every Kiro registry model a MITM slot", () => {
+    // Setiap model di registry kiro harus bisa dipetakan; tanpa slot,
+    // getMappedModel() melewatkan request ke AWS.
+    const registry = (PROVIDER_MODELS.kr || []).map((m) => m.id);
+    const byId = new Map(kiro.defaultModels.map((m) => [m.id, m]));
+    const missing = [];
+    for (const id of registry) {
+      if (byId.has(id)) continue;
+      // Varian -thinking / -agentic / -thinking-agentic kembali ke model induknya
+      // via pattern matching di src/mitm/config.js — tidak butuh slot sendiri.
+      const base = String(id).replace(/-(?:thinking|agentic|thinking-agentic)$/, "");
+      if (byId.has(base)) continue;
+      missing.push(id);
+    }
+    expect(missing).toEqual([]);
+  });
 });
 
 describe("Kiro static provider models", () => {

@@ -53,6 +53,16 @@ const MODEL_SYNONYMS = {
     "claude-sonnet-4-5": "claude-sonnet-4.5",
     "claude-haiku-4-5": "claude-haiku-4.5",
     "claude-sonnet-5-latest": "claude-sonnet-5",
+    // Kiro memakai casing campur "MiniMax-M2.5"; beberapa klien mengirim
+    // lowercase atau underscore. Normalisasi ke slot yang sama.
+    "minimax-m2.5": "minimax-m2.5",
+    "minimax_m2.5": "minimax-m2.5",
+    "minimax-m2-5": "minimax-m2.5",
+    "minimax-m2.1": "minimax-m2.1",
+    "minimax_m2.1": "minimax-m2.1",
+    "minimax-m2-1": "minimax-m2.1",
+    "glm-5": "glm-5",
+    "glm_5": "glm-5",
   },
 };
 
@@ -64,8 +74,18 @@ const MODEL_PATTERNS = {
     { match: /^claude-sonnet-5/i, alias: "claude-sonnet-5" },
     { match: /^claude-sonnet-4(?:[.-]?5)?/i, alias: "claude-sonnet-4.5" },
     { match: /^claude-haiku-4(?:[.-]?5)?/i, alias: "claude-haiku-4.5" },
+    { match: /^claude-opus-5/i, alias: "claude-opus-5" },
+    { match: /^claude-opus-4[.-]?8/i, alias: "claude-opus-4.8" },
+    { match: /^claude-opus-4[.-]?7/i, alias: "claude-opus-4.7" },
+    { match: /^claude-opus-4[.-]?5/i, alias: "claude-opus-4.5" },
     { match: /^deepseek-3(?:[.-]?2)?/i, alias: "deepseek-3.2" },
-    { match: /^minimax-m2(?:[.-]?1)?/i, alias: "minimax-m2.1" },
+    // M2.5 vs M2.1 adalah model berbeda; urutan M2.5 dulu agar regex
+    // minimax-m2[.-]?1 tidak menyerap "minimax-m2.5" (prefix match salah).
+    { match: /^minimax[-_]?m2(?:[.-]?5)?/i, alias: "minimax-m2.5" },
+    { match: /^minimax[-_]?m2(?:[.-]?1)?/i, alias: "minimax-m2.1" },
+    // GLM 5 tidak punya varian numerik ambigu seperti MiniMax, tapi anchor
+    // eksplisit menghindari tertangkap model "glm-5.x" mendatang.
+    { match: /^glm[-_]?5(?:\b|$)/i, alias: "glm-5" },
     { match: /^gpt-5(?:[.-]?6)?-sol/i, alias: "gpt-5.6-sol" },
     { match: /^gpt-5(?:[.-]?6)?-terra/i, alias: "gpt-5.6-terra" },
     { match: /^gpt-5(?:[.-]?6)?-luna/i, alias: "gpt-5.6-luna" },
