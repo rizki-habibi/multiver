@@ -58,14 +58,14 @@ const COOLDOWN = {
  */
 export const ERROR_RULES = [
   // --- Text-based rules (checked first, order = priority) ---
-  { text: "no credentials",           cooldownMs: COOLDOWN.long },
-  { text: "request not allowed",      cooldownMs: COOLDOWN.short },
+  { text: "no credentials", cooldownMs: COOLDOWN.long },
+  { text: "request not allowed", cooldownMs: COOLDOWN.short },
   { text: "improperly formed request", cooldownMs: COOLDOWN.long },
-  { text: "rate limit",               backoff: true },
-  { text: "too many requests",        backoff: true },
-  { text: "quota exceeded",           backoff: true },
-  { text: "capacity",                 backoff: true },
-  { text: "overloaded",               backoff: true },
+  { text: "rate limit", backoff: true },
+  { text: "too many requests", backoff: true },
+  { text: "quota exceeded", backoff: true },
+  { text: "capacity", backoff: true },
+  { text: "overloaded", backoff: true },
 
   // --- Status-based rules (fallback when text doesn't match) ---
   { status: 401, cooldownMs: COOLDOWN.long },
@@ -73,6 +73,12 @@ export const ERROR_RULES = [
   { status: 403, cooldownMs: COOLDOWN.long },
   { status: 404, cooldownMs: COOLDOWN.long },
   { status: 429, backoff: true },
+  // 409 = konflik state, paling sering kuota habis / limit bersamaan
+  // (antigravity memancarkan 409 untuk pool exhaustion). Sebelumnya 409
+  // jatuh ke cabang 4xx "request-scoped" → shouldFallback:false, artinya
+  // akun yang kuotanya habis TIDAK pernah rotasi; setiap permintaan
+  // berikutnya memukul akun yang sama. Perlakukan seperti 429.
+  { status: 409, backoff: true },
   // 5xx upstream failures are usually transient. Keep the cooldown short so
   // one unhealthy gateway does not poison the whole combo for 30 seconds.
   { status: 502, cooldownMs: 2000 },

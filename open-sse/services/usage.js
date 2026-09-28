@@ -28,6 +28,7 @@ import {
   getVercelAiGatewayUsage,
   getQoderUsage,
 } from "./usage/misc.js";
+import { getTraeUsage } from "./usage/trae.js";
 
 /**
  * Get usage data for a provider connection
@@ -62,6 +63,11 @@ const USAGE_HANDLERS = {
   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
+  // Trae: GetUserInfo dengan x-cloudide-token; dipakai untuk verifikasi
+  // koneksi + menampilkan identitas akun (email/nama) di dasbor kuota.
+  // Sebelumnya registry menyatakan features.usage:true tanpa handler, jadi
+  // pemanggilan selalu "Usage API not implemented for trae".
+  trae: (c) => getTraeUsage(c.accessToken, c.proxyOptions, c.providerSpecificData),
 };
 
 // Qoder intl/CN share one usage path: PATs must be exchanged to a job token

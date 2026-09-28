@@ -16,7 +16,7 @@
  *   --no-relaunch   Jangan jalankan ulang setelah update
  */
 
-const { execSync, spawn } = require("child_process");
+const { execSync, spawnSync, spawn } = require("child_process");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
@@ -27,6 +27,134 @@ const APP_ROOT = path.resolve(__dirname, "..", "..", "..");
 const PKG = require(path.join(APP_ROOT, "package.json"));
 
 function log(msg) { console.log(`[update] ${msg}`); }
+
+// Root repo git (bisa beda dari APP_ROOT: update.js ada di <repo>/cli/src/cli/commands,
+// APP_ROOT = <repo>/cli, tapi .git di <repo>). Fallback ke APP_ROOT bila bukan repo git.
+function getRepoRoot() {
+  try {
+    const out = execSync("git rev-parse --show-toplevel", {
+      cwd: APP_ROOT,
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 5000,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const root = out.trim();
+    if (root && fs.existsSync(path.join(root, "package.json"))) return root;
+  } catch { /* bukan repo git / git tidak ada */ }
+  return APP_ROOT;
+}
+
+// File npm-cli.js; di npm 10 lokasinya bin/npm-cli.js, di npm <10 bin/npm-cli.js juga,
+// tapi beberapa distro linux menempatkannya di bin/npm-cli.js vs lib/node_modules.
+const NPM_CLI_RELS = [
+  ["node_modules", "npm", "bin", "npm-cli.js"],
+  ["node_modules", "npm", "lib", "node_modules", "npm", "bin", "npm-cli.js"],
+  ["lib", "node_modules", "npm", "bin", "npm-cli.js"],
+  ["npm", "node_modules", "npm", "bin", "npm-cli.js"],
+];
+
+function findNpmCliIn(dir) {
+  for (const rel of NPM_CLI_RELS) {
+    const cli = path.join(dir, ...rel);
+    if (fs.existsSync(cli)) return cli;
+  }
+  return null;
+}
+
+/**
+ * Resolve npm CLI yang andal, LEBIH PHPA npm.cmd shim.
+ *
+ * Kenapa tidak pakai npm.cmd: shim itu menghitung ulang prefix lewat
+ * `%~dp0\node_modules\npm\bin\npm-prefix.js`. Saat di-spawn dari folder lain,
+ * resolusi npm-prefix gagal / kembali ke cwd → npm mencari
+ * `<cwd>/node_modules/npm/bin/npm-cli.js` yang tidak ada (npm 11+ memindahkan
+ * berkas itu). Gejala: "Cannot find module ...\npm\bin\npm-prefix.js".
+ * Jalan pintas: jalankan node.exe langsung dengan npm-cli.js absolut.
+ *
+ * Urutan: (1) npm bundled di samping node (install default), (2) prefix global,
+ * (3) PATH scan untuk node/npx shim lalu relatif dari sana, (4) npm prefix.
+ */
+function resolveNpmCli() {
+  // 1) npm bundled di samping node executable (install default Windows/mac/Linux).
+  const nodeDir = path.dirname(process.execPath);
+  const bundledCli = findNpmCliIn(nodeDir);
+  if (bundledCli) return { node: process.execPath, cli: bundledCli };
+
+  // 2) npm global terinstal (prefix global user).
+  for (const prefix of [
+    process.env.npm_config_prefix,
+    IS_WIN ? path.join(process.env.APPDATA || "", "npm") : null,
+    IS_WIN ? path.join(process.env.LOCALAPPDATA || "", "npm") : null,
+    "/usr/local",
+    "/usr",
+  ]) {
+    if (!prefix) continue;
+    const cli = findNpmCliIn(prefix);
+    if (cli) return { node: process.execPath, cli };
+  }
+
+  // 3) Cari node/npx di PATH; npm terinstal di direktori yang sama (nvm/fnm/volta).
+  for (const binName of IS_WIN ? ["node.exe", "npx.cmd", "npm.cmd"] : ["node", "npx", "npm"]) {
+    const shim = which(binName);
+    if (!shim) continue;
+    const cli = findNpmCliIn(path.dirname(fs.realpathSync(shim)));
+    if (cli) return { node: fs.realpathSync(shim), cli };
+  }
+
+  // 4) Terakhir: resolve lewat `npm prefix` (best-effort).
+  try {
+    const prefix = execSync('npm prefix', { encoding: "utf8", windowsHide: true, timeout: 8000 }).trim();
+    const cli = findNpmCliIn(prefix);
+    if (cli) return { node: process.execPath, cli };
+  } catch { /* ignore */ }
+
+  return null;
+}
+
+function which(bin) {
+  // PATHEXT sudah memuat titik (".EXE;.CMD"); jangan tambah titik lagi, atau
+  // filename menjadi "node.exe.EXE" yang tidak pernah ada.
+  const raw = (process.env.PATHEXT || "").split(IS_WIN ? ";" : ":").filter(Boolean);
+  const exts = IS_WIN
+    ? raw.map((e) => (e.startsWith(".") ? e : `.${e}`))
+    : [""];
+  for (const dir of (process.env.PATH || "").split(IS_WIN ? ";" : ":")) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const full = path.join(dir, bin + ext);
+      try {
+        if (fs.statSync(full).isFile()) return full;
+      } catch { /* not here */ }
+    }
+  }
+  return null;
+}
+
+// Jalankan npm via node + npm-cli.js (lewati npm.cmd/npx shim).
+// args = array argumen npm (mis. ["install","--no-audit","--no-fund"]).
+// Pakai spawnSync tanpa shell: argumen tidak dapat di-inject/pecah oleh
+// karakter spasi di path maupun flags seperti --no-audit.
+function npmExec(args, opts = {}) {
+  if (!Array.isArray(args)) args = String(args).split(/\s+/).filter(Boolean);
+  const npm = resolveNpmCli();
+  if (npm) {
+    return spawnSync(npm.node, [npm.cli, ...args], {
+      ...opts,
+      cwd: opts.cwd || REPO_ROOT,
+      windowsHide: opts.windowsHide ?? false,
+      shell: false,
+    });
+  }
+  // Fallback: npm biasa (path di-quote untuk spasi seperti "Program Files").
+  const npmCmd = IS_WIN ? "npm.cmd" : "npm";
+  return spawnSync(npmCmd, args, {
+    ...opts,
+    cwd: opts.cwd || REPO_ROOT,
+    windowsHide: opts.windowsHide ?? false,
+    shell: false,
+  });
+}
 
 // ─── Versi ─────────────────────────────────────────────────────────────────
 function fetchLatestNpmVersion(pkgName, { timeout = 6000 } = {}) {
@@ -54,9 +182,11 @@ function compareVersions(a, b) {
 }
 
 // ─── Git ───────────────────────────────────────────────────────────────────
+const REPO_ROOT = getRepoRoot();
+
 function runGit(args, opts = {}) {
   return execSync(`git ${args.join(" ")}`, {
-    cwd: APP_ROOT,
+    cwd: REPO_ROOT,
     encoding: "utf8",
     windowsHide: true,
     timeout: opts.timeout || 20000,
@@ -77,10 +207,25 @@ function hasUpstreamCommits() {
     const local = runGit(["rev-parse", "HEAD"]);
     const remote = runGit(["rev-parse", `origin/${branch}`]).trim();
     if (!remote) return { behind: false, ref: null };
-    // behind = local bukan ancestor dari remote
-    let behind = true;
-    try { runGit(["merge-base", "--is-ancestor", local, remote]); } catch { behind = false; }
-    return { behind, ref: remote };
+    // runGit melempar pada exit != 0; merge-base --is-ancestor exit 1 artinya
+    // lokal BUKAN ancestor → ada commit baru di remote. Karena itu tangkap
+    // exit code secara eksplisit, bukan lewat exception.
+    let isAncestor = false;
+    try {
+      execSync(`git merge-base --is-ancestor ${local} ${remote}`, {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 20000,
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+      isAncestor = true; // exit 0: lokal adalah ancestor → bisa di-FF
+    } catch (e) {
+      isAncestor = false; // exit 1/lain: divergen atau lokal lebih maju
+    }
+    // behind hanya bila remote berbeda DAN lokal bukan ancestor remote.
+    // (local === remote dengan ancestor=true → behind harus false.)
+    return { behind: local !== remote && !isAncestor, ref: remote };
   } catch { return { behind: false, ref: null }; }
 }
 
@@ -157,31 +302,61 @@ function gitUpdate({ force }) {
   }
 
   log("Update tersedia — pulling...");
-  // Stash perubahan lokal (mis. runtime) agar pull --ff-only tidak konflik
-  try { runGit(["stash", "--quiet", "--include-untracked", "--", ":!.next", ":!node_modules"]); } catch { /* nothing to stash */ }
+  // Stash perubahan lokal (mis. runtime) agar pull --ff-only tidak konflik.
+  // Stash DIPOP kembali setelah pull berhasil; hanya pada divergen berat
+  // perubahan itu terpaksa dibuang — dan tetap ditinggalkan tercatat supaya
+  // bisa dikembalikan manual (update tidak boleh memakan perbaikan sendiri).
+  let stashed = false;
+  let stashRef = null;
+  try {
+    runGit(["stash", "--quiet", "--include-untracked", "--", ":!.next", ":!node_modules"]);
+    stashed = true;
+    stashRef = runGit(["rev-parse", "-q", "--verify", "refs/stash"]).trim();
+  } catch { /* nothing to stash */ }
   try {
     runGit(["pull", "--quiet", "--ff-only"], { timeout: 120000 });
   } catch (e) {
-    // FF gagal (divergen) → hard reset ke origin. Aman untuk app read-only.
+    // FF gagal (divergen). Jangan langsung hard-reset — itu membuang SEMUA
+    // perubahan lokal yang belum ter-commit, termasuk perbaikan yang sedang
+    // membuat update ini bisa jalan. Simpan dulu stash ke branch cadangan.
     try {
       const branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+      if (stashRef) {
+        // Pindahkan stash ke branch bernama agar mudah dikembalikan:
+        // `git checkout multiver-backup-<ts>` atau `git stash apply <ref>`.
+        const backup = `multiver-backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+        try {
+          runGit(["branch", backup, stashRef]);
+          runGit(["stash", "drop", "--quiet", stashRef]);
+          log(`  (perubahan lokal dipindahkan ke branch ${backup})`);
+        } catch { /* biarkan stash tetap ada */ }
+      }
       runGit(["reset", "--hard", `origin/${branch}`], { timeout: 60000 });
-      log("  (hard reset ke origin — perubahan lokal dibuang)");
+      log("  (hard reset ke origin)");
     } catch {
       console.error(`\n❌ git pull gagal: ${e.message.split("\n")[0]}`);
       console.error("   Resolve manual: cd repo && git pull, lalu multiver update --force");
       process.exit(1);
     }
   }
-  try { runGit(["stash", "pop", "--quiet"]); } catch { /* stash kosong */ }
+  try { if (stashed) runGit(["stash", "pop", "--quiet"]); } catch { /* stash kosong */ }
 
   // Install deps + build
   log("Installing dependencies...");
-  const npmCmd = IS_WIN ? "npm.cmd" : "npm";
-  execSync(`"${npmCmd}" install --no-audit --no-fund`, { cwd: APP_ROOT, stdio: "inherit", windowsHide: false });
+  const installRes = npmExec(["install", "--no-audit", "--no-fund"], { cwd: REPO_ROOT, stdio: "inherit" });
+  if (installRes.status !== 0) {
+    console.error(`\n❌ npm install gagal (exit ${installRes.status})`);
+    console.error("   Selesaikan manual: cd repo && npm install, lalu multiver update --no-relaunch");
+    process.exit(1);
+  }
 
   log("Building...");
-  execSync(`"${npmCmd}" run build`, { cwd: APP_ROOT, stdio: "inherit", windowsHide: false });
+  const buildRes = npmExec(["run", "build"], { cwd: REPO_ROOT, stdio: "inherit" });
+  if (buildRes.status !== 0) {
+    console.error(`\n❌ npm run build gagal (exit ${buildRes.status})`);
+    console.error("   Repo sudah ter-update; selesaikan build manual: npm run build");
+    process.exit(1);
+  }
 
   return true;
 }
@@ -203,15 +378,35 @@ async function npmUpdate({ force, pkgName }) {
   }
   log(`Update tersedia: v${current} → v${latest}`);
   const target = force ? `${pkgName}@latest` : `${pkgName}@${latest}`;
-  const npmCmd = IS_WIN ? "npm.cmd" : "npm";
-  execSync(`"${npmCmd}" i -g ${target} --prefer-online`, { stdio: "inherit", windowsHide: false });
+  npmExec(["i", "-g", target, "--prefer-online"], { stdio: "inherit" });
   return true;
 }
 
 // ─── Relaunch ───────────────────────────────────────────────────────────────
+/**
+ * Resolve node executable untuk relaunch. Hindari npx.cmd (shim npm-prefix
+ * yang sama yang menyebabkan bug update); jalankan router script langsung.
+ */
 function relaunch(args = []) {
   const isTray = !process.stdin.isTTY;
   const finalArgs = isTray ? ["--tray", "--skip-update", ...args] : args;
+
+  // Router script global (multiver) — sebenarnya junction ke repo cli.js,
+  // jadi jalankan node + cli.js langsung lebih andal dari npx.
+  const globalEntry = path.join(npmGlobalPrefix(), "node_modules", "multiver", "cli.js");
+  if (fs.existsSync(globalEntry)) {
+    log(`Relaunching: node "${globalEntry}" ${finalArgs.join(" ")}`);
+    const child = spawn(process.execPath, [globalEntry, ...finalArgs], {
+      detached: true,
+      stdio: "ignore",
+      shell: false,
+      cwd: os.homedir(),
+      windowsHide: false,
+    });
+    child.unref();
+    return;
+  }
+
   const cmd = IS_WIN ? "npx.cmd" : "npx";
   log(`Relaunching: ${cmd} multiver ${finalArgs.join(" ")}`);
   const child = spawn(cmd, ["multiver", ...finalArgs], {
@@ -222,6 +417,14 @@ function relaunch(args = []) {
     windowsHide: false,
   });
   child.unref();
+}
+
+function npmGlobalPrefix() {
+  try {
+    return execSync('npm prefix -g', { encoding: "utf8", windowsHide: true, timeout: 8000 }).trim();
+  } catch {
+    return IS_WIN ? path.join(process.env.APPDATA || "", "npm") : "/usr/local";
+  }
 }
 
 async function run(args = []) {

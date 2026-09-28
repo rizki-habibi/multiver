@@ -111,6 +111,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEXT="${{ steps.bump.outputs.version }}"
+          # Tag harus dibuat eksplisit: sebelumnya hanya release (lightweight
+          # object) yang dibuat, jadi `git tag --list v*` kosong dan update
+          # versi lokal tidak punya acuan untuk "sudah terbaru".
+          git tag -a "v$NEXT" -m "v$NEXT" || true
+          git push origin "refs/tags/v$NEXT" || true
           gh release create "v$NEXT" \
             --title "v$NEXT" \
             --notes "Auto-version bump dari commit ${{ github.sha }}

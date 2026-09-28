@@ -1,4 +1,32 @@
-import { ERROR_TYPES, DEFAULT_ERROR_MESSAGES } from "../config/errorConfig.js";
+import { ERROR_TYPES, DEFAULT_ERROR_MESSAGES, MAX_RATE_LIMIT_COOLDOWN_MS } from "../config/errorConfig.js";
+
+/**
+ * Convert google.rpc.RetryInfo.retryDelay (dan bentuk ringkas sejenis) ke epoch ms.
+ *
+ * Format yang didukung: "30s", "2.5s", "1.5h", "10m", "500ms", atau angka detik
+ * polos ("30"). Mengembalikan null bila tidak terurai — pemanggil menjatuhkannya
+ * ke backoff eksponensial biasa.
+ *
+ * @param {string|number} retryAfter
+ * @returns {number|null} epoch ms saat batas seharusnya selesai
+ */
+export function parseRetryAfterToMs(retryAfter) {
+  if (retryAfter == null) return null;
+  if (typeof retryAfter === "number" && Number.isFinite(retryAfter)) {
+    return Date.now() + Math.min(retryAfter * 1000, MAX_RATE_LIMIT_COOLDOWN_MS);
+  }
+  const str = String(retryAfter).trim().toLowerCase();
+  if (!str) return null;
+  const m = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?$/.exec(str);
+  if (!m) return null;
+  const value = Number(m[1]);
+  const unit = m[2] || "s";
+  const multipliers = { ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  const ms = value * multipliers[unit];
+  // Cap supaya satu batas upstream tidak melumpuhkan akun selama berjam-jam
+  // (MAX_RATE_LIMIT_COOLDOWN_MS = 30 menit, sama dengan aturan resetsAtMs lain).
+  return Date.now() + Math.min(ms, MAX_RATE_LIMIT_COOLDOWN_MS);
+}
 
 /**
  * Build OpenAI-compatible error response body
@@ -7,8 +35,8 @@ import { ERROR_TYPES, DEFAULT_ERROR_MESSAGES } from "../config/errorConfig.js";
  * @returns {object} Error response object
  */
 export function buildErrorBody(statusCode, message) {
-  const errorInfo = ERROR_TYPES[statusCode] || 
-    (statusCode >= 500 
+  const errorInfo = ERROR_TYPES[statusCode] ||
+    (statusCode >= 500
       ? { type: "server_error", code: "internal_server_error" }
       : { type: "invalid_request_error", code: "" });
 
@@ -69,7 +97,13 @@ export async function parseUpstreamError(response, executor = null) {
       const parsed = executor.parseError(response, bodyText);
       if (parsed && typeof parsed === "object") {
         const msg = parsed.message || DEFAULT_ERROR_MESSAGES[response.status] || `Upstream error: ${response.status}`;
-        return { statusCode: parsed.status || response.status, message: msg, resetsAtMs: parsed.resetsAtMs };
+        // Executor dapat menyimpan dua macam expiry presisi:
+        //   resetsAtMs — epoch ms langsung (codex)
+        //   retryAfter — google.rpc.RetryInfo.retryDelay ("30s", "2.5s", "1.5h")
+        // Sebelumnya retryAfter dibaca di sini sehingga petunjuk reset
+        // google tidak pernah sampai ke penjadwalan cooldown.
+        const resetsAtMs = parsed.resetsAtMs ?? parseRetryAfterToMs(parsed.retryAfter);
+        return { statusCode: parsed.status || response.status, message: msg, resetsAtMs };
       }
     } catch { /* fall through to default parsing */ }
   }
