@@ -23,13 +23,7 @@ const debugItems = [
   { href: "/dashboard/translator", label: "Penerjemah", icon: "translate" },
 ];
 
-// Operasional: MITM, Konsol Log, dan Diagnostik hidup di tab halaman Penggunaan.
-// "Log Gateway" menuju tab yang sama dengan "Konsol Log" (tab gateway tidak ada);
-// Konsol Log sudah menampilkan log gateway + MITM, jadi tidak ada menu yang menyesatkan.
 const operationalItems = [
-  { href: "/dashboard/usage?tab=mitm", label: "Kiro MITM", icon: "security" },
-  { href: "/dashboard/usage?tab=console", label: "Konsol Log", icon: "console" },
-  { href: "/dashboard/usage?tab=diagnostics", label: "Diagnostik", icon: "health_and_safety" },
   { href: "/dashboard/compatibility", label: "Kompatibilitas", icon: "grid_view" },
 ];
 
