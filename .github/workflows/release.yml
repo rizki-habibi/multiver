@@ -1,0 +1,68 @@
+name: Build & Publish CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (tidak publish)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: publish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install root deps
+        run: npm install --no-audit --no-fund
+
+      - name: Build CLI bundle
+        run: npm run cli:build
+
+      - name: Verify bundle
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('cli/package.json','utf8'));
+            console.log('CLI version:', p.version);
+            if (!fs.existsSync('cli/cli.js')) throw new Error('cli/cli.js tidak ada setelah build');
+            if (!fs.existsSync('cli/app/package.json')) throw new Error('cli/app/package.json hilang');
+            console.log('Build OK');
+          "
+
+      - name: Pack (dry-run check)
+        run: npm pack --prefix cli --pack-destination /tmp
+        env:
+          NODE_ENV: production
+
+      - name: Publish to npm
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        run: npm publish --prefix cli --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: multiver-tgz
+          path: /tmp/multiver-*.tgz
+          if-no-files-found: ignore
+          retention-days: 30

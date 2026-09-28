@@ -1,0 +1,126 @@
+name: Auto Version & Tag
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".gitignore"
+      - "README.md"
+      - "*.md"
+      - ".github/**"
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip version]')"
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      changed: ${{ steps.bump.outputs.changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Compute next version
+        id: bump
+        shell: bash
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          # Ambil semua tag yang sudah ada
+          git fetch --tags --quiet || true
+          LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n 1 || true)
+          echo "latest_tag=${LATEST_TAG:-none}" >> "$GITHUB_OUTPUT"
+
+          NEXT="$CURRENT"
+          if [ -n "$LATEST_TAG" ]; then
+            BASE="${LATEST_TAG#v}"
+            # Patch bump dari tag terbaru
+            MAJOR=$(echo "$BASE" | cut -d. -f1)
+            MINOR=$(echo "$BASE" | cut -d. -f2)
+            PATCH=$(echo "$BASE" | cut -d. -f3)
+            PATCH=$((PATCH + 1))
+            NEXT="$MAJOR.$MINOR.$PATCH"
+          else
+            PATCH=$(echo "$CURRENT" | cut -d. -f3)
+            PATCH=$((PATCH + 1))
+            NEXT=$(echo "$CURRENT" | cut -d. -f1).$(echo "$CURRENT" | cut -d. -f2).$PATCH
+          fi
+
+          # Jika package.json version lebih besar dari tag, pakai itu
+          if [ -n "$LATEST_TAG" ]; then
+            BASE="${LATEST_TAG#v}"
+            HIGHER=$(node -p "require('./package.json').version >= '$BASE' ? 'yes' : 'no'")
+            if [ "$HIGHER" = "yes" ]; then
+              NEXT=$(node -p "require('./package.json').version")
+              # Tetap bump patch agar selalu naik
+              PATCH=$(echo "$NEXT" | cut -d. -f3)
+              PATCH=$((PATCH + 1))
+              NEXT=$(echo "$NEXT" | cut -d. -f1).$(echo "$NEXT" | cut -d. -f2).$PATCH
+            fi
+          fi
+
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "changed=$([ "$NEXT" != "$CURRENT" ] && echo true || echo false)"
+          echo "Current: $CURRENT → Next: $NEXT (tag: ${LATEST_TAG:-none})"
+
+      - name: Update package.json versions
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        run: |
+          NEXT="${{ steps.bump.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            for (const f of ['package.json', 'cli/package.json']) {
+              const p = JSON.parse(fs.readFileSync(f, 'utf8'));
+              p.version = '$NEXT';
+              fs.writeFileSync(f, JSON.stringify(p, null, 2) + '\n');
+              console.log('bumped', f, '→', '$NEXT');
+            }
+          "
+
+      - name: Commit version bump
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        run: |
+          NEXT="${{ steps.bump.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json cli/package.json
+          git commit -m "chore: bump version to v$NEXT [skip version]"
+          git push
+
+      - name: Create GitHub release + tag
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEXT="${{ steps.bump.outputs.version }}"
+          gh release create "v$NEXT" \
+            --title "v$NEXT" \
+            --notes "Auto-version bump dari commit ${{ github.sha }}
+
+          Jalankan update lokal:
+          \`\`\`
+          multiver update
+          \`\`\`
+          Atau dari source:
+          \`\`\`
+          git pull && npm install && npm run build
+          \`\`\`" \
+            --generate-notes || echo "release create best-effort"
