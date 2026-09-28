@@ -281,7 +281,7 @@ export default function TokenSaverClient() {
       setExtrasConfirm({
         title: "Install [ml]",
         message: "[ml] downloads ~1 GB (torch + huggingface-hub). Continue?",
-        confirmText: "Install",
+        confirmText: "Pasang",
         variant: "primary",
         onConfirm: installExtrasConfirmed,
       });
@@ -294,7 +294,7 @@ export default function TokenSaverClient() {
     setExtrasConfirm({
       title: `Remove [${extra}]`,
       message: `Remove [${extra}] and its packages?`,
-      confirmText: "Remove",
+      confirmText: "Hapus",
       variant: "danger",
       onConfirm: () => removeExtraConfirmed(extra),
     });
@@ -426,14 +426,14 @@ export default function TokenSaverClient() {
 
   const headroomRunning = !!headroomStatus.running;
   const headroomStatusLabel = headroomStatus.loading
-    ? "Checking&"
+    ? "Memeriksa..."
     : headroomRunning
-      ? "Running"
+      ? "Berjalan"
       : headroomStatus.localUrl !== false && !headroomStatus.installed
-        ? "Not installed"
+        ? "Belum terpasang"
         : headroomStatus.localUrl !== false
-          ? "Stopped"
-          : "External";
+          ? "Berhenti"
+          : "Eksternal";
   const headroomLocalUrl = headroomStatus.localUrl !== false;
   const headroomCanStart = !!headroomStatus.canStart;
   const headroomManaged =
@@ -441,16 +441,16 @@ export default function TokenSaverClient() {
 
   const pxpipeHealthy = pxpipeHealth?.healthy === true;
   const pxpipeStatusLabel = pxpipeStatus.loading
-    ? "Checking&"
+    ? "Memeriksa..."
     : pxpipeStatus.installing
-      ? "Installing&"
+      ? "Memasang..."
       : !pxpipeStatus.installed
-        ? "Not installed"
+        ? "Belum terpasang"
         : pxpipeHealthy
           ? "Healthy"
           : pxpipeStatus.running
-            ? "Running"
-            : "Stopped";
+            ? "Berjalan"
+            : "Berhenti";
   const pxpipeChipClass =
     pxpipeHealthy || pxpipeStatus.running
       ? "bg-success/15 text-success"
@@ -513,7 +513,7 @@ export default function TokenSaverClient() {
                 onClick={() => setShowHeadroomInstallModal(true)}
                 className="text-xs text-primary underline hover:opacity-80"
               >
-                {headroomRunning ? "Manage" : "Setup"}
+                {headroomRunning ? "Kelola" : "Atur"}
               </button>
             </div>
             <p className="text-sm text-text-muted mt-1">
@@ -562,7 +562,7 @@ export default function TokenSaverClient() {
                         className="ml-1 text-error underline hover:opacity-80 disabled:opacity-50"
                         title={`Uninstall [${extra}]`}
                       >
-                        {removingExtra === extra ? "Uninstalling&" : "Uninstall"}
+                        {removingExtra === extra ? "Menghapus..." : "Hapus"}
                       </button>
                     </div>
                   );
@@ -595,7 +595,7 @@ export default function TokenSaverClient() {
                   className="text-xs px-2.5 py-1 rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {extrasActionLoading
-                    ? "Installing&"
+                    ? "Memasang..."
                     : `Install [proxy,${pendingExtras.join(",")}]`}
                 </button>
               )}
@@ -745,7 +745,7 @@ export default function TokenSaverClient() {
                   onClick={() => setShowPxpipeModal(true)}
                   className="text-xs text-primary underline hover:opacity-80"
                 >
-                  {pxpipeStatus.installed ? "Manage" : "Setup"}
+                  {pxpipeStatus.installed ? "Kelola" : "Atur"}
                 </button>
                 <button
                   onClick={() => setShowPxpipeModal(true)}
@@ -827,7 +827,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Stopping&" : "Stop Headroom"}
+              {headroomActionLoading ? "Stopping&" : "Hentikan Headroom"}
             </Button>
           ) : headroomRunning ? (
             <p className="text-sm text-success">
@@ -839,7 +839,7 @@ export default function TokenSaverClient() {
               fullWidth
               disabled={headroomActionLoading}
             >
-              {headroomActionLoading ? "Starting&" : "Start Headroom"}
+              {headroomActionLoading ? "Memulai..." : "Start Headroom"}
             </Button>
           ) : !headroomLocalUrl ? (
             <p className="text-sm text-warning">
@@ -933,7 +933,7 @@ export default function TokenSaverClient() {
                 fullWidth
                 disabled={pxpipeActionLoading || pxpipeStatus.installing}
               >
-                {pxpipeActionLoading || pxpipeStatus.installing ? "Installing&" : "Install"}
+                {pxpipeActionLoading || pxpipeStatus.installing ? "Memasang..." : "Pasang"}
               </Button>
               <p className="text-xs text-text-muted">
                 Installs the npm package <code className="font-mono">pxpipe-proxy</code> into
@@ -953,7 +953,7 @@ export default function TokenSaverClient() {
                 </>
               ) : (
                 <Button onClick={() => pxpipeAction("start")} disabled={pxpipeActionLoading}>
-                  {pxpipeActionLoading ? "Starting&" : "Start"}
+                  {pxpipeActionLoading ? "Memulai..." : "Mulai"}
                 </Button>
               )}
               <Button onClick={() => pxpipeAction("install")} variant="ghost" disabled={pxpipeActionLoading}>
