@@ -2,7 +2,7 @@
 
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
-![Version](https://img.shields.io/badge/version-10.0.0-0969DA)
+![Version](https://img.shields.io/badge/version-11.0.0-0969DA)
 [![License](https://img.shields.io/npm/l/multiver.svg)](https://github.com/rizki-habibi/multiver/blob/main/LICENSE)
 
 Multiver bukan sekadar router AI yang memilih satu model. Multiver Max menjalankan
@@ -31,7 +31,7 @@ Bila registry belum tersedia / offline:
 ```bash
 # di folder repo (setelah npm run cli:build)
 npm pack --prefix cli                    # hasil: cli/multiver-<versi>.tgz
-npm install -g cli/multiver-10.0.0.tgz
+npm install -g cli/multiver-11.0.0.tgz
 multiver
 ```
 
@@ -161,12 +161,18 @@ Kompresi external (Headroom `/v1/compress` di `localhost:8787`) sudah non-aktif 
 
 ### 4. 📊 Penggunaan & Konsol Log
 
-Halaman **Penggunaan** (`/dashboard/usage`) sekarang punya 4 tab:
+Halaman **Penggunaan** (`/dashboard/usage`) sekarang punya 6 tab:
 
 - **Ikhtisar** — statistik penggunaan API, konsumsi token, request count per periode
+- **Detail** — rincian per request (model, status, latency, token)
 - **Konsol Log** — terminal real-time (SSE) untuk memantau error, fallback, dan rate limit
-- **Diagnostik** — cek kesehatan gateway, MITM, DNS, dan CA dalam satu halaman
 - **Kiro MITM** — intersepsi traffic Kiro IDE (sebelumnya halaman terpisah)
+- **Diagnostik** — cek kesehatan gateway, MITM, DNS, dan CA dalam satu halaman
+- **Validasi Kunci** — cek validitas API key/provider key secara massal
+
+> Menu sidebar **Kiro MITM**, **Konsol Log**, dan **Diagnostik** sudah dihapus di v11
+> untuk meringankan sidebar. Ketiganya tetap bisa diakses sebagai tab di halaman
+> Penggunaan di atas.
 
 #### Konsol Log real-time
 
@@ -264,36 +270,122 @@ Runtime dependencies (sql.js, better-sqlite3) di self-heal ke `~/.multiver/runti
 
 ## 🧩 Arsitektur
 
+### Struktur folder
+
 ```
 Multiver/
-├── cli/                    # CLI launcher (multiver command)
-│   ├── cli.js              # Entry point — start server, menu, tray
-│   ├── src/cli/            # Terminal UI, menus, utils
-│   └── app/                # Standalone Next.js build (output)
-├── open-sse/               # Provider-agnostic SSE engine
-│   ├── config/             # Provider registry, models, runtime config
-│   ├── translator/         # Format conversion (OpenAI ↔ Claude ↔ Gemini...)
-│   ├── executors/          # Per-provider upstream callers
-│   ├── handlers/           # chat / image / tts / stt / search cores
-│   ├── rtk/                # Token saver (compress tool_result)
-│   └── services/           # combo, fusion, MAX, token refresh, usage
+├── cli/                        # CLI launcher → perintah `multiver`
+│   ├── cli.js                  # Entry point: start server, menu, tray
+│   ├── link-global.js          # Daftarkan `multiver` global tanpa publish npm
+│   ├── hooks/                  # postinstall (warm-up SQLite/tray runtime)
+│   ├── scripts/
+│   │   ├── build-cli.js        # next build + salin standalone → cli/app
+│   │   └── buildMitm.js        # Bundle MITM server (esbuild)
+│   ├── src/cli/                # api/, commands/, menus/, tray/, utils/
+│   └── app/                    # Standalone Next.js build (output, git-ignored)
+├── open-sse/                   # Provider-agnostic SSE engine
+│   ├── config/                 # Provider registry, models, runtime config
+│   ├── executors/              # Per-provider upstream callers (40+ file)
+│   ├── handlers/               # chat / image / tts / stt / search cores
+│   ├── providers/              # Registry per-provider (kilo-gateway, dll)
+│   ├── rtk/                    # Token saver (kompres tool_result)
+│   ├── services/               # combo, fusion, MAX, token refresh, usage
+│   ├── shared/                 # clineEnvelope, dll (shared internals)
+│   ├── transformer/            # Transformasi format response
+│   ├── translator/             # OpenAI ↔ Claude ↔ Gemini ↔ Kiro...
+│   └── utils/                  # Util engine
 ├── src/
-│   ├── app/                # Next.js App Router (dashboard + API routes)
-│   │   ├── (dashboard)/    # UI pages
-│   │   └── api/            # REST + SSE endpoints
-│   ├── lib/                # DB, logger, maxEvents, headroom, tunnel
-│   ├── mitm/               # Kiro MITM server (CJS, runs standalone)
-│   ├── sse/                # Gateway handlers (chat, tts, image, fetch, search)
-│   └── shared/             # Constants, components, utils
-├── skills/                 # Agent skills (raw SKILL.md files)
-└── tests/                  # Unit tests (vitest)
+│   ├── app/                    # Next.js App Router
+│   │   ├── (dashboard)/        # UI pages (lihat daftar komponen di bawah)
+│   │   └── api/                # REST + SSE endpoints (/api/v1/*, /api/mitm/*)
+│   ├── lib/                    # DB repos, logger, maxEvents, headroom, tunnel, auth
+│   ├── mitm/                   # Kiro MITM server (CJS, berjalan standalone di luar Next)
+│   │   ├── server.js           # HTTPS server port 443 + routing intercept
+│   │   ├── manager.js          # Spawn/restart MITM, CA, DNS, admin elevation
+│   │   ├── handlers/           # base.js (fetchRouter), kiro.js (intercept)
+│   │   ├── cert/               # Root CA generate/install/leaf cert
+│   │   ├── dns/                # Hosts file entries per tool
+│   │   ├── consoleLog.js       # Emit log ke /api/console-log
+│   │   ├── dbReader.js         # Baca aliases.json (cache alias MITM)
+│   │   ├── config.js           # TARGET_HOSTS, isChatRequest, MODEL_SYNONYMS
+│   │   ├── paths.js            # DATA_DIR / MITM_DIR (AppData | ~/.multiver)
+│   │   ├── winElevated.js      # Run elevated via PowerShell (Windows)
+│   │   └── logger.js           # Logger + redact secret
+│   ├── models/                 # Re-export layer DB (connections, keys, nodes)
+│   ├── sse/                    # Gateway handlers (chat, tts, image, fetch, search)
+│   ├── shared/                 # Constants, components, hooks, services, utils
+│   ├── store/                  # State store
+│   ├── dashboardGuard.js       # Middleware logic (auth, local-only, public /v1)
+│   ├── proxy.js                # Export middleware (mimo login session proxy)
+│   └── instrumentation.js      # OpenTelemetry / instrumentation hooks
+├── skills/                     # Agent skills (SKILL.md per kapabilitas)
+├── tests/                      # Unit tests (vitest)
+├── custom-server.js            # Wrapper http.createServer: stamp real IP + peer token
+└── next.config.mjs             # Config: standalone + rewrites /v1 → /api/v1
 ```
+
+> **Catatan rewrite `/v1`:** handler API sebenarnya ada di `/api/v1/*`. Karena README,
+> skills, dan `dashboardGuard.js` mendokumentasikan `/v1` sebagai API publik,
+> `next.config.mjs` menulis ulang `/v1/*` → `/api/v1/*` (dan `/v1beta/*`) di
+> `beforeFiles`. MITM (`src/mitm/handlers/base.js`) memakai `/v1/chat/completions`.
+
+### Komponen utama (src/shared/components)
+
+Komponen UI reusable. Dipakai oleh dashboard pages di `src/app/(dashboard)/`.
+
+| File | Fungsi |
+|------|--------|
+| `Sidebar.js` | Navigasi kiri. Menu: Titik Akhir & Kunci, Penyedia, Kombinasi, Penggunaan, Pelacak Kuota, Penghemat Token, Kompatibilitas, Penyimpanan Awan, Pengaturan |
+| `Header.js`, `HeaderMenu.js` | Top bar + menu mobile (hamburger) |
+| `layouts/DashboardLayout.js` | Layout shell: sidebar desktop + drawer mobile + main content |
+| `Card.js`, `Button.js`, `Input.js`, `Select.js`, `Badge.js`, `Toggle.js`, `Tooltip.js` | Primitif UI dasar |
+| `Modal.js`, `ConfirmModal.js` | Modal + konfirmasi (update flow, dst) |
+| `SegmentedControl.js` | Tab switcher (dipakai di halaman Penggunaan) |
+| `Drawer.js` | Panel sisi kanan (edit koneksi, dst) |
+| `UsageStats.js` | Statistik penggunaan per periode + breakdown per akun |
+| `ProviderIcon.js`, `ProviderInfoCard.js`, `CapacityBadges.js` | Ikon + info + badge kapabilitas per provider |
+| `ModelSelectModal.js` | Pilih model (combo/alias/provider) |
+| `ComboFormModal.js` | Buat/edit combo + pilih strategy (fallback/round-robin/MAX/fusion) |
+| `OAuthModal.js`, `KiroAuthModal.js`, `KiroOAuthWrapper.js`, `KiroSocialOAuthModal.js`, `CursorAuthModal.js`, `GitLabAuthModal.js`, `IFlowCookieModal.js`, `XiaomiMimoAuthModal.js` | Modal OAuth/cookie per provider |
+| `EditConnectionModal.js`, `ManualConfigModal.js`, `NoAuthProxyCard.js` | Edit koneksi, config manual (baseUrl/apiKey), kartu proxy no-auth |
+| `AddCustomEmbeddingModal.js` | Tambah node custom-embedding |
+| `McpMarketplaceModal.js` | Marketplace MCP plugin |
+| `PricingModal.js` | Atur pricing per model |
+| `ChangelogModal.js` | Tampilan changelog versi |
+| `NineRemoteButton.js`, `NineRemotePromoModal.js` | Remote access (nine.ai) |
+| `RequestLogger.js` | Tampilan log request di UI |
+| `ThemeProvider.js`, `ThemeToggle.js` | Dark/light theme |
+| `Avatar.js`, `Pagination.js`, `Loading.js`, `Footer.js` | Avatar, pagination, loading skeleton, footer |
+
+### Halaman dashboard (src/app/(dashboard)/dashboard)
+
+| Route | Halaman | Komponen utama |
+|-------|---------|----------------|
+| `/dashboard` | Beranda (status server + shortcut) | page.js |
+| `/dashboard/endpoint` | Titik Akhir & Kunci (API key mgmt) | `EndpointPageClient.js` |
+| `/dashboard/providers` | Daftar provider | `ConnectionsCard.js` |
+| `/dashboard/providers/[id]` | Detail provider + koneksi | `ConnectionRow.js` |
+| `/dashboard/combos` | Kombinasi & Adaptor Vision | `ComboFormModal.js` |
+| `/dashboard/usage` | Penggunaan (6 tab) | `UsageStats`, `RequestDetailsTab`, `ConsoleLogTab`, `MitmTab`, `DiagnosticsTab`, `KeyValidationTab` |
+| `/dashboard/quota` | Pelacak Kuota | `usage/components/ProviderLimits` |
+| `/dashboard/token-saver` | Penghemat Token (RTK) | — |
+| `/dashboard/compatibility` | Cek kompatibilitas client | — |
+| `/dashboard/cloud` | Penyimpanan Awan (GDrive/WebDAV) | — |
+| `/dashboard/profile` | Pengaturan | — |
+| `/dashboard/mitm` | (redirect) tab MITM di usage | `MitmServerCard`, `MitmToolCard` |
+| `/dashboard/console-log` | (redirect) tab Konsol Log | `ConsoleLogTab` |
+| `/dashboard/diagnostics` | (redirect) tab Diagnostik | `DiagnosticsTab` |
+| `/dashboard/basic-chat` | Chat UI langsung | — |
+| `/dashboard/proxy-pools`, `/dashboard/pxpipe`, `/dashboard/skills`, `/dashboard/translator`, `/dashboard/logs` | Fitur lanjutan | — |
 
 ### Request lifecycle (chat)
 
 ```
 client request
-  → src/sse/handlers/chat.js     (combo resolution + strategy dispatch)
+  → custom-server.js          (stamp real IP + peer token)
+  → next.config.mjs rewrites  (/v1/* → /api/v1/*)
+  → dashboardGuard.js         (auth: API key / JWT / local-only)
+  → src/sse/handlers/chat.js  (combo resolution + strategy dispatch)
   → open-sse/handlers/chatCore.js
   → rtk/ (token saver, in-place)
   → translator (client format → provider format)
@@ -301,6 +393,25 @@ client request
   → translator response (provider → client format)
   → SSE out
 ```
+
+### Request lifecycle (Kiro MITM)
+
+```
+Kiro IDE (https)
+  → src/mitm/server.js         (port 443, anti-loop + host match + isChatRequest)
+  → getMappedModel()           (aliases.json: deepseek-3.2 → a/Atria-Dawn-Preview)
+  ├─ alias tidak ada → passthrough ke AWS upstream asli
+  └─ alias ada → src/mitm/handlers/kiro.js
+       → CodeWhisperer JSON → OpenAI messages[]
+       → fetchRouter(POST /v1/chat/completions)  ← lewat rewrite next.config.mjs
+       → pipeTransformedEventStream (SSE → AWS EventStream binary)
+  → Kiro IDE
+```
+
+> Passthrough hanya terjadi **sebelum** mapping: anti-loop request, host tidak dikenal,
+> bukan chat request, atau alias tidak ditemukan. Jika gateway error **setelah** model
+> ter-resolve (misal HTTP 500 upstream), error diteruskan ke IDE — tidak ada fallback
+> otomatis ke upstream AWS.
 
 ---
 
@@ -423,4 +534,32 @@ Jika masih, cek `/api/console-log?limit=200` langsung.
 
 ## 📄 License
 
-MIT
+---
+
+## 📜 Changelog
+
+### v11.0.0
+
+- **fix(mitm): HTTP 404 saat Kiro IDE request** — handler MITM mem-posting ke
+  `http://localhost:20222/v1/chat/completions`, tapi route Next.js hanya tersedia di
+  `/api/v1/*`. Tidak ada route `/v1` dan tidak ada rewrite, jadi Next.js menyajikan
+  halaman `/_not-found` (HTML `lang="id"`) → `HTTP 404` di setiap permintaan yang
+  diintercept. Sekarang `next.config.mjs` menulis ulang `/v1/*` → `/api/v1/*` dan
+  `/v1beta/*` → `/api/v1beta/*` di `beforeFiles`.
+- **Sidebar lebih ringkas** — menu **Kiro MITM**, **Konsol Log**, dan **Diagnostik**
+  dihapus dari sidebar. Ketiganya tetap tersedia sebagai tab di halaman Penggunaan
+  (`/dashboard/usage?tab=mitm|console|diagnostics`).
+- Halaman Penggunaan kini punya **6 tab** (sebelumnya 4): Ikhtisar, Detail, Konsol Log,
+  Kiro MITM, Diagnostik, Validasi Kunci.
+- Dokumentasi arsitektur diperluas: tree folder lengkap, tabel komponen
+  `src/shared/components`, tabel route dashboard, dan lifecycle request MITM.
+
+### v10.0.0
+
+- MAX — All Models Parallel Execution (semua model jalan paralel, semua hasil
+  dipertahankan; partial success; rate-limit handling per model; concurrency limit)
+- Token Saver (RTK) all-in-one — kompresi internal, tanpa install `headroom-ai` terpisah
+- Konsol Log real-time dengan filter level/source/tool, pencarian, dan auto-redact secret
+- Auto Health Monitor — deteksi akun suspended, key lock saat rate limit, cooldown
+  dari header `Retry-After`
+- Cloud Storage Sync (Google Drive / WebDAV)
