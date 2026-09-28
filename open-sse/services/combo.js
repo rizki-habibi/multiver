@@ -87,6 +87,34 @@ export function reorderByCapabilities(models, required) {
  */
 const comboRotationState = new Map();
 
+// Short-lived model health circuit breaker. A provider returning 502/503/504
+// repeatedly should not be hammered on every new request while healthy models
+// are available. This is process-local by design; a restart clears it.
+const modelHealthCooldown = new Map();
+const MODEL_HEALTH_COOLDOWN_MS = 15000;
+
+function modelHealthKey(model) {
+  return String(model || "").trim().toLowerCase();
+}
+
+function getModelCooldown(model) {
+  const until = modelHealthCooldown.get(modelHealthKey(model)) || 0;
+  if (until <= Date.now()) {
+    modelHealthCooldown.delete(modelHealthKey(model));
+    return 0;
+  }
+  return until - Date.now();
+}
+
+function markModelTransientFailure(model, status) {
+  if (![500, 502, 503, 504].includes(Number(status))) return;
+  modelHealthCooldown.set(modelHealthKey(model), Date.now() + MODEL_HEALTH_COOLDOWN_MS);
+}
+
+function markModelHealthy(model) {
+  modelHealthCooldown.delete(modelHealthKey(model));
+}
+
 // Trailing run of items after the last assistant/model turn = the current user
 // turn. It may span several messages (e.g. text + image split across blocks),
 // so we return all of them. History media (older turns) must not pin the combo
@@ -299,14 +327,22 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
-    log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
+    const cooldownRemaining = getModelCooldown(modelStr);
+    if (cooldownRemaining > 0) {
+      log.warn("COMBO", `Melewati model ${modelStr}: sementara tidak sehat (${Math.ceil(cooldownRemaining / 1000)}s)`, {
+        status: "MODEL_COOLDOWN",
+      });
+      continue;
+    }
+    log.info("COMBO", `Mencoba model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
 
       // Success (2xx) - return response
       if (result.ok) {
-        log.info("COMBO", `Model ${modelStr} succeeded`);
+        markModelHealthy(modelStr);
+        log.info("COMBO", `Model ${modelStr} berhasil`);
         return result;
       }
 
@@ -332,6 +368,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       }
 
       // Check if should fallback to next model
+      markModelTransientFailure(modelStr, result.status);
       const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
 
       if (!shouldFallback) {
@@ -351,7 +388,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       // Fallback to next model
       lastError = errorText || String(result.status);
       if (!lastStatus) lastStatus = result.status;
-      log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
+      log.warn("COMBO", `Model ${modelStr} gagal, mencoba berikutnya`, { status: result.status });
     } catch (error) {
       // Catch unexpected exceptions to ensure fallback continues
       lastError = error.message || String(error);
@@ -366,7 +403,10 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   // or have no active credentials. 503 is more accurate and retryable by clients.
   const allDisabled = lastError && lastError.toLowerCase().includes("no credentials");
   const status = allDisabled ? 503 : (lastStatus || 503);
-  const msg = lastError || "All combo models unavailable";
+  const attempted = rotatedModels.length;
+  const msg = lastError
+    ? `Semua ${attempted} model dalam kombinasi gagal. Penyebab terakhir: ${lastError}`
+    : `Semua ${attempted} model dalam kombinasi sedang tidak tersedia.`;
 
   if (earliestRetryAfter) {
     const retryHuman = formatRetryAfter(earliestRetryAfter);
