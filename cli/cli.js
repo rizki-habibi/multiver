@@ -465,6 +465,48 @@ function isRestrictedEnvironment() {
   return null;
 }
 
+// Cek versi baru dari git (untuk install via clone repo). Mengembalikan
+// versi terbaru bila origin lebih maju dari HEAD lokal, atau null.
+// Update otomatis sebelumnya hanya mengecek npm registry — padahal multiver
+// tidak dipublikasikan ke npm, jadi tombol "Update to vX" tidak pernah
+// muncul di popup saat dipasang dari git.
+//
+// Repo root: cli.js ada di <repo>/cli, tapi .git ada di <repo>.
+// Git sendiri bisa resolve naik dari subdir (git -C <dir> mencari ke atas),
+// jadi pakai -C agar andal baik dari source maupun dari paket terinstal
+// yang masih berada di dalam repo.
+function checkGitUpdate() {
+  return new Promise((resolve) => {
+    try {
+      const { execSync } = require("child_process");
+      const runInRepo = (args) => execSync(`git -C "${__dirname}" ${args.join(" ")}`, {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 8000,
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+      runInRepo(["rev-parse", "--is-inside-work-tree"]);
+      // JANGAN pakai --depth=1: repo mungkin sudah shallow, dan fetch dangkal
+      // memotong history sehingga merge-base --is-ancestor selalu gagal
+      // (exit 1 "not an ancestor") meski lokal jelas tertinggal.
+      runInRepo(["fetch", "--quiet", "origin"]);
+      const branch = runInRepo(["rev-parse", "--abbrev-ref", "HEAD"]);
+      if (!branch || branch === "HEAD") return resolve(null);
+      const local = runInRepo(["rev-parse", "HEAD"]);
+      const remote = runInRepo(["rev-parse", `origin/${branch}`]);
+      if (!remote || local === remote) return resolve(null);
+      // behind = lokal BUKAN ancestor remote. merge-base exit 0 = lokal
+      // adalah ancestor (bisa di-FF, ada update); exit 1 = divergen/tidak.
+      try { runInRepo(["merge-base", "--is-ancestor", local, remote]); }
+      catch { return resolve(null); }
+      // Ambil versi dari package.json di remote (sumber kebenaran versi).
+      const remoteVersion = runInRepo(["show", `origin/${branch}:cli/package.json`])
+        .match(/"version"\s*:\s*"([^"]+)"/)?.[1];
+      resolve(remoteVersion || "latest");
+    } catch { resolve(null); }
+  });
+}
+
 // Check if new version available, return latest version or null
 function checkForUpdate() {
   return new Promise((resolve) => {
@@ -492,25 +534,36 @@ function checkForUpdate() {
       resolve(version);
     };
 
+    // Sumber 1: git (install via clone repo — cara utama memasang multiver).
+    // Sumber 2: npm registry (fallback bila terinstal dari registry).
+    // Pakai yang mana saja yang melaporkan versi lebih baru.
+    let gitDone = false, npmDone = false;
+    let gitResult = null, npmResult = null;
+    const current = pkg.version;
+
+    const finishIfReady = () => {
+      if (!gitDone || !npmDone) return;
+      const pick = (v) => v && compareVersions(v, current) > 0 ? v : null;
+      done(pick(gitResult) || pick(npmResult));
+    };
+
+    checkGitUpdate().then((v) => { gitResult = v; gitDone = true; finishIfReady(); });
+
     const req = https.get(`https://registry.npmjs.org/${pkg.name}/latest`, { timeout: 3000 }, (res) => {
       let data = "";
       res.on("data", chunk => data += chunk);
       res.on("end", () => {
         try {
           const latest = JSON.parse(data);
-          if (latest.version && compareVersions(latest.version, pkg.version) > 0) {
-            done(latest.version);
-          } else {
-            done(null);
-          }
-        } catch (e) {
-          done(null);
-        }
+          npmResult = latest.version || null;
+        } catch (e) { npmResult = null; }
+        npmDone = true;
+        finishIfReady();
       });
     });
 
-    req.on("error", () => done(null));
-    req.on("timeout", () => { req.destroy(); done(null); });
+    req.on("error", () => { npmDone = true; finishIfReady(); });
+    req.on("timeout", () => { req.destroy(); npmDone = true; finishIfReady(); });
   });
 }
 
