@@ -65,7 +65,6 @@ export default function ProviderLimitCard({
             style={{ backgroundColor: `${providerColor}15` }}
           >
             <ProviderIcon
-              src={`/providers/${provider}.png`}
               alt={provider || "Provider"}
               size={40}
               className="object-contain rounded-lg"
@@ -97,9 +96,8 @@ export default function ProviderLimitCard({
           title="Refresh quota"
         >
           <span
-            className={`material-symbols-outlined text-[20px] text-text-muted ${
-              refreshing || loading ? "animate-spin" : ""
-            }`}
+            className={`material-symbols-outlined text-[20px] text-text-muted ${refreshing || loading ? "animate-spin" : ""
+              }`}
           >
             refresh
           </span>

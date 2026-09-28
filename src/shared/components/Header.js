@@ -120,7 +120,7 @@ const getPageInfo = (pathname) => {
   return { title: "", description: "", breadcrumbs: [] };
 };
 
-export default function Header({ onMenuClick, showMenuButton = true }) {
+export default function Header({ onMenuClick, showMenuButton = true, collapsed = false, onToggleCollapse }) {
   const pathname = usePathname();
   const [displayName, setDisplayName] = useState("");
   const [loginMethod, setLoginMethod] = useState("");
@@ -168,6 +168,19 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
 
   return (
     <header className="shrink-0 flex items-center justify-between gap-3 px-4 lg:px-8 pt-3 pb-2 border-b border-border-subtle bg-surface/60 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none z-20">
+      {/* Desktop collapse toggle */}
+      {onToggleCollapse && (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? "Buka sidebar" : "Tutup sidebar"}
+          title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
+          className="hidden lg:inline-flex items-center justify-center w-8 h-8 rounded-md text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
+        >
+          <span className="material-symbols-outlined">{collapsed ? "chevron_right" : "chevron_left"}</span>
+        </button>
+      )}
+
       {/* Mobile menu button */}
       <div className="flex items-center gap-3 lg:hidden shrink-0">
         {showMenuButton && (
@@ -301,4 +314,6 @@ function HeaderSearch() {
 Header.propTypes = {
   onMenuClick: PropTypes.func,
   showMenuButton: PropTypes.bool,
+  collapsed: PropTypes.bool,
+  onToggleCollapse: PropTypes.func,
 };

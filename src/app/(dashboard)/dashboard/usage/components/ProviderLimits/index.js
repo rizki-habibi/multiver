@@ -461,7 +461,7 @@ export default function ProviderLimits() {
           setProxyPools(data.proxyPools);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };
@@ -552,7 +552,7 @@ export default function ProviderLimits() {
         });
         setQuotaVisibility(s?.quotaVisibility || {});
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const toggleAutoPing = useCallback(async (connectionId, provider, on) => {
@@ -841,7 +841,6 @@ export default function ProviderLimits() {
                   </span>
                 ) : (
                   <ProviderIcon
-                    src={`/providers/${providerFilter}.png`}
                     alt={providerFilter}
                     size={18}
                     className="size-[18px] rounded object-contain"
@@ -903,7 +902,6 @@ export default function ProviderLimits() {
                         className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${providerFilter === provider ? "bg-primary/10 text-primary" : "text-text-primary hover:bg-black/5 dark:hover:bg-white/10"}`}
                       >
                         <ProviderIcon
-                          src={`/providers/${provider}.png`}
                           alt={provider}
                           size={24}
                           className="size-6 rounded-md object-contain"
@@ -1004,9 +1002,8 @@ export default function ProviderLimits() {
             title={autoRefresh ? "Disable auto-refresh" : "Enable auto-refresh"}
           >
             <span
-              className={`material-symbols-outlined text-[14px] ${
-                autoRefresh ? "text-primary" : "text-text-muted"
-              }`}
+              className={`material-symbols-outlined text-[14px] ${autoRefresh ? "text-primary" : "text-text-muted"
+                }`}
             >
               {autoRefresh ? "toggle_on" : "toggle_off"}
             </span>
@@ -1073,7 +1070,6 @@ export default function ProviderLimits() {
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-8 h-8 shrink-0 rounded-md flex items-center justify-center overflow-hidden">
                       <ProviderIcon
-                        src={`/providers/${conn.provider}.png`}
                         alt={conn.provider}
                         size={32}
                         className="object-contain"
@@ -1107,15 +1103,14 @@ export default function ProviderLimits() {
                             </span>
                           )}
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              isInactive
-                                ? "bg-surface-2 text-text-muted"
-                                : conn.testStatus === "active" || conn.testStatus === "success"
-                                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                                  : conn.testStatus === "error" || conn.testStatus === "expired" || conn.testStatus === "unavailable"
-                                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                                    : "bg-surface-2 text-text-muted"
-                            }`}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isInactive
+                              ? "bg-surface-2 text-text-muted"
+                              : conn.testStatus === "active" || conn.testStatus === "success"
+                                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                : conn.testStatus === "error" || conn.testStatus === "expired" || conn.testStatus === "unavailable"
+                                  ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                                  : "bg-surface-2 text-text-muted"
+                              }`}
                           >
                             {isInactive ? "disabled" : conn.testStatus || "unknown"}
                           </span>
@@ -1158,11 +1153,10 @@ export default function ProviderLimits() {
                                 ? `Use one Codex reset credit. ${resetCreditCount} available.`
                                 : "No Codex reset credits available"
                             }
-                            className={`flex h-8 min-w-10 items-center justify-center gap-1 rounded-lg border px-2 text-[11px] font-medium tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/60 disabled:cursor-not-allowed disabled:opacity-60 ${
-                              resetCreditCount > 0
-                                ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-                                : "border-black/10 bg-black/[0.02] text-text-muted dark:border-white/10 dark:bg-white/[0.03]"
-                            }`}
+                            className={`flex h-8 min-w-10 items-center justify-center gap-1 rounded-lg border px-2 text-[11px] font-medium tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/60 disabled:cursor-not-allowed disabled:opacity-60 ${resetCreditCount > 0
+                              ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+                              : "border-black/10 bg-black/[0.02] text-text-muted dark:border-white/10 dark:bg-white/[0.03]"
+                              }`}
                           >
                             <span className={`material-symbols-outlined text-[15px] ${isResettingLimit ? "animate-spin" : ""}`}>
                               {isResettingLimit ? "progress_activity" : "restart_alt"}
@@ -1324,127 +1318,127 @@ export default function ProviderLimits() {
       </div>
 
       <div className="rounded-xl border border-black/10 bg-black/[0.02] px-3 py-2 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-text-muted">{connectionsPageSummary}</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={isCustomPageSize ? "custom" : String(pageSize)}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  if (nextValue === "custom") return;
-                  const nextPageSize = Number.parseInt(nextValue, 10);
-                  if (Number.isFinite(nextPageSize)) {
-                    setPage(1);
-                    setPageSize(nextPageSize);
-                    setCustomPageSizeInput(String(nextPageSize));
-                  }
-                }}
-                className="h-8 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
-                aria-label="Accounts per page"
-              >
-                {ACCOUNT_PAGE_SIZE_OPTIONS.map((option) => (
-                  <option key={option} value={String(option)}>
-                    {option} / page
-                  </option>
-                ))}
-                <option value="custom">Custom</option>
-              </select>
-              <input
-                type="number"
-                min="1"
-                max={String(ACCOUNT_PAGE_SIZE_MAX)}
-                inputMode="numeric"
-                value={customPageSizeInput}
-                onChange={(event) => setCustomPageSizeInput(event.target.value)}
-                onBlur={() => {
-                  const parsedValue = Number.parseInt(customPageSizeInput, 10);
-                  if (!Number.isFinite(parsedValue)) {
-                    setCustomPageSizeInput(String(pageSize));
-                    return;
-                  }
-                  const nextPageSize = Math.min(ACCOUNT_PAGE_SIZE_MAX, Math.max(1, parsedValue));
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-text-muted">{connectionsPageSummary}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={isCustomPageSize ? "custom" : String(pageSize)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (nextValue === "custom") return;
+                const nextPageSize = Number.parseInt(nextValue, 10);
+                if (Number.isFinite(nextPageSize)) {
                   setPage(1);
                   setPageSize(nextPageSize);
                   setCustomPageSizeInput(String(nextPageSize));
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  const parsedValue = Number.parseInt(customPageSizeInput, 10);
-                  if (!Number.isFinite(parsedValue)) {
-                    setCustomPageSizeInput(String(pageSize));
-                    return;
-                  }
-                  const nextPageSize = Math.min(ACCOUNT_PAGE_SIZE_MAX, Math.max(1, parsedValue));
-                  setPage(1);
-                  setPageSize(nextPageSize);
-                  setCustomPageSizeInput(String(nextPageSize));
-                }}
-                className="h-8 w-20 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
-                aria-label="Custom accounts per page"
-                placeholder="Custom"
-              />
-              <span className="text-xs text-text-muted">Page {pagination.page} / {pagination.totalPages}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPage(1)}
-                disabled={
-                  pagination.page <= 1 || connectionsLoading || refreshingAll
                 }
-                className="flex h-8 items-center rounded-lg border border-black/10 px-3 text-xs text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
-              >
-                First Page
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((currentPage) => Math.max(1, currentPage - 1))
+              }}
+              className="h-8 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
+              aria-label="Accounts per page"
+            >
+              {ACCOUNT_PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={String(option)}>
+                  {option} / page
+                </option>
+              ))}
+              <option value="custom">Custom</option>
+            </select>
+            <input
+              type="number"
+              min="1"
+              max={String(ACCOUNT_PAGE_SIZE_MAX)}
+              inputMode="numeric"
+              value={customPageSizeInput}
+              onChange={(event) => setCustomPageSizeInput(event.target.value)}
+              onBlur={() => {
+                const parsedValue = Number.parseInt(customPageSizeInput, 10);
+                if (!Number.isFinite(parsedValue)) {
+                  setCustomPageSizeInput(String(pageSize));
+                  return;
                 }
-                disabled={
-                  pagination.page <= 1 || connectionsLoading || refreshingAll
+                const nextPageSize = Math.min(ACCOUNT_PAGE_SIZE_MAX, Math.max(1, parsedValue));
+                setPage(1);
+                setPageSize(nextPageSize);
+                setCustomPageSizeInput(String(nextPageSize));
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                const parsedValue = Number.parseInt(customPageSizeInput, 10);
+                if (!Number.isFinite(parsedValue)) {
+                  setCustomPageSizeInput(String(pageSize));
+                  return;
                 }
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
-                aria-label="Previous accounts page"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  chevron_left
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((currentPage) =>
-                    Math.min(pagination.totalPages, currentPage + 1),
-                  )
-                }
-                disabled={
-                  pagination.page >= pagination.totalPages ||
-                  connectionsLoading ||
-                  refreshingAll
-                }
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
-                aria-label="Next accounts page"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  chevron_right
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage(pagination.totalPages)}
-                disabled={
-                  pagination.page >= pagination.totalPages ||
-                  connectionsLoading ||
-                  refreshingAll
-                }
-                className="flex h-8 items-center rounded-lg border border-black/10 px-3 text-xs text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
-              >
-                Last Page
-              </button>
-            </div>
+                const nextPageSize = Math.min(ACCOUNT_PAGE_SIZE_MAX, Math.max(1, parsedValue));
+                setPage(1);
+                setPageSize(nextPageSize);
+                setCustomPageSizeInput(String(nextPageSize));
+              }}
+              className="h-8 w-20 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
+              aria-label="Custom accounts per page"
+              placeholder="Custom"
+            />
+            <span className="text-xs text-text-muted">Page {pagination.page} / {pagination.totalPages}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              disabled={
+                pagination.page <= 1 || connectionsLoading || refreshingAll
+              }
+              className="flex h-8 items-center rounded-lg border border-black/10 px-3 text-xs text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
+            >
+              First Page
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((currentPage) => Math.max(1, currentPage - 1))
+              }
+              disabled={
+                pagination.page <= 1 || connectionsLoading || refreshingAll
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
+              aria-label="Previous accounts page"
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                chevron_left
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((currentPage) =>
+                  Math.min(pagination.totalPages, currentPage + 1),
+                )
+              }
+              disabled={
+                pagination.page >= pagination.totalPages ||
+                connectionsLoading ||
+                refreshingAll
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
+              aria-label="Next accounts page"
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                chevron_right
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(pagination.totalPages)}
+              disabled={
+                pagination.page >= pagination.totalPages ||
+                connectionsLoading ||
+                refreshingAll
+              }
+              className="flex h-8 items-center rounded-lg border border-black/10 px-3 text-xs text-text-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5"
+            >
+              Last Page
+            </button>
           </div>
         </div>
+      </div>
 
       <ConfirmModal
         isOpen={Boolean(resetConfirmState)}

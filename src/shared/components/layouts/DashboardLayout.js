@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/notificationStore";
 import Sidebar from "../Sidebar";
@@ -31,9 +31,24 @@ function getToastStyle(type) {
   };
 }
 
+const COLLAPSE_KEY = "multiver:sidebar-collapsed";
+
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { }
+  }, []);
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0"); } catch { }
+      return next;
+    });
+  };
   const notifications = useNotificationStore((state) => state.notifications);
   const removeNotification = useNotificationStore((state) => state.removeNotification);
 
@@ -77,7 +92,7 @@ export default function DashboardLayout({ children }) {
       )}
 
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:flex">
+      <div className={`hidden lg:flex ${collapsed ? "lg:hidden" : ""}`}>
         <Suspense fallback={null}>
           <Sidebar />
         </Suspense>
@@ -97,7 +112,23 @@ export default function DashboardLayout({ children }) {
       <main className="flex flex-col flex-1 h-full min-w-0 relative transition-colors duration-300 isolate">
         {/* Faint grid background */}
         <div className="landing-grid absolute inset-0 pointer-events-none -z-10" aria-hidden="true" />
-        <Header key={pathname} onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          key={pathname}
+          onMenuClick={() => setSidebarOpen(true)}
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapse}
+        />
+        {collapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            aria-label="Buka Sidebar"
+            title="Buka Sidebar"
+            className="hidden lg:flex fixed left-4 bottom-6 z-30 size-9 items-center justify-center rounded-full border border-border-subtle bg-surface/80 shadow-md backdrop-blur-md hover:bg-surface hover:text-primary transition-all text-text-muted cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+        )}
         <div className={`flex-1 overflow-y-auto custom-scrollbar ${pathname === "/dashboard/basic-chat" ? "" : "p-6 lg:p-10"} ${pathname === "/dashboard/basic-chat" ? "flex flex-col overflow-hidden" : ""}`}>
           <div className={`${pathname === "/dashboard/basic-chat" ? "flex-1 w-full h-full flex flex-col" : "max-w-7xl mx-auto"}`}>{children}</div>
         </div>

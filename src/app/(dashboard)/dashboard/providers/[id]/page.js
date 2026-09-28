@@ -1350,15 +1350,7 @@ export default function ProviderDetailPage() {
   }
 
   // Determine icon path: OpenAI Compatible providers use specialized icons
-  const getHeaderIconPath = () => {
-    if (isOpenAICompatible && providerInfo.apiType) {
-      return providerInfo.apiType === "responses" ? "/providers/oai-r.png" : "/providers/oai-cc.png";
-    }
-    if (isAnthropicCompatible) {
-      return "/providers/anthropic-m.png";
-    }
-    return getProviderIconSrc(providerInfo.id);
-  };
+  const getHeaderIconPath = () => null; // nol ikon murni: selalu fallback teks
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:gap-8 sm:px-0">

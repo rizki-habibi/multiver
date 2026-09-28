@@ -1,11 +1,10 @@
-// MITM Tools � Kiro is the only intercepted IDE.
+﻿// MITM Tools ï¿½ Kiro is the only intercepted IDE.
 // Antigravity/Copilot/Cursor MITM support was removed; their provider adapters in
 // open-sse remain (they are unrelated to MITM interception).
 export const MITM_TOOLS = {
   kiro: {
     id: "kiro",
     name: "Kiro",
-    image: "/providers/kiro.png",
     color: "#FF6B00",
     description: "Kiro IDE with MITM",
     configType: "mitm",
@@ -13,7 +12,7 @@ export const MITM_TOOLS = {
     defaultModels: [
       // Kiro's agent/"vibe" mode sends modelId "auto" for the main turn and "simple-task"
       // for background sub-tasks (verified via MITM request dump of generateAssistantResponse).
-      // Both need a mappable slot � otherwise getMappedModel returns null and the chat call
+      // Both need a mappable slot ï¿½ otherwise getMappedModel returns null and the chat call
       // is passed through to AWS instead of being routed to the chosen provider.
       { id: "auto", name: "Auto (Kiro Agent)", alias: "auto" },
       { id: "claude-sonnet-5", name: "Claude Sonnet 5", alias: "claude-sonnet-5" },
@@ -35,7 +34,6 @@ export const CLI_TOOLS = {
   claude: {
     id: "claude",
     name: "Claude Code",
-    image: "/providers/claude.png",
     color: "#D97757",
     description: "Anthropic Claude Code CLI",
     configType: "env",
@@ -59,7 +57,6 @@ export const CLI_TOOLS = {
   openclaw: {
     id: "openclaw",
     name: "Open Claw",
-    image: "/providers/openclaw.png",
     color: "#FF6B35",
     description: "Open Claw AI Assistant",
     configType: "custom",
@@ -67,7 +64,6 @@ export const CLI_TOOLS = {
   codex: {
     id: "codex",
     name: "OpenAI Codex CLI / App",
-    image: "/providers/codex.png",
     color: "#10A37F",
     description: "OpenAI Codex CLI",
     configType: "custom",
@@ -75,7 +71,6 @@ export const CLI_TOOLS = {
   copilot: {
     id: "copilot",
     name: "GitHub Copilot",
-    image: "/providers/copilot.png",
     color: "#1F6FEB",
     description: "GitHub Copilot in VS Code via Multiver extension",
     configType: "guide",
@@ -103,7 +98,6 @@ export const CLI_TOOLS = {
   opencode: {
     id: "opencode",
     name: "OpenCode",
-    image: "/providers/opencode.png",
     color: "#E87040",
     description: "OpenCode AI Terminal Assistant",
     configType: "custom",
@@ -111,7 +105,6 @@ export const CLI_TOOLS = {
   cowork: {
     id: "cowork",
     name: "Claude Cowork",
-    image: "/providers/claude.png",
     color: "#D97757",
     description: "Claude Desktop Cowork (third-party inference)",
     configType: "custom",
@@ -119,7 +112,6 @@ export const CLI_TOOLS = {
   hermes: {
     id: "hermes",
     name: "Hermes Agent",
-    image: "/providers/hermes.png",
     color: "#8B5CF6",
     description: "Nous Research self-improving AI agent",
     configType: "custom",
@@ -127,7 +119,6 @@ export const CLI_TOOLS = {
   droid: {
     id: "droid",
     name: "Factory Droid",
-    image: "/providers/droid.png",
     color: "#00D4FF",
     description: "Factory Droid AI Assistant",
     configType: "custom",
@@ -135,7 +126,6 @@ export const CLI_TOOLS = {
   cursor: {
     id: "cursor",
     name: "Cursor",
-    image: "/providers/cursor.png",
     color: "#000000",
     description: "Cursor AI Code Editor",
     configType: "guide",
@@ -145,18 +135,17 @@ export const CLI_TOOLS = {
       { type: "cloudCheck", text: "Cursor meneruskan permintaan melalui servernya sendiri, sehingga endpoint lokal tidak didukung. Aktifkan Tunnel atau Endpoint Awan di Pengaturan." },
     ],
     guideSteps: [
-      { step: 1, title: "Buka Pengaturan", desc: "Buka Pengaturan → Model" },
+      { step: 1, title: "Buka Pengaturan", desc: "Buka Pengaturan â†’ Model" },
       { step: 2, title: "Aktifkan OpenAI API", desc: "Aktifkan opsi \"OpenAI API key\"" },
       { step: 3, title: "Base URL", value: "{{baseUrl}}", copyable: true },
       { step: 4, title: "API Key", type: "apiKeySelector" },
-      { step: 5, title: "Tambah Model Kustom", desc: "Klik \"View All Model\" → \"Add Custom Model\"" },
+      { step: 5, title: "Tambah Model Kustom", desc: "Klik \"View All Model\" â†’ \"Add Custom Model\"" },
       { step: 6, title: "Pilih Model", type: "modelSelector" },
     ],
   },
   cline: {
     id: "cline",
     name: "Cline",
-    image: "/providers/cline.png",
     color: "#5B9BD5",
     description: "Cline AI Coding Assistant",
     configType: "custom",
@@ -164,7 +153,6 @@ export const CLI_TOOLS = {
   kilo: {
     id: "kilo",
     name: "Kilo Code",
-    image: "/providers/kilocode.png",
     color: "#FF6B6B",
     description: "Kilo Code AI Assistant",
     configType: "custom",
@@ -172,7 +160,6 @@ export const CLI_TOOLS = {
   roo: {
     id: "roo",
     name: "Roo",
-    image: "/providers/roo.png",
     color: "#FF6B6B",
     description: "Roo AI Assistant",
     configType: "guide",
@@ -187,7 +174,6 @@ export const CLI_TOOLS = {
   continue: {
     id: "continue",
     name: "Continue",
-    image: "/providers/continue.png",
     color: "#7C3AED",
     description: "Continue AI Assistant",
     configType: "guide",
@@ -211,7 +197,6 @@ export const CLI_TOOLS = {
   amp: {
     id: "amp",
     name: "Amp CLI",
-    image: "/providers/amp.png",
     color: "#F97316",
     description: "Sourcegraph Amp coding assistant CLI",
     docsUrl: "/docs?section=cli-tools&tool=amp",
@@ -242,16 +227,15 @@ amp --model "{{model}}"
   qwen: {
     id: "qwen",
     name: "Qwen Code",
-    image: "/providers/qwen.png",
     color: "#10B981",
-    description: "Alibaba Qwen Code CLI � supports OpenAI, Anthropic & Gemini providers via Multiver",
+    description: "Alibaba Qwen Code CLI ï¿½ supports OpenAI, Anthropic & Gemini providers via Multiver",
     docsUrl: "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/",
     configType: "guide",
     defaultCommand: "qwen",
     notes: [
       { type: "info", text: "Qwen Code supports multiple provider types (openai, anthropic, gemini) via modelProviders in settings.json. Multiver works as an OpenAI-compatible endpoint." },
-      { type: "info", text: "Any model available in Multiver can be used � not just Qwen models. Select from Qwen, Claude, Gemini, GPT, and more." },
-      { type: "warning", text: "Config path: Linux/macOS ~/.qwen/settings.json � Windows %USERPROFILE%\\.qwen\\settings.json" },
+      { type: "info", text: "Any model available in Multiver can be used ï¿½ not just Qwen models. Select from Qwen, Claude, Gemini, GPT, and more." },
+      { type: "warning", text: "Config path: Linux/macOS ~/.qwen/settings.json ï¿½ Windows %USERPROFILE%\\.qwen\\settings.json" },
       { type: "error", text: "Qwen OAuth free tier was discontinued on 2026-04-15. Use Multiver with alicode/openrouter/anthropic/gemini providers instead." },
     ],
     modelAliases: ["coder-model", "qwen3-coder-plus", "qwen3-coder-flash", "vision-model", "claude-sonnet-4-6", "claude-opus-4-6-thinking", "gemini-3-flash", "gemini-3.1-pro-high"],
@@ -291,7 +275,6 @@ amp --model "{{model}}"
   "deepseek-tui": {
     id: "deepseek-tui",
     name: "DeepSeek TUI",
-    image: "/providers/deepseek-tui.png",
     color: "#4D6BFE",
     description: "DeepSeek Terminal Coding Agent (Rust TUI)",
     docsUrl: "https://github.com/DeepSeek-TUI/DeepSeek-TUI",
@@ -305,13 +288,12 @@ amp --model "{{model}}"
     ],
     notes: [
       { type: "info", text: "DeepSeek TUI uses ~/.deepseek/config.toml for configuration. Multiver will update the provider to 'openai' mode with your base_url, api_key, and model." },
-      { type: "warning", text: "Config path: Linux/macOS ~/.deepseek/config.toml � Windows %USERPROFILE%\\.deepseek\\config.toml" },
+      { type: "warning", text: "Config path: Linux/macOS ~/.deepseek/config.toml ï¿½ Windows %USERPROFILE%\\.deepseek\\config.toml" },
     ],
   },
   jcode: {
     id: "jcode",
     name: "jcode",
-    image: "/providers/jcode.png",
     color: "#FF6B35",
     description: "High-performance Rust-based coding agent harness",
     configType: "custom",
@@ -340,7 +322,6 @@ amp --model "{{model}}"
   "grok-build": {
     id: "grok-build",
     name: "Grok Build",
-    image: "/providers/grok-cli.png",
     color: "#1DA1F2",
     description: "xAI Grok Build TUI coding agent",
     configType: "custom",
@@ -357,26 +338,25 @@ amp --model "{{model}}"
       },
       {
         type: "warning",
-        text: "Config path: Linux/macOS ~/.grok/config.toml � Windows %USERPROFILE%\\.grok\\config.toml",
+        text: "Config path: Linux/macOS ~/.grok/config.toml ï¿½ Windows %USERPROFILE%\\.grok\\config.toml",
       },
     ],
   },
   devin: {
     id: "devin",
     name: "Devin CLI",
-    image: "/providers/devin-cli.png",
     color: "#6366F1",
-    description: "Cognition Devin CLI � local binary called by the Devin CLI provider via ACP/stdio",
+    description: "Cognition Devin CLI ï¿½ local binary called by the Devin CLI provider via ACP/stdio",
     configType: "guide",
     installUrl: "https://cli.devin.ai",
     notes: [
       { type: "info", text: "This is a local dependency, not a routed CLI. The Devin CLI provider spawns `devin acp --agent-type summarizer` and relays its output." },
-      { type: "warning", text: "Install the Devin CLI and run `devin auth login` � without it, the provider returns a spawn error on first request." },
+      { type: "warning", text: "Install the Devin CLI and run `devin auth login` ï¿½ without it, the provider returns a spawn error on first request." },
     ],
     guideSteps: [
       { step: 1, title: "Install Devin CLI", desc: "Install via the official installer at cli.devin.ai.", docsUrl: "https://cli.devin.ai" },
       { step: 2, title: "Authenticate", desc: "Log in once so the binary stores its own credentials." },
-      { step: 3, title: "Use the provider", desc: "Pick any Devin CLI model under the Providers tab � no API key field needed." },
+      { step: 3, title: "Use the provider", desc: "Pick any Devin CLI model under the Providers tab ï¿½ no API key field needed." },
     ],
     codeBlock: {
       language: "bash",
@@ -390,13 +370,12 @@ devin --version`,
   opendesign: {
     id: "opendesign",
     name: "OpenDesign",
-    image: "/providers/opendesign.png",
     color: "#7C3AED",
-    description: "OpenDesign � claude.ai/design open-sourced! Agent-native design skills pack",
+    description: "OpenDesign ï¿½ claude.ai/design open-sourced! Agent-native design skills pack",
     docsUrl: "https://github.com/manalkaff/opendesign",
     configType: "guide",
     notes: [
-      { type: "info", text: "OpenDesign ships as a plugin/skills pack installed into Claude Code, Cursor, OpenAI Codex, Gemini CLI, or OpenCode. It inherits the host agent's model config, so once your host points at Multiver, /opendesign design sessions route through Multiver automatically � no extra env vars needed." },
+      { type: "info", text: "OpenDesign ships as a plugin/skills pack installed into Claude Code, Cursor, OpenAI Codex, Gemini CLI, or OpenCode. It inherits the host agent's model config, so once your host points at Multiver, /opendesign design sessions route through Multiver automatically ï¿½ no extra env vars needed." },
       { type: "info", text: "Invoke with /opendesign <brief>. Covers decks, wireframes, interactive prototypes, design-system extraction, and brand systems, with a verifier subagent that checks output against the brief." },
     ],
     guideSteps: [
@@ -429,9 +408,8 @@ gemini extensions install https://github.com/manalkaff/opendesign
   pi: {
     id: "pi",
     name: "Pi (pi-coding-agent)",
-    image: "/providers/pi.svg",
     color: "#6366F1",
-    description: "Pi coding agent � minimal, extensible agent harness (pi.dev)",
+    description: "Pi coding agent ï¿½ minimal, extensible agent harness (pi.dev)",
     configType: "custom",
     docsUrl: "https://pi.dev",
     notes: [
@@ -444,7 +422,6 @@ gemini extensions install https://github.com/manalkaff/opendesign
   omp: {
     id: "omp",
     name: "Oh My Pi",
-    image: "/providers/omp.png",
     color: "#EC4899",
     description: "Oh My Pi terminal AI agent with auto-discovery support",
     configType: "custom",
@@ -459,7 +436,6 @@ gemini extensions install https://github.com/manalkaff/opendesign
   crush: {
     id: "crush",
     name: "Crush",
-    image: "/providers/crush.png",
     color: "#FB923C",
     description: "Charm Crush terminal AI coding agent",
     configType: "custom",
@@ -474,7 +450,6 @@ gemini extensions install https://github.com/manalkaff/opendesign
   forge: {
     id: "forge",
     name: "ForgeCode",
-    image: "/providers/forge.png",
     color: "#EAB308",
     description: "Antinomy HQ ForgeCode agent harness",
     configType: "custom",
@@ -489,7 +464,6 @@ gemini extensions install https://github.com/manalkaff/opendesign
   smelt: {
     id: "smelt",
     name: "Smelt",
-    image: "/providers/smelt.svg",
     color: "#EF4444",
     description: "Smelt terminal AI coding assistant",
     configType: "custom",
@@ -504,7 +478,6 @@ gemini extensions install https://github.com/manalkaff/opendesign
   codewhale: {
     id: "codewhale",
     name: "CodeWhale",
-    image: "/providers/codewhale.svg",
     color: "#4F46E5",
     description: "CodeWhale terminal coding agent (successor to DeepSeek TUI)",
     configType: "custom",

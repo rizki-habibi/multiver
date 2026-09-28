@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 
 const CLI_TOOLS = [
-  { id: "claude", name: "Claude Code", image: "/providers/claude.png" },
-  { id: "codex", name: "OpenAI Codex", image: "/providers/codex.png" },
-  { id: "cline", name: "Cline", image: "/providers/cline.png" },
-  { id: "cursor", name: "Cursor", image: "/providers/cursor.png" },
+  { id: "claude", name: "Claude Code" },
+  { id: "codex", name: "OpenAI Codex" },
+  { id: "cline", name: "Cline" },
+  { id: "cursor", name: "Cursor" },
 ];
 
 const PROVIDERS = [
@@ -68,7 +68,7 @@ export default function FlowAnimation() {
           >
             <div className="w-16 h-16 rounded-2xl bg-[#161b22] border border-[#30363d] flex items-center justify-center overflow-hidden p-2 hover:border-[#58A6FF]/50 transition-all hover:scale-105">
               <ProviderIcon
-                src={tool.image}
+
                 alt={tool.name}
                 size={48}
                 className="object-contain rounded-xl max-w-[48px] max-h-[48px]"

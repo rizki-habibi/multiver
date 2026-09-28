@@ -266,9 +266,9 @@ export default function ModelSelectModal({
           combined = [
             ...registeredTyped,
             ...getModelsByProviderId(providerId)
-            .filter((m) => getModelKind(m) === kindFilter)
-            .map((m) => ({ id: m.id, name: m.name, value: `${alias}/${m.id}`, kind: getModelKind(m) }))
-            .filter((m) => !registeredTyped.some((registered) => registered.value === m.value)),
+              .filter((m) => getModelKind(m) === kindFilter)
+              .map((m) => ({ id: m.id, name: m.name, value: `${alias}/${m.id}`, kind: getModelKind(m) }))
+              .filter((m) => !registeredTyped.some((registered) => registered.value === m.value)),
           ];
           // Fallback: provider-as-model when no hardcoded models match (tts/image/webFetch only)
           if (combined.length === 0 && ALLOW_PROVIDER_FALLBACK_KINDS.has(kindFilter)) {
@@ -561,7 +561,6 @@ export default function ModelSelectModal({
             {/* Provider header */}
             <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
               <ProviderIcon
-                src={`/providers/${providerId}.png`}
                 alt={group.name}
                 size={14}
                 fallbackText={(group.name || providerId).slice(0, 2).toUpperCase()}

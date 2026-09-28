@@ -28,6 +28,7 @@
     "jose": "^6.2.12",
     "marked": "^18.0.14",
     "material-symbols": "^0.47.5",
+    "mysql2": "^3.24.4",
     "next": "^15.1.0",
     "node-forge": "^1.4.0",
     "node-machine-id": "^1.1.12",
