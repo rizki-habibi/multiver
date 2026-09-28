@@ -26,7 +26,7 @@ export default function ConsoleLogTab() {
   const [tool, setTool] = useState("all");
   const [search, setSearch] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [status, setStatus] = useState({ mitm: "Unknown", gateway: "Unknown" });
+  const [status, setStatus] = useState({ mitm: "UNKNOWN", gateway: "UNKNOWN", kiro: "MENUNGGU" });
   const [selected, setSelected] = useState(null);
   const containerRef = useRef(null);
 
@@ -46,9 +46,11 @@ export default function ConsoleLogTab() {
     const res = await fetch("/api/mitm/kiro/diagnostics", { cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
+    const traffic = !!data?.trafficDetected;
     setStatus({
-      mitm: data?.state || "Unknown",
-      gateway: data?.checks?.find((c) => c.name?.includes("Gateway /health"))?.status === "PASS" ? "Online" : "Offline",
+      mitm: data?.state || "UNKNOWN",
+      gateway: data?.checks?.find((c) => c.name?.includes("Gateway /health"))?.status === "PASS" ? "ONLINE" : "OFFLINE",
+      kiro: traffic ? "TERHUBUNG" : (data?.state === "RUNNING" || data?.state === "DEGRADED" ? "MENUNGGU" : "OFFLINE"),
     });
   }, []);
 
@@ -103,21 +105,22 @@ export default function ConsoleLogTab() {
 
   const statusBadge = useMemo(() => ({
     mitm: status.mitm === "RUNNING" ? "text-green-600" : status.mitm === "DEGRADED" ? "text-amber-600" : "text-red-600",
-    gateway: status.gateway === "Online" ? "text-green-600" : "text-red-600",
+    gateway: status.gateway === "ONLINE" ? "text-green-600" : "text-red-600",
+    kiro: status.kiro === "TERHUBUNG" ? "text-green-600" : status.kiro === "MENUNGGU" ? "text-amber-600" : "text-red-600",
   }), [status]);
 
   return (
     <div className="flex flex-col gap-4">
-      {status.mitm !== "RUNNING" || status.gateway !== "Online" ? (
+      {status.mitm !== "RUNNING" || status.gateway !== "ONLINE" || status.kiro !== "TERHUBUNG" ? (
         <Card className="p-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/30">
           <span className="material-symbols-outlined text-[16px] text-amber-600 mt-0.5 shrink-0">warning</span>
           <div className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
-            <p className="font-semibold">Kiro belum terhubung ke Multiver</p>
+            <p className="font-semibold">{status.kiro === "MENUNGGU" ? "MITM aktif, menunggu Kiro" : "Kiro belum terhubung ke Multiver"}</p>
             <p>
-              Jalankan sebagai Administrator, mulai MITM di tab{" "}
-              <a href="/dashboard/usage?tab=mitm" className="underline font-medium">Kiro MITM</a>, pastikan CA terpasang dan DNS Kiro aktif,
-              lalu buka Kiro IDE. Cek{" "}
-              <a href="/dashboard/usage?tab=diagnostics" className="underline font-medium">Diagnostik</a> bila masih gagal.
+              Status Kiro hanya disebut <strong>TERHUBUNG</strong> setelah traffic Kiro benar-benar terintercept.
+              Pastikan MITM aktif, CA dipercaya, DNS Kiro aktif, lalu kirim satu prompt dari Kiro IDE.
+              Buka <a href="/dashboard/usage?tab=mitm" className="underline font-medium">Kiro MITM</a> atau{" "}
+              <a href="/dashboard/usage?tab=diagnostics" className="underline font-medium">Diagnostik</a> untuk pemeriksaan detail.
             </p>
           </div>
         </Card>
@@ -129,6 +132,7 @@ export default function ConsoleLogTab() {
           <div className="flex items-center gap-3 text-xs">
             <span className={statusBadge.mitm}>● MITM {status.mitm}</span>
             <span className={statusBadge.gateway}>● Gateway {status.gateway}</span>
+            <span className={statusBadge.kiro}>● Kiro {status.kiro}</span>
           </div>
         </div>
 
@@ -151,13 +155,17 @@ export default function ConsoleLogTab() {
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <div ref={containerRef} className="max-h-[520px] overflow-auto p-3 flex flex-col gap-2 font-mono text-xs">
+      <Card className="p-0 overflow-hidden bg-[#090909] border-black">
+        <div className="flex items-center justify-between px-3 py-2 bg-[#111] border-b border-white/10 text-xs text-white/60">
+          <span className="font-mono">Multiver Console</span>
+          <span className="font-mono">filter: {level.toUpperCase()} / {source.toUpperCase()} / {tool.toUpperCase()}</span>
+        </div>
+        <div ref={containerRef} className="max-h-[560px] overflow-auto p-3 flex flex-col gap-1 font-mono text-xs bg-[#090909]">
           {visibleLogs.length === 0 ? <p className="text-text-muted">Belum ada log.</p> : visibleLogs.map((log, idx) => (
             <button
               key={`${log.timestamp}-${idx}`}
               onClick={() => setSelected(log)}
-              className="text-left rounded border border-border p-2 hover:bg-surface/70"
+              className="text-left rounded px-2 py-1.5 border border-white/5 hover:bg-white/5 text-white/90"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span>{new Date(log.timestamp).toLocaleTimeString("id-ID", { hour12: false })}</span>
