@@ -27,7 +27,21 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
+    if (body.models !== undefined) {
+      if (!Array.isArray(body.models)) {
+        return NextResponse.json({ error: "Models must be an array" }, { status: 400 });
+      }
+      const normalizedModels = body.models.map((model) => typeof model === "string" ? model.trim() : "");
+      if (normalizedModels.some((model) => !model)) {
+        return NextResponse.json({ error: "Every combo model must be a non-empty string" }, { status: 400 });
+      }
+      if (new Set(normalizedModels).size !== normalizedModels.length) {
+        return NextResponse.json({ error: "Combo models must be unique" }, { status: 400 });
+      }
+      body.models = normalizedModels;
+    }
+
     // Validate name format if provided
     if (body.name) {
       if (!VALID_NAME_REGEX.test(body.name)) {
