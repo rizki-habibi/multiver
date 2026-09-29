@@ -92,7 +92,7 @@ export default function ModelSelectModal({
   onDeselect,
   selectedModel,
   activeProviders = [],
-  title = "Select Model",
+  title = "Pilih Model",
   modelAliases = {},
   kindFilter = null,
   capFilter = null,
@@ -516,7 +516,7 @@ export default function ModelSelectModal({
       {/* Info bar */}
       <div className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
         <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: "14px" }}>info</span>
-        <span>Click to add, click again to remove. Changes are saved automatically.</span>
+        <span>Klik untuk menambah, klik lagi untuk menghapus. Perubahan disimpan otomatis.</span>
       </div>
 
       {/* Search - compact */}
@@ -527,7 +527,7 @@ export default function ModelSelectModal({
           </span>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Cari..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 bg-surface border border-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
