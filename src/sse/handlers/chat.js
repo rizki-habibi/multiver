@@ -121,6 +121,7 @@ export async function handleChat(request, clientRawRequest = null, options = {})
     const comboStrategies = settings.comboStrategies || {};
     const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
     const comboStrategy = comboSpecificStrategy || settings.comboStrategy || "fallback";
+    const smartConfig = comboStrategies[modelStr]?.smartRouting || settings.comboSmartRouting || {};
     const augmentedModels = augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, settings);
     const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
 
@@ -179,7 +180,8 @@ export async function handleChat(request, clientRawRequest = null, options = {})
       log,
       comboName: modelStr,
       comboStrategy,
-      comboStickyLimit
+      comboStickyLimit,
+      smartConfig
     });
   }
 
