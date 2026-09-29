@@ -180,11 +180,14 @@ async function resolveCompatibleModel(provider, connections) {
   for (const connection of connections.filter((item) => item.isActive !== false)) {
     const baseUrl = connection.providerSpecificData?.baseUrl?.replace(/\/$/, "");
     if (!baseUrl) continue;
+    const connectionApiKey = connection.apiKey || connection.providerSpecificData?.apiKey || null;
+    const connectionAccessToken = connection.accessToken || connection.providerSpecificData?.accessToken || null;
     const headers = { "Content-Type": "application/json" };
-    if (connection.apiKey) {
+    if (connectionApiKey || connectionAccessToken) {
       if (isAnthropicCompatibleProvider(provider)) {
-        headers["x-api-key"] = connectionApiKey;
-        headers.Authorization = "Bearer " + connectionApiKey;
+        const credential = connectionApiKey || connectionAccessToken;
+        headers["x-api-key"] = credential;
+        headers.Authorization = "Bearer " + credential;
         headers["anthropic-version"] = "2023-06-01";
       } else {
         headers.Authorization = "Bearer " + (connectionApiKey || connectionAccessToken);
@@ -514,6 +517,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       message,
+      mode: "chat-all",
       results,
       testedAt: new Date().toISOString(),
       summary: {
