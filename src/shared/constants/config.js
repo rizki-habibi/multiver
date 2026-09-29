@@ -9,7 +9,7 @@ export const APP_CONFIG = {
 
 // GitHub configuration
 export const GITHUB_CONFIG = {
-  changelogUrl: "https://raw.githubusercontent.com/rizki/multiver/refs/heads/main/CHANGELOG.md",
+  changelogUrl: "https://raw.githubusercontent.com/rizki-habibi/multiver/refs/heads/main/CHANGELOG.md",
 };
 
 // ─── Network configuration (single source of truth) ────────────────────────
@@ -39,8 +39,9 @@ export function getMultiverBaseUrl(host) {
 // Updater configuration
 export const UPDATER_CONFIG = {
   npmPackageName: "multiver",
-  installCmd: "npm i -g multiver",
-  installCmdLatest: "npm i -g multiver@latest --prefer-online",
+  installCmd: "multiver update",
+  installCmdLatest: "multiver update",
+  releaseUrl: "https://github.com/rizki-habibi/multiver/releases/latest/download/multiver-latest.tgz",
   shutdownCountdownSec: 3,
   exitDelayMs: 500,
   statusPort: NETWORK_CONFIG.statusPort, // Incremented to avoid conflict with main port
