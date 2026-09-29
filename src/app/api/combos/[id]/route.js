@@ -42,6 +42,10 @@ export async function PUT(request, { params }) {
       body.models = normalizedModels;
     }
 
+    if (body.name !== undefined && Array.isArray(body.models) && body.models.includes(body.name.trim())) {
+      return NextResponse.json({ error: "Combo cannot contain itself" }, { status: 400 });
+    }
+
     // Validate name format if provided
     if (body.name) {
       if (!VALID_NAME_REGEX.test(body.name)) {
