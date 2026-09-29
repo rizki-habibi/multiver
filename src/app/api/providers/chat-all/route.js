@@ -64,25 +64,38 @@ function diagnose(status, rawError = "") {
       message: "Akun atau layanan kemungkinan ditangguhkan/dinonaktifkan oleh penyedia. Periksa status akun dan sesi OAuth/kunci API.",
     };
   }
-  if (status === 401 || status === 403 || /unauthorized|invalid api key|token invalid|expired|forbidden/.test(lower)) {
+  // Quota/billing must win over generic 403 AUTH: many compatible gateways
+  // return 403 for an empty wallet or exhausted subscription.
+  if (
+    status === 402 ||
+    /payment required|paid model|billing|credit(?:s)?\b|insufficient(?:_user)?_quota|insufficient balance|saldo|wallet balance|quota(?: exceeded| exhausted)|usage_limit_exceeded|monthly_request_count|deposit required|recharge|top up/.test(lower)
+  ) {
     return {
-      code: "AUTH",
-      message: "Kunci atau sesi layanan ditolak. Periksa token, login OAuth, atau masa berlaku akun.",
+      code: "QUOTA",
+      message: "Saldo, kredit, paket, atau kuota layanan sudah habis/tidak mencukupi. Pengujian dilanjutkan ke layanan berikutnya.",
     };
   }
-  if (status === 402 || /payment|billing|credit|insufficient|saldo|quota exceeded/.test(lower)) {
-    return {
-      code: "402",
-      message: "Layanan meminta pembayaran, saldo, kredit, atau kuota akun sudah habis.",
-    };
-  }
-  if (status === 429 || /rate.?limit|too many requests|throttl|quota/.test(lower)) {
+  if (status === 429 || /rate.?limit|too many requests|throttl|rate.?limit|quota.*(?:limit|exhaust|reset)/.test(lower)) {
     return {
       code: "429",
       message: "Layanan membatasi permintaan. Kemungkinan terkena batas laju atau kuota.",
     };
   }
-  if (status === 404 || /not found|unknown model|model .*not/.test(lower)) {
+  if (status === 405 || /method not allowed/.test(lower)) {
+    return {
+      code: "ENDPOINT_METHOD",
+      message: "Alamat layanan aktif, tetapi metode/endpoint yang dipakai tidak cocok. Periksa Base URL dan jenis API (Chat/Responses/Anthropic).",
+    };
+  }
+  if (
+    /unsupported_model_schema|model_not_supported|model.*not supported|unknown model|model .*not found|does not support the requested schema/.test(lower)
+  ) {
+    return {
+      code: "MODEL_INCOMPATIBLE",
+      message: "Model terdeteksi tetapi tidak cocok dengan skema API yang digunakan. Multiver akan mencoba model chat lain dari katalog layanan.",
+    };
+  }
+  if (status === 404 || /not found/.test(lower)) {
     return {
       code: "404",
       message: "Model atau titik akhir tidak ditemukan. Periksa model yang tersedia pada layanan.",
@@ -94,10 +107,16 @@ function diagnose(status, rawError = "") {
       message: "Layanan tidak menjawab dalam batas waktu pengujian.",
     };
   }
+  if (/invalid json response|unexpected token|invalid json/.test(lower)) {
+    return {
+      code: "UPSTREAM_PROTOCOL",
+      message: "Layanan merespons dengan format data yang tidak sesuai. Multiver mencatat error dan melanjutkan ke layanan berikutnya.",
+    };
+  }
   if (status >= 500 || /bad gateway|service unavailable|upstream/.test(lower)) {
     return {
       code: status ? String(status) : "5XX",
-      message: "Layanan tujuan mengalami gangguan atau mengembalikan kesalahan server.",
+      message: "Layanan tujuan mengalami gangguan atau mengembalikan kesalahan server. Pengujian dilanjutkan.",
     };
   }
   if (/enotfound|econnrefused|econnreset|network|fetch failed|socket/.test(lower)) {
@@ -176,73 +195,105 @@ function firstChatModel(models = []) {
   });
 }
 
-async function resolveCompatibleModel(provider, connections) {
+async function resolveCompatibleModels(provider, connections) {
+  const candidates = [];
+  const seen = new Set();
+
+  const add = (model) => {
+    const normalized = normalizeModelId(model, provider);
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push(normalized);
+  };
+
   for (const connection of connections.filter((item) => item.isActive !== false)) {
-    const baseUrl = connection.providerSpecificData?.baseUrl?.replace(/\/$/, "");
-    if (!baseUrl) continue;
+    add(connection.defaultModel);
+    const baseRaw = connection.providerSpecificData?.baseUrl;
+    if (!baseRaw) continue;
+    const baseUrl = String(baseRaw)
+      .replace(/\/chat\/completions\/?$/i, "")
+      .replace(/\/responses\/?$/i, "")
+      .replace(/\/messages\/?$/i, "")
+      .replace(/\/$/, "");
     const connectionApiKey = connection.apiKey || connection.providerSpecificData?.apiKey || null;
     const connectionAccessToken = connection.accessToken || connection.providerSpecificData?.accessToken || null;
-    const headers = { "Content-Type": "application/json" };
+    const headers = { "Content-Type": "application/json", Accept: "application/json" };
     if (connectionApiKey || connectionAccessToken) {
+      const credential = connectionApiKey || connectionAccessToken;
       if (isAnthropicCompatibleProvider(provider)) {
-        const credential = connectionApiKey || connectionAccessToken;
         headers["x-api-key"] = credential;
         headers.Authorization = "Bearer " + credential;
         headers["anthropic-version"] = "2023-06-01";
       } else {
-        headers.Authorization = "Bearer " + (connectionApiKey || connectionAccessToken);
+        headers.Authorization = "Bearer " + credential;
       }
     }
+
+    // Discover models from the provider itself. SQL/SQLite connection data
+    // remains authoritative for Base URL, credential and defaultModel.
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
+      const timer = setTimeout(() => controller.abort(), 6000);
       try {
         const response = await fetch(baseUrl + "/models", { headers, signal: controller.signal });
-        if (!response.ok) continue;
-        const data = await response.json();
-        const models = Array.isArray(data) ? data : (data?.data || data?.models || []);
-        const selected = firstChatModel(models);
-        if (selected) return normalizeModelId(selected, provider);
+        if (response.ok) {
+          const data = await response.json().catch(() => null);
+          const models = Array.isArray(data) ? data : (data?.data || data?.models || []);
+          for (const item of models) {
+            const id = item?.id || item?.model || item?.name;
+            if (!id) continue;
+            const lower = String(id).toLowerCase();
+            if (/embed|embedding|tts|audio|image|video|stt|transcrib|moderation|rerank/.test(lower)) continue;
+            add(id);
+          }
+        }
       } finally {
         clearTimeout(timer);
       }
     } catch {
-      // Continue with the next connection/model source.
+      // Keep configured/default models; a broken /models endpoint must not
+      // make an otherwise valid connection disappear.
     }
   }
-  return null;
+
+  return candidates;
 }
 
-async function resolveDynamicModel(provider, connections, modelAliases, customModels) {
-  const configuredDefault = connections
+async function resolveDynamicModels(provider, connections, modelAliases, customModels) {
+  const candidates = [];
+  const seen = new Set();
+  const add = (model) => {
+    const normalized = normalizeModelId(model, provider);
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push(normalized);
+  };
+
+  connections
     .filter((connection) => connection.isActive !== false)
-    .map((connection) => normalizeModelId(connection.defaultModel, provider))
-    .find(Boolean);
-  if (configuredDefault) return configuredDefault;
+    .forEach((connection) => add(connection.defaultModel));
 
-  const staticDefault = getDefaultModel(provider);
-  if (staticDefault) return staticDefault;
+  add(getDefaultModel(provider));
 
-  // Some registry providers (notably OpenCode Free) keep their live/static
-  // model catalog on the provider registry instead of providerModels.js.
-  // Prefer a declared chat model there before reporting NO_MODEL.
   const registryModel = firstChatModel(PROVIDERS[provider]?.models || []);
-  if (registryModel) return normalizeModelId(registryModel, provider);
+  if (registryModel) add(registryModel.id || registryModel.model || registryModel.name);
 
-  const aliased = Object.values(modelAliases || {})
-    .filter((fullModel) => typeof fullModel === "string" && fullModel.startsWith(provider + "/"))
-    .map((fullModel) => ({ id: normalizeModelId(fullModel, provider), kind: "llm" }));
-  const aliasModel = firstChatModel(aliased);
-  if (aliasModel) return aliasModel.id;
+  for (const fullModel of Object.values(modelAliases || {})) {
+    if (typeof fullModel === "string" && fullModel.startsWith(provider + "/")) add(fullModel);
+  }
 
-  const custom = (customModels || [])
-    .filter((item) => item?.providerAlias === provider && (item?.kind || item?.type || "llm") === "llm")
-    .map((item) => ({ id: item.id, kind: "llm" }));
-  const customModel = firstChatModel(custom);
-  if (customModel) return customModel.id;
+  for (const item of customModels || []) {
+    if (item?.providerAlias === provider && (item?.kind || item?.type || "llm") === "llm") {
+      add(item.id);
+    }
+  }
 
   if (isOpenAICompatibleProvider(provider) || isAnthropicCompatibleProvider(provider)) {
-    return resolveCompatibleModel(provider, connections);
+    for (const model of await resolveCompatibleModels(provider, connections)) add(model);
   }
 
   if (provider === "zed") {
@@ -253,16 +304,16 @@ async function resolveDynamicModel(provider, connections, modelAliases, customMo
           accessToken: connection.accessToken,
           providerSpecificData: connection.providerSpecificData || {},
         }, { forceRefresh: true });
-        const model = firstChatModel(result?.models || []);
-        if (model) return normalizeModelId(model, provider);
-      } catch {
-        // The normal chat request will report the real upstream error.
-      }
+        for (const item of result?.models || []) {
+          if (firstChatModel([item])) add(item.id || item.model || item.name);
+        }
+      } catch {}
     }
   }
 
-  return null;
+  return candidates;
 }
+
 async function testProvider(provider, message, requestHeaders, displayNames, modelAliases, customModels) {
   const startedAt = Date.now();
   const connections = await getProviderConnections({ provider });
@@ -311,18 +362,19 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     };
   }
 
-  const model = await resolveDynamicModel(provider, connections, modelAliases, customModels);
-  if (!model) {
+  const models = await resolveDynamicModels(provider, connections, modelAliases, customModels);
+  if (models.length === 0) {
     return {
       provider,
       name: providerName(provider, displayNames),
       status: "failed",
       code: "NO_MODEL",
-      message: "Belum ada model chat yang bisa dipakai. Atur model bawaan, alias model, atau koneksi layanan terlebih dahulu.",
+      message: "Belum ada model chat yang bisa dipakai. Multiver sudah memeriksa model koneksi, alias, katalog, model kustom, dan /models pada layanan kompatibel.",
       connectionCount: connections.length,
       activeConnectionCount: activeConnections.length,
       hasUsableCredential,
       credentialInfo,
+      discoveredModels: models.slice(0, 30),
       latencyMs: Date.now() - startedAt,
     };
   }
@@ -331,7 +383,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     return {
       provider,
       name: providerName(provider, displayNames),
-      model,
+      model: null,
       status: "skipped",
       code: "NO_CREDENTIAL",
       message: "Model ditemukan, tetapi layanan belum memiliki kredensial yang bisa dipakai. Daftarkan API key, login OAuth, access token, atau refresh token pada koneksi layanan ini.",
@@ -343,127 +395,149 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     };
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
+  const maxModelAttempts = Math.min(models.length, 4);
+  let lastFailure = null;
 
-  try {
-    const headers = new Headers({
-      "content-type": "application/json",
-      "user-agent": "Multiver-Layanan-Test/1.0",
-      "x-multiver-service-test": "1",
-    });
+  for (let modelIndex = 0; modelIndex < maxModelAttempts; modelIndex++) {
+    const model = models[modelIndex];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
 
-    const authorization = requestHeaders.get("authorization");
-    const xApiKey = requestHeaders.get("x-api-key");
-    if (authorization) headers.set("authorization", authorization);
-    if (xApiKey) headers.set("x-api-key", xApiKey);
+    try {
+      const headers = new Headers({
+        "content-type": "application/json",
+        "user-agent": "Multiver-Layanan-Test/1.0",
+        "x-multiver-service-test": "1",
+      });
 
-    const internalRequest = new Request("http://multiver.local/v1/chat/completions", {
-      method: "POST",
-      headers,
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: `${provider}/${model}`,
-        messages: [{ role: "user", content: message }],
-        stream: false,
-      }),
-    });
+      const authorization = requestHeaders.get("authorization");
+      const xApiKey = requestHeaders.get("x-api-key");
+      if (authorization) headers.set("authorization", authorization);
+      if (xApiKey) headers.set("x-api-key", xApiKey);
 
-    const response = await handleChat(internalRequest, null, { internal: true });
-    const parsed = await readResponse(response);
-    const latencyMs = Date.now() - startedAt;
+      const internalRequest = new Request("http://multiver.local/v1/chat/completions", {
+        method: "POST",
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: `${provider}/${model}`,
+          messages: [{ role: "user", content: message }],
+          stream: false,
+        }),
+      });
 
-    if (response.ok && parsed.assistantText) {
+      const response = await handleChat(internalRequest, null, { internal: true });
+      const parsed = await readResponse(response);
+      const latencyMs = Date.now() - startedAt;
+
+      if (response.ok && parsed.assistantText) {
+        await appendMitmConsoleLog({
+          level: "success",
+          source: "LAYANAN-TEST",
+          event: "provider.chat_test.success",
+          message: `Chat uji berhasil — ${provider}/${model}`,
+          model: `${provider}/${model}`,
+          route: "LAYANAN-TEST",
+          status: "SUCCESS",
+        }).catch(() => {});
+
+        return {
+          provider,
+          name: providerName(provider, displayNames),
+          model,
+          status: "ok",
+          code: "OK",
+          message: parsed.assistantText.slice(0, 1200),
+          connectionCount: connections.length,
+          activeConnectionCount: activeConnections.length,
+          hasUsableCredential,
+          credentialInfo,
+          discoveredModels: models.slice(0, 30),
+          attempts: modelIndex + 1,
+          latencyMs,
+        };
+      }
+
+      const diagnosis = diagnose(response.status, parsed.raw);
+      const detail = parsed.raw
+        .replace(/authorization\s*[:=]\s*[^\s,}]+/gi, "authorization=[REDAKSI]")
+        .replace(/api[_-]?key\s*[:=]\s*[^\s,}]+/gi, "apiKey=[REDAKSI]")
+        .slice(0, 800);
+
+      lastFailure = { model, diagnosis, detail, latencyMs };
+
       await appendMitmConsoleLog({
-        level: "success",
+        level: "error",
         source: "LAYANAN-TEST",
-        event: "provider.chat_test.success",
-        message: `Chat uji berhasil — ${provider}/${model}`,
+        event: "provider.chat_test.detect",
+        message: `Deteksi error — ${provider}/${model} HTTP ${response.status}`,
         model: `${provider}/${model}`,
         route: "LAYANAN-TEST",
-        status: "SUCCESS",
+        status: diagnosis.code,
+        error: detail || diagnosis.message,
+        reason: diagnosis.message,
       }).catch(() => {});
 
-      return {
-        provider,
-        name: providerName(provider, displayNames),
-        model,
-        status: "ok",
-        code: "OK",
-        message: parsed.assistantText.slice(0, 1200),
-        connectionCount: connections.length,
-        activeConnectionCount: activeConnections.length,
-        hasUsableCredential,
-        credentialInfo,
-        latencyMs,
-      };
+      const retryableModelError = ["MODEL_INCOMPATIBLE", "404", "ENDPOINT_METHOD", "UPSTREAM_PROTOCOL"].includes(diagnosis.code);
+      if (!retryableModelError || modelIndex + 1 >= maxModelAttempts) {
+        break;
+      }
+
+      await appendMitmConsoleLog({
+        level: "info",
+        source: "LAYANAN-TEST",
+        event: "provider.chat_test.continue",
+        message: `Lanjut otomatis — ${provider}: model berikutnya`,
+        model: `${provider}/${model}`,
+        route: "LAYANAN-TEST",
+        status: "CONTINUE",
+        reason: `${diagnosis.code}; mencoba kandidat model berikutnya`,
+      }).catch(() => {});
+    } catch (error) {
+      const latencyMs = Date.now() - startedAt;
+      const rawError = error?.name === "AbortError" ? "Timeout 15 detik" : error?.message || String(error);
+      const diagnosis = diagnose(null, rawError);
+      lastFailure = { model, diagnosis, detail: rawError.slice(0, 800), latencyMs };
+
+      await appendMitmConsoleLog({
+        level: "error",
+        source: "LAYANAN-TEST",
+        event: "provider.chat_test.detect",
+        message: `Deteksi exception — ${provider}/${model}`,
+        model: `${provider}/${model}`,
+        route: "LAYANAN-TEST",
+        status: diagnosis.code,
+        error: rawError.slice(0, 800),
+        reason: diagnosis.message,
+      }).catch(() => {});
+      break;
+    } finally {
+      clearTimeout(timer);
     }
-
-    const diagnosis = diagnose(response.status, parsed.raw);
-    const detail = parsed.raw
-      .replace(/authorization\s*[:=]\s*[^\s,}]+/gi, "authorization=[REDAKSI]")
-      .replace(/api[_-]?key\s*[:=]\s*[^\s,}]+/gi, "apiKey=[REDAKSI]")
-      .slice(0, 800);
-
-    await appendMitmConsoleLog({
-      level: "error",
-      source: "LAYANAN-TEST",
-      event: "provider.chat_test.error",
-      message: `Chat uji gagal — ${provider}/${model} HTTP ${response.status}`,
-      model: `${provider}/${model}`,
-      route: "LAYANAN-TEST",
-      status: `HTTP_${response.status}`,
-      error: detail || diagnosis.message,
-      reason: diagnosis.message,
-    }).catch(() => {});
-
-    return {
-      provider,
-      name: providerName(provider, displayNames),
-      model,
-      status: "failed",
-      code: diagnosis.code,
-      message: diagnosis.message,
-      error: detail || `HTTP ${response.status}`,
-      latencyMs,
-    };
-  } catch (error) {
-    const latencyMs = Date.now() - startedAt;
-    const rawError = error?.name === "AbortError"
-      ? "Timeout 30 detik"
-      : error?.message || String(error);
-    const diagnosis = diagnose(null, rawError);
-
-    await appendMitmConsoleLog({
-      level: "error",
-      source: "LAYANAN-TEST",
-      event: "provider.chat_test.exception",
-      message: `Chat uji gagal — ${provider}/${model}`,
-      model: `${provider}/${model}`,
-      route: "LAYANAN-TEST",
-      status: diagnosis.code,
-      error: rawError.slice(0, 800),
-      reason: diagnosis.message,
-    }).catch(() => {});
-
-    return {
-      provider,
-      name: providerName(provider, displayNames),
-      model,
-      status: "failed",
-      code: diagnosis.code,
-      message: diagnosis.message,
-      error: rawError.slice(0, 800),
-      connectionCount: connections.length,
-      activeConnectionCount: activeConnections.length,
-      hasUsableCredential,
-      credentialInfo,
-      latencyMs,
-    };
-  } finally {
-    clearTimeout(timer);
   }
-}
+
+  const failure = lastFailure || {
+    model: models[0],
+    diagnosis: diagnose(null, "Unknown provider test failure"),
+    detail: "Unknown provider test failure",
+    latencyMs: Date.now() - startedAt,
+  };
+  return {
+    provider,
+    name: providerName(provider, displayNames),
+    model: failure.model,
+    status: "failed",
+    code: failure.diagnosis.code,
+    message: failure.diagnosis.message,
+    error: failure.detail || failure.diagnosis.message,
+    connectionCount: connections.length,
+    activeConnectionCount: activeConnections.length,
+    hasUsableCredential,
+    credentialInfo,
+    discoveredModels: models.slice(0, 30),
+    attempts: maxModelAttempts,
+    latencyMs: failure.latencyMs,
+  };
 
 async function runWithConcurrency(items, worker, limit = 5) {
   const results = new Array(items.length);
