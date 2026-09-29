@@ -1,0 +1,54 @@
+name: Build Check
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - ".gitignore"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Build app
+        run: npm run build
+
+      - name: Build CLI bundle
+        run: npm run cli:build
+
+      - name: Verify bundles
+        run: |
+          node -e "
+            const fs = require('fs');
+            if (!fs.existsSync('cli/cli.js')) throw new Error('cli/cli.js tidak ada setelah build');
+            if (!fs.existsSync('cli/app/package.json')) throw new Error('cli/app/package.json hilang');
+            console.log('Build OK — app + CLI');
+          "
+
+      - name: Upload app build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
+          if-no-files-found: ignore
+          retention-days: 7

@@ -15,9 +15,7 @@ import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import {
   FREE_PROVIDERS,
   FREE_TIER_PROVIDERS,
-  WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
-  ANTHROPIC_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
 import Link from "next/link";
 import { getErrorCode, getRelativeTime } from "@/shared/utils";
@@ -99,8 +97,6 @@ export default function ProvidersPage() {
   const [providerNodes, setProviderNodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
-  const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
-    useState(false);
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -133,18 +129,7 @@ export default function ProvidersPage() {
       return (a.name || "").localeCompare(b.name || "");
     });
 
-  const sortItemsByPriority = (items, authType) =>
-    [...items].sort((a, b) => {
-      const pa = a.priority ?? 999;
-      const pb = b.priority ?? 999;
-      if (pa !== pb) return pa - pb;
-      const sa = getProviderStats(a.id, authType);
-      const sb = getProviderStats(b.id, authType);
-      const ca = sa.connected > 0 ? 1 : 0;
-      const cb = sb.connected > 0 ? 1 : 0;
-      if (ca !== cb) return cb - ca;
-      return (a.name || "").localeCompare(b.name || "");
-    });
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -407,33 +392,41 @@ export default function ProvidersPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
-            Penyedia Kustom (Kompatibel OpenAI/Anthropic){" "}
+            Penyedia Kustom (API Keys Kompatibel)
           </h2>
-          <div className="grid grid-cols-1 gap-2 sm:flex sm:w-auto">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button
               size="sm"
-              icon="add"
-              onClick={() => setShowAddAnthropicCompatibleModal(true)}
-              className="w-full sm:w-auto"
-            >
-              Tambah Kompatibel Anthropic
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
               icon="add"
               onClick={() => setShowAddCompatibleModal(true)}
               className="w-full !bg-white !text-black hover:!bg-gray-100 sm:w-auto"
             >
-              Tambah Kompatibel OpenAI
+              Tambah API Keys Kompatibel
             </Button>
+            <button
+              onClick={() => handleBatchTest("compatible")}
+              disabled={!!testingMode}
+              className={`flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors sm:w-auto sm:py-1.5 ${testingMode === "compatible"
+                ? "bg-primary/20 border-primary/40 text-primary animate-pulse"
+                : "bg-bg border-border text-text-muted hover:text-text-main hover:border-primary/40"
+                }`}
+              title="Uji semua koneksi API Keys Kompatibel (OpenAI & Anthropic)"
+              aria-label="Uji semua koneksi API Keys Kompatibel"
+            >
+              <span
+                className={`material-symbols-outlined text-[14px]${testingMode === "compatible" ? " animate-spin" : ""}`}
+              >
+                play_arrow
+              </span>
+              {testingMode === "compatible" ? "Menguji..." : "Uji Semua"}
+            </button>
           </div>
         </div>
         {compatibleProviders.length === 0 &&
           anthropicCompatibleProviders.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-xl text-text-muted text-sm">
             <span className="material-symbols-outlined text-[18px]">extension</span>
-            <span>Belum ada penyedia kustom — gunakan tombol di atas untuk menambah titik akhir kompatibel OpenAI/Anthropic</span>
+            <span>Belum ada penyedia kustom — gunakan tombol di atas untuk menambah API keys kompatibel (OpenAI/Anthropic)</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -561,43 +554,12 @@ export default function ProvidersPage() {
         </div>
       )}
 
-      {/* Web Cookie Providers — use browser subscription cookie instead of API key */}
-      {/* <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            Web Cookie Providers{" "}
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Object.entries(WEB_COOKIE_PROVIDERS).map(([key, info]) => (
-            <ApiKeyProviderCard
-              key={key}
-              providerId={key}
-              provider={info}
-              stats={getProviderStats(key, "apikey")}
-              authType="apikey"
-              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
-            />
-          ))}
-        </div>
-      </div> */}
-
       <AddCompatibleModal
-        variant="openai"
         isOpen={showAddCompatibleModal}
         onClose={() => setShowAddCompatibleModal(false)}
         onCreated={(node) => {
           setProviderNodes((prev) => [...prev, node]);
           setShowAddCompatibleModal(false);
-        }}
-      />
-      <AddCompatibleModal
-        variant="anthropic"
-        isOpen={showAddAnthropicCompatibleModal}
-        onClose={() => setShowAddAnthropicCompatibleModal(false)}
-        onCreated={(node) => {
-          setProviderNodes((prev) => [...prev, node]);
-          setShowAddAnthropicCompatibleModal(false);
         }}
       />
 
@@ -635,19 +597,6 @@ export default function ProvidersPage() {
 function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isNoAuth = !!provider.noAuth;
-
-  const dotColors = {
-    free: "bg-green-500",
-    oauth: "bg-blue-500",
-    apikey: "bg-amber-500",
-    compatible: "bg-orange-500",
-  };
-  const dotLabels = {
-    free: "Free",
-    oauth: "OAuth",
-    apikey: "API Key",
-    compatible: "Compatible",
-  };
 
   return (
     <Link href={`/dashboard/providers/${providerId}`} className="group min-w-0">
@@ -750,22 +699,6 @@ function ApiKeyProviderCard({
 }) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isCompatible = providerId.startsWith(OPENAI_COMPATIBLE_PREFIX);
-  const isAnthropicCompatible = providerId.startsWith(
-    ANTHROPIC_COMPATIBLE_PREFIX,
-  );
-
-  const dotColors = {
-    free: "bg-green-500",
-    oauth: "bg-blue-500",
-    apikey: "bg-amber-500",
-    compatible: "bg-orange-500",
-  };
-  const dotLabels = {
-    free: "Free",
-    oauth: "OAuth",
-    apikey: "API Key",
-    compatible: "Compatible",
-  };
 
   return (
     <Link href={`/dashboard/providers/${providerId}`} className="group min-w-0">
@@ -813,7 +746,7 @@ function ApiKeyProviderCard({
                           : "Chat"}
                       </Badge>
                     )}
-                    {isAnthropicCompatible && (
+                    {!isCompatible && (
                       <Badge variant="default" size="sm">
                         Messages
                       </Badge>
@@ -890,6 +823,7 @@ function ProviderTestResultsView({ results }) {
       free: "Free",
       apikey: "API Key",
       provider: "Provider",
+      compatible: "API Keys Kompatibel",
       all: "All",
     }[mode] || mode;
 

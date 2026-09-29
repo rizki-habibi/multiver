@@ -4,43 +4,24 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Badge, Button, Input, Modal, Select } from "@/shared/components";
 
-const VARIANT_CONFIG = {
-  openai: {
-    title: "Add OpenAI Compatible",
-    type: "openai-compatible",
-    defaultBaseUrl: "https://api.openai.com/v1",
-    namePlaceholder: "OpenAI Compatible (Prod)",
-    prefixPlaceholder: "oc-prod",
-    baseUrlHint: "Use the base URL (ending in /v1) for your OpenAI-compatible API.",
-    modelIdPlaceholder: "e.g. gpt-4, claude-3-opus",
-    errorLabel: "OpenAI Compatible",
-    hasApiType: true,
-  },
-  anthropic: {
-    title: "Add Anthropic Compatible",
-    type: "anthropic-compatible",
-    defaultBaseUrl: "https://api.anthropic.com/v1",
-    namePlaceholder: "Anthropic Compatible (Prod)",
-    prefixPlaceholder: "ac-prod",
-    baseUrlHint: "Use the base URL (ending in /v1) for your Anthropic-compatible API. The system will append /messages.",
-    modelIdPlaceholder: "e.g. claude-3-opus",
-    errorLabel: "Anthropic Compatible",
-    hasApiType: false,
-  },
-};
-
 const API_TYPE_OPTIONS = [
   { value: "chat", label: "Chat Completions" },
   { value: "responses", label: "Responses API" },
 ];
 
-function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
-  const config = VARIANT_CONFIG[variant];
+// Base URL hint shown when the user picks the API style manually.
+const STYLE_HINT = {
+  openai: "Gunakan base URL (berakhiran /v1) untuk API kompatibel OpenAI.",
+  anthropic: "Gunakan base URL (berakhiran /v1) untuk API kompatibel Anthropic. Sistem akan menambah /messages otomatis.",
+};
+
+function AddCompatibleModal({ isOpen, onClose, onCreated }) {
   const initialFormData = () => ({
     name: "",
     prefix: "",
-    ...(config.hasApiType ? { apiType: "chat" } : {}),
-    baseUrl: config.defaultBaseUrl,
+    apiStyle: "openai",
+    apiType: "chat",
+    baseUrl: "https://api.openai.com/v1",
   });
 
   const [formData, setFormData] = useState(initialFormData);
@@ -49,17 +30,59 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
   const [checkModelId, setCheckModelId] = useState("");
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectResult, setDetectResult] = useState(null);
 
-  // openai: reset baseUrl when apiType changes; anthropic: reset checks when opened
+  const isAnthropic = formData.apiStyle === "anthropic";
+
+  // Reset transient state every time the modal is (re)opened
   useEffect(() => {
-    if (config.hasApiType) {
-      setFormData((prev) => ({ ...prev, baseUrl: config.defaultBaseUrl }));
-    } else if (isOpen) {
-      setValidationResult(null);
+    if (isOpen) {
       setCheckKey("");
       setCheckModelId("");
+      setValidationResult(null);
+      setDetectResult(null);
     }
-  }, [config.hasApiType ? formData.apiType : isOpen]);
+  }, [isOpen]);
+
+  // Anthropic nodes have no apiType selector — keep form consistent
+  useEffect(() => {
+    if (isAnthropic) {
+      setFormData((prev) => ({ ...prev, apiType: "chat", baseUrl: "https://api.anthropic.com/v1" }));
+    } else {
+      setFormData((prev) => ({ ...prev, baseUrl: "https://api.openai.com/v1" }));
+    }
+  }, [formData.apiStyle]);
+
+  // Auto-detect API style from baseUrl + apiKey (OpenAI vs Anthropic native)
+  const handleDetect = async () => {
+    setDetecting(true);
+    setDetectResult(null);
+    try {
+      const res = await fetch("/api/provider-nodes/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseUrl: formData.baseUrl, apiKey: checkKey }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDetectResult(data);
+        // Adopt the detected style so the rest of the form (prefix hint,
+        // submit payload) matches the real endpoint.
+        setFormData((prev) => ({
+          ...prev,
+          apiStyle: data.type === "anthropic-compatible" ? "anthropic" : "openai",
+          apiType: data.apiType === "responses" ? "responses" : "chat",
+        }));
+      } else {
+        setDetectResult({ error: data.error || "Deteksi gagal" });
+      }
+    } catch {
+      setDetectResult({ error: "Network error" });
+    } finally {
+      setDetecting(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.prefix.trim() || !formData.baseUrl.trim()) return;
@@ -71,9 +94,9 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
         body: JSON.stringify({
           name: formData.name,
           prefix: formData.prefix,
-          ...(config.hasApiType ? { apiType: formData.apiType } : {}),
+          type: isAnthropic ? "anthropic-compatible" : "openai-compatible",
+          ...(isAnthropic ? {} : { apiType: formData.apiType }),
           baseUrl: formData.baseUrl,
-          type: config.type,
         }),
       });
       const data = await res.json();
@@ -82,9 +105,10 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
         setFormData(initialFormData());
         setCheckKey("");
         setValidationResult(null);
+        setDetectResult(null);
       }
     } catch (error) {
-      console.log(`Error creating ${config.errorLabel} node:`, error);
+      console.log("Error creating compatible node:", error);
     } finally {
       setSubmitting(false);
     }
@@ -99,7 +123,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
         body: JSON.stringify({
           baseUrl: formData.baseUrl,
           apiKey: checkKey,
-          type: config.type,
+          type: isAnthropic ? "anthropic-compatible" : "openai-compatible",
           modelId: checkModelId.trim() || undefined,
         }),
       });
@@ -110,6 +134,35 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
     } finally {
       setValidating(false);
     }
+  };
+
+  const renderDetectResult = () => {
+    if (!detectResult) return null;
+    if (detectResult.error) {
+      return (
+        <div className="flex flex-col gap-1">
+          <Badge variant="error">Deteksi Gagal</Badge>
+          <span className="text-sm text-red-500">{detectResult.error}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="success">
+          {detectResult.type === "anthropic-compatible" ? "Anthropic" : "OpenAI"} Kompatibel
+        </Badge>
+        {!isAnthropic && (
+          <span className="text-sm text-text-muted">
+            {detectResult.apiType === "responses" ? "Responses API" : "Chat Completions"}
+          </span>
+        )}
+        {detectResult.existingCount > 0 && (
+          <span className="text-sm text-amber-500">
+            Sudah ada {detectResult.existingCount} koneksi dengan base URL ini
+          </span>
+        )}
+      </div>
+    );
   };
 
   const renderValidationResult = () => {
@@ -134,49 +187,63 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
   };
 
   return (
-    <Modal isOpen={isOpen} title={config.title} onClose={onClose}>
+    <Modal isOpen={isOpen} title="Tambah API Keys Kompatibel" onClose={onClose}>
       <div className="flex flex-col gap-4">
+        <div className="rounded-lg border border-border bg-bg/50 p-3 text-sm text-text-muted">
+          Masukkan Base URL dan API key, lalu klik <strong>Deteksi</strong> — sistem
+          mengenali otomatis apakah endpoint ini kompatibel OpenAI atau Anthropic.
+        </div>
+        <Input
+          label="Base URL"
+          value={formData.baseUrl}
+          onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
+          placeholder="https://api.example.com/v1"
+          hint={STYLE_HINT[formData.apiStyle]}
+        />
+        <Input
+          label="API Key"
+          type="password"
+          value={checkKey}
+          onChange={(e) => setCheckKey(e.target.value)}
+          placeholder="Masukkan API key untuk deteksi & uji"
+        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+          <Button
+            onClick={handleDetect}
+            disabled={!checkKey || detecting || !formData.baseUrl.trim()}
+            variant="secondary"
+            className="w-full sm:w-auto"
+          >
+            {detecting ? "Mendeteksi..." : "Deteksi"}
+          </Button>
+          {renderDetectResult()}
+        </div>
         <Input
           label="Name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={config.namePlaceholder}
-          hint="Required. A friendly label for this node."
+          placeholder="Mis. Produksi"
+          hint="Wajib. Label untuk node ini."
         />
         <Input
           label="Prefix"
           value={formData.prefix}
           onChange={(e) => setFormData({ ...formData, prefix: e.target.value })}
-          placeholder={config.prefixPlaceholder}
-          hint="Required. Used as the provider prefix for model IDs."
+          placeholder="Mis. prod"
+          hint="Wajib. Dipakai sebagai prefix model ID."
         />
-        {config.hasApiType && (
-          <Select
-            label="API Type"
-            options={API_TYPE_OPTIONS}
-            value={formData.apiType}
-            onChange={(e) => setFormData({ ...formData, apiType: e.target.value })}
-          />
-        )}
-        <Input
-          label="Base URL"
-          value={formData.baseUrl}
-          onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-          placeholder={config.defaultBaseUrl}
-          hint={config.baseUrlHint}
+        <Select
+          label="Tipe API"
+          options={API_TYPE_OPTIONS}
+          value={formData.apiType}
+          onChange={(e) => setFormData({ ...formData, apiType: e.target.value })}
         />
         <Input
-          label="API Key (for Check)"
-          type="password"
-          value={checkKey}
-          onChange={(e) => setCheckKey(e.target.value)}
-        />
-        <Input
-          label="Model ID (optional)"
+          label="Model ID (opsional)"
           value={checkModelId}
           onChange={(e) => setCheckModelId(e.target.value)}
-          placeholder={config.modelIdPlaceholder}
-          hint="If provider lacks /models endpoint, enter a model ID to validate via chat/completions instead."
+          placeholder="Mis. gpt-4, claude-3-opus"
+          hint="Jika endpoint tidak punya /models, masukkan model ID untuk uji via chat/completions."
         />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button
@@ -185,7 +252,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
             variant="secondary"
             className="w-full sm:w-auto"
           >
-            {validating ? "Checking..." : "Check"}
+            {validating ? "Menguji..." : "Uji API Key"}
           </Button>
           {renderValidationResult()}
         </div>
@@ -212,7 +279,6 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
 }
 
 AddCompatibleModal.propTypes = {
-  variant: PropTypes.oneOf(["openai", "anthropic"]).isRequired,
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onCreated: PropTypes.func.isRequired,

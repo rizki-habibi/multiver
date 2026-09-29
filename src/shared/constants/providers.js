@@ -110,27 +110,6 @@ export const AUTH_METHODS = {
   cookie: { id: "cookie" },
 };
 
-// Modality support for graceful rejection. `serviceKinds` is the registry
-// source of truth; LLM providers that omit it default to chat-only.
-export function getProviderModalities(provider) {
-  if (!provider) return [];
-  const kinds = provider.serviceKinds || [];
-  const out = new Set();
-  for (const k of kinds) {
-    if (k === "llm") out.add("text");
-    else out.add(k);
-  }
-  if (!out.has("text") && (!kinds.length || kinds.includes("llm"))) out.add("text");
-  return [...out];
-}
-
-export function providerSupportsModality(provider, kind) {
-  if (!provider || !kind) return true;
-  const kinds = provider.serviceKinds;
-  if (!kinds || kinds.includes("llm")) return kind === "text";
-  return kinds.includes(kind);
-}
-
 // Helper: Get provider by alias
 export function getProviderByAlias(alias) {
   for (const provider of Object.values(AI_PROVIDERS)) {
@@ -158,23 +137,3 @@ export const ALIAS_TO_ID = Object.values(AI_PROVIDERS).reduce((acc, p) => {
   acc[p.alias] = p.id;
   return acc;
 }, {});
-
-// ID to Alias mapping
-export const ID_TO_ALIAS = Object.values(AI_PROVIDERS).reduce((acc, p) => {
-  acc[p.id] = p.alias;
-  return acc;
-}, {});
-
-// Helper: Get providers by service kind (e.g. "tts", "embedding", "image")
-// Providers without serviceKinds default to ["llm"]
-export function getProvidersByKind(kind) {
-  return Object.values(AI_PROVIDERS)
-    .filter((p) => {
-      const kinds = p.serviceKinds ?? ["llm"];
-      if (!kinds.includes(kind)) return false;
-      if (p.hidden) return false;
-      if (p.hiddenKinds?.includes(kind)) return false;
-      return true;
-    })
-    .sort((a, b) => (a.priority ?? a.mediaPriority ?? 999) - (b.priority ?? b.mediaPriority ?? 999));
-}
