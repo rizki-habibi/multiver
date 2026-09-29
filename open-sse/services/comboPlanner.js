@@ -40,6 +40,8 @@ const PROVIDER_TIER_HINTS = {
 
   kiro: "free",
   kr: "free",
+  xkiro: "free",
+  "mimo-free": "free",
   if: "free",
   iflow: "free",
   qwen: "free",
