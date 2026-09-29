@@ -194,10 +194,17 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
 
     const resolvedProxy = await resolveConnectionProxyConfig(connection.providerSpecificData || {});
 
+    // Some imported/custom connections keep the active credential inside
+    // providerSpecificData instead of the top-level fields. Use only explicit
+    // apiKey/accessToken fields as fallbacks; never promote refreshToken.
+    const storedProviderData = connection.providerSpecificData || {};
+    const resolvedApiKey = connection.apiKey || storedProviderData.apiKey || null;
+    const resolvedAccessToken = connection.accessToken || storedProviderData.accessToken || null;
+
     return {
       authType: connection.authType,
-      apiKey: connection.apiKey,
-      accessToken: connection.accessToken,
+      apiKey: resolvedApiKey,
+      accessToken: resolvedAccessToken,
       refreshToken: connection.refreshToken,
       idToken: connection.idToken,
       expiresAt: connection.expiresAt,
