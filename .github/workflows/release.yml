@@ -80,16 +80,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "${GITHUB_REF_NAME}" = "" ] || [ "${GITHUB_REF_NAME}" = "main" ]; then
+            VERSION=$(node -p "JSON.parse(require(\"fs\").readFileSync(\"cli/package.json\",\"utf8\")).version")
+            TAG="v$VERSION"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="v$VERSION"
+          fi
+          echo "Publishing Multiver release $TAG (version $VERSION)"
           TARBALL=$(ls /tmp/multiver-*.tgz | head -n 1)
           if [ -z "$TARBALL" ]; then
             echo "ERROR: CLI tarball tidak ditemukan"
             exit 1
           fi
           cp "$TARBALL" /tmp/multiver-latest.tgz
-          if ! gh release view "v$VERSION" >/dev/null 2>&1; then
-            gh release create "v$VERSION" \
-              --title "v$VERSION" \
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "$TAG" \
               --generate-notes
           fi
-          gh release upload "v$VERSION" "$TARBALL" /tmp/multiver-latest.tgz --clobber
+          gh release upload "$TAG" "$TARBALL" /tmp/multiver-latest.tgz --clobber
