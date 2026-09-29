@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { getProviderConnections } from "@/models";
+import { getProviderConnections, getProviderNodes, getModelAliases, getCustomModels } from "@/models";
 import { FREE_PROVIDERS } from "@/shared/constants/providers";
 import { getDefaultModel } from "open-sse/config/providerModels.js";
+import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
+import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { PROVIDERS } from "open-sse/config/providers.js";
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
@@ -23,6 +25,7 @@ const HIDDEN_PROVIDER_IDS = new Set([
   "poolside",
   "byteplus",
   "kimchi",
+  "kimchi-nope",
   "api-airforce",
   "bazaarlink",
   "kilo-gateway",
@@ -37,8 +40,9 @@ async function ensureInitialized() {
   }
 }
 
-function providerName(provider) {
+function providerName(provider, displayNames = new Map()) {
   return (
+    displayNames.get(provider) ||
     PROVIDERS[provider]?.display?.name ||
     PROVIDERS[provider]?.name ||
     provider
@@ -156,14 +160,108 @@ async function readResponse(response) {
   };
 }
 
-async function testProvider(provider, message, requestHeaders) {
+function normalizeModelId(model, provider) {
+  if (!model) return null;
+  const value = typeof model === "string" ? model : model.id || model.model || model.name;
+  if (!value) return null;
+  const prefix = provider + "/";
+  return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+}
+
+function firstChatModel(models = []) {
+  return models.find((item) => {
+    const kind = item?.kind || item?.type;
+    const id = String(item?.id || item?.model || item?.name || "").toLowerCase();
+    return id && (!kind || kind === "llm" || kind === "chat") && !/embed|embedding|tts|audio|image|video|stt|transcrib/.test(id);
+  });
+}
+
+async function resolveCompatibleModel(provider, connections) {
+  for (const connection of connections.filter((item) => item.isActive !== false)) {
+    const baseUrl = connection.providerSpecificData?.baseUrl?.replace(/\/$/, "");
+    if (!baseUrl) continue;
+    const headers = { "Content-Type": "application/json" };
+    if (connection.apiKey) {
+      if (isAnthropicCompatibleProvider(provider)) {
+        headers["x-api-key"] = connection.apiKey;
+        headers.Authorization = "Bearer " + connection.apiKey;
+        headers["anthropic-version"] = "2023-06-01";
+      } else {
+        headers.Authorization = "Bearer " + connection.apiKey;
+      }
+    }
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const response = await fetch(baseUrl + "/models", { headers, signal: controller.signal });
+        if (!response.ok) continue;
+        const data = await response.json();
+        const models = Array.isArray(data) ? data : (data?.data || data?.models || []);
+        const selected = firstChatModel(models);
+        if (selected) return normalizeModelId(selected, provider);
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch {
+      // Continue with the next connection/model source.
+    }
+  }
+  return null;
+}
+
+async function resolveDynamicModel(provider, connections, modelAliases, customModels) {
+  const configuredDefault = connections
+    .filter((connection) => connection.isActive !== false)
+    .map((connection) => normalizeModelId(connection.defaultModel, provider))
+    .find(Boolean);
+  if (configuredDefault) return configuredDefault;
+
+  const staticDefault = getDefaultModel(provider);
+  if (staticDefault) return staticDefault;
+
+  const aliased = Object.values(modelAliases || {})
+    .filter((fullModel) => typeof fullModel === "string" && fullModel.startsWith(provider + "/"))
+    .map((fullModel) => ({ id: normalizeModelId(fullModel, provider), kind: "llm" }));
+  const aliasModel = firstChatModel(aliased);
+  if (aliasModel) return aliasModel.id;
+
+  const custom = (customModels || [])
+    .filter((item) => item?.providerAlias === provider && (item?.kind || item?.type || "llm") === "llm")
+    .map((item) => ({ id: item.id, kind: "llm" }));
+  const customModel = firstChatModel(custom);
+  if (customModel) return customModel.id;
+
+  if (isOpenAICompatibleProvider(provider) || isAnthropicCompatibleProvider(provider)) {
+    return resolveCompatibleModel(provider, connections);
+  }
+
+  if (provider === "zed") {
+    const connection = connections.find((item) => item.isActive !== false);
+    if (connection?.accessToken) {
+      try {
+        const result = await resolveZedModels({
+          accessToken: connection.accessToken,
+          providerSpecificData: connection.providerSpecificData || {},
+        }, { forceRefresh: true });
+        const model = firstChatModel(result?.models || []);
+        if (model) return normalizeModelId(model, provider);
+      } catch {
+        // The normal chat request will report the real upstream error.
+      }
+    }
+  }
+
+  return null;
+}
+async function testProvider(provider, message, requestHeaders, displayNames, modelAliases, customModels) {
   const startedAt = Date.now();
   const connections = await getProviderConnections({ provider });
 
   if (!isChatProvider(provider)) {
     return {
       provider,
-      name: providerName(provider),
+      name: providerName(provider, displayNames),
       status: "skipped",
       code: "NON_CHAT",
       message: "Layanan ini bukan layanan percakapan sehingga tidak diuji dengan pesan chat.",
@@ -177,7 +275,7 @@ async function testProvider(provider, message, requestHeaders) {
   if (activeConnections.length === 0 && !hasNoAuth) {
     return {
       provider,
-      name: providerName(provider),
+      name: providerName(provider, displayNames),
       status: "skipped",
       code: "NO_CONNECTION",
       message: connections.length > 0
@@ -187,14 +285,14 @@ async function testProvider(provider, message, requestHeaders) {
     };
   }
 
-  const model = getDefaultModel(provider);
+  const model = await resolveDynamicModel(provider, connections, modelAliases, customModels);
   if (!model) {
     return {
       provider,
-      name: providerName(provider),
+      name: providerName(provider, displayNames),
       status: "failed",
       code: "NO_MODEL",
-      message: "Tidak ditemukan model chat bawaan untuk layanan ini.",
+      message: "Belum ada model chat yang bisa dipakai. Atur model bawaan, alias model, atau koneksi layanan terlebih dahulu.",
       latencyMs: Date.now() - startedAt,
     };
   }
@@ -242,7 +340,7 @@ async function testProvider(provider, message, requestHeaders) {
 
       return {
         provider,
-        name: providerName(provider),
+        name: providerName(provider, displayNames),
         model,
         status: "ok",
         code: "OK",
@@ -271,7 +369,7 @@ async function testProvider(provider, message, requestHeaders) {
 
     return {
       provider,
-      name: providerName(provider),
+      name: providerName(provider, displayNames),
       model,
       status: "failed",
       code: diagnosis.code,
@@ -300,7 +398,7 @@ async function testProvider(provider, message, requestHeaders) {
 
     return {
       provider,
-      name: providerName(provider),
+      name: providerName(provider, displayNames),
       model,
       status: "failed",
       code: diagnosis.code,
@@ -340,7 +438,22 @@ export async function POST(request) {
 
     await ensureInitialized();
 
-    const allConnections = await getProviderConnections({});
+    const [allConnections, providerNodes, modelAliases, customModels] = await Promise.all([
+      getProviderConnections({}),
+      getProviderNodes(),
+      getModelAliases(),
+      getCustomModels(),
+    ]);
+    const displayNames = new Map(
+      (providerNodes || [])
+        .filter((node) => node?.id)
+        .map((node) => [node.id, node.name || node.prefix || node.id]),
+    );
+    for (const connection of allConnections) {
+      if (connection?.provider && connection?.name && !displayNames.has(connection.provider)) {
+        displayNames.set(connection.provider, connection.name);
+      }
+    }
     const configuredProviders = new Set(
       allConnections
         .map((connection) => connection.provider)
@@ -356,7 +469,7 @@ export async function POST(request) {
     const providers = [...configuredProviders].filter(isChatProvider).sort();
     const results = await runWithConcurrency(
       providers,
-      (provider) => testProvider(provider, message, request.headers),
+      (provider) => testProvider(provider, message, request.headers, displayNames, modelAliases, customModels),
       5,
     );
 
