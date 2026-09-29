@@ -372,8 +372,9 @@ export default function CombosPage() {
             Group models under one name, then pick a strategy per combo:
           </p>
           <ul className="text-sm text-text-muted mt-2 flex flex-col gap-1">
-            <li><span className="font-medium text-text-main">Fallback</span> — tries models in order (next on failure)</li>
-            <li><span className="font-medium text-text-main">Round Robin</span> — rotates models across requests to spread load</li>
+            <li><span className="font-medium text-text-main">Fallback</span> — mencoba model sesuai prioritas dan pindah saat gagal</li>
+            <li><span className="font-medium text-text-main">Smart</span> — menganalisis capability, context, tools, kompleksitas, tipe tugas, lalu menyusun kandidat sebelum fallback</li>
+            <li><span className="font-medium text-text-main">Round Robin</span> — merotasi model antar-request untuk menyebarkan beban</li>
             <li><span className="font-medium text-text-main">MAX</span> — runs ALL models in parallel, preserving each response (partial success allowed)</li>
             <li><span className="font-medium text-text-main">Fusion</span> — queries all models in parallel, then a judge synthesizes one answer. Best quality, but costs the most: every request bills all panel models + the judge (N+1 calls)</li>
           </ul>
