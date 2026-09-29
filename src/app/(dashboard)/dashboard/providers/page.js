@@ -38,6 +38,7 @@ const HIDDEN_PROVIDER_IDS = new Set([
   "poolside",
   "byteplus",
   "kimchi",
+  "kimchi-nope",
   "api-airforce",
   "bazaarlink",
   "kilo-gateway",
