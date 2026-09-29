@@ -538,6 +538,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     attempts: maxModelAttempts,
     latencyMs: failure.latencyMs,
   };
+}
 
 async function runWithConcurrency(items, worker, limit = 5) {
   const results = new Array(items.length);
