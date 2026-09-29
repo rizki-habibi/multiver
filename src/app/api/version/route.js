@@ -1,33 +1,24 @@
-﻿import https from "https";
+﻿import { execSync } from "child_process";
 import pkg from "../../../../package.json" with { type: "json" };
 
-const NPM_PACKAGE_NAME = "Multiver";
-const VERSION_CACHE_TTL_MS = 3600000; // cache npm latest lookup for 1h
-
-// Survive hot reload; one cache per process
+const VERSION_CACHE_TTL_MS = 3600000; // 1h cache
 const versionCache = (global.__npmVersionCache ??= { value: null, fetchedAt: 0 });
 
-// Fetch latest version from npm registry
+// Fetch latest version from git tags (works for private repos without token)
 function fetchLatestVersion() {
-  return new Promise((resolve) => {
-    const req = https.get(
-      `https://registry.npmjs.org/${NPM_PACKAGE_NAME}/latest`,
-      { timeout: 4000 },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data).version || null);
-          } catch {
-            resolve(null);
-          }
-        });
-      }
+  try {
+    // Use git ls-remote to get tags without cloning — works for any repo with git access
+    const output = execSync(
+      `git ls-remote --tags --sort=-v:refname origin`,
+      { encoding: "utf8", timeout: 8000, stdio: ["pipe", "pipe", "pipe"] }
     );
-    req.on("error", () => resolve(null));
-    req.on("timeout", () => { req.destroy(); resolve(null); });
-  });
+    // Tags look like: <sha>\trefs/tags/v12.0.0
+    // Filter annotated tag refs (skip ^{} dereferenced ones for clean match)
+    const match = output.match(/refs\/tags\/v(\d+\.\d+\.\d+)$/m);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 function compareVersions(a, b) {
@@ -44,7 +35,7 @@ async function getLatestVersionCached() {
   if (versionCache.value && Date.now() - versionCache.fetchedAt < VERSION_CACHE_TTL_MS) {
     return versionCache.value;
   }
-  const latest = await fetchLatestVersion();
+  const latest = fetchLatestVersion();
   if (latest) {
     versionCache.value = latest;
     versionCache.fetchedAt = Date.now();

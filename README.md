@@ -2,7 +2,7 @@
 
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
-![Version](https://img.shields.io/badge/version-11.1.0-0969DA)
+![Version](https://img.shields.io/badge/version-12.0.0-0969DA)
 [![License](https://img.shields.io/npm/l/multiver.svg)](https://github.com/rizki-habibi/multiver/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/rizki-habibi/multiver)](https://github.com/rizki-habibi/multiver/releases)
 
@@ -23,7 +23,7 @@ multiver
 
 ```bash
 npm pack --prefix cli   # hasil: cli/multiver-<versi>.tgz
-npm install -g cli/multiver-11.1.0.tgz
+npm install -g cli/multiver-12.0.0.tgz
 multiver
 ```
 
@@ -172,7 +172,7 @@ Dua workflow GitHub Actions berjalan otomatis di setiap push ke `main`:
 - GitHub **tag `vX.Y.Z`** dan **Release** dibuat otomatis
 - `paths-ignore` untuk `*.md` dan `.github/**` — update dokumen tidak memicu bump
 
-Versi naik dari `11.1.0` → `11.1.1` → `11.1.2` → ...
+Versi naik dari `12.0.0` → `12.0.1` → ...
 
 ### 2. `release.yml` — Build + publish npm
 
@@ -261,6 +261,14 @@ MIT — lihat file LICENSE.
 - Filter log konsol ditingkatkan.
 - UI ikon provider diganti fallback teks.
 - Penambahan MySQL adapter.
+
+### v12.0.0
+- **Update langsung dari dashboard**: tombol "Pasang & Mulai Ulang" menjalankan
+  installer otomatis (npm i -g multiver@latest), mematikan server, lalu
+  memulai ulang tanpa intervensi manual.
+- Cek versi terbaru kini membaca tag git repo (sebelumnya npm registry yang
+  selalu 404), sehingga notifikasi "Versi baru tersedia" tidak pernah muncul.
+- Bump versi 11.1.1 → 12.0.0.
 
 ### v11.2.0
 - Fitur **Riwayat Percakapan** (tabel prompt/respons/parameter + drawer detail).

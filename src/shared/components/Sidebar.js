@@ -46,9 +46,12 @@ export default function Sidebar({ onClose }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [shutdownCountdown, setShutdownCountdown] = useState(0);
   const [enableTranslator, setEnableTranslator] = useState(false);
+  const [autoUpdating, setAutoUpdating] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState(null);
   const { copied, copy } = useCopyToClipboard(2000);
 
   const INSTALL_CMD = UPDATER_CONFIG.installCmdLatest;
+  const STATUS_URL = `http://127.0.0.1:${UPDATER_CONFIG.statusPort}/update/status`;
 
   useEffect(() => {
     fetch("/api/settings")
@@ -111,6 +114,40 @@ export default function Sidebar({ onClose }) {
     setShutdownCountdown(0);
   };
 
+  // 1-klik auto-install: POST /api/version/update → spawn detached updater,
+  // server mati, npm i -g jalan sendiri, relaunch otomatis. Browser poll
+  // status server di :statusPort selama server utama mati.
+  const handleAutoUpdate = async () => {
+    setShowUpdateModal(false);
+    setAutoUpdating(true);
+    setUpdateStatus({ phase: "starting" });
+    try {
+      await fetch("/api/version/update", { method: "POST" });
+    } catch { /* expected: server exits mid-request */ }
+    // Server akan mati ~500ms setelahnya; mulai poll status updater.
+    setTimeout(() => pollUpdateStatus(), 800);
+  };
+
+  const pollUpdateStatus = () => {
+    let pollTimer = null;
+    const tick = async () => {
+      try {
+        const res = await fetch(STATUS_URL, { cache: "no-store" });
+        const data = await res.json();
+        setUpdateStatus(data);
+        if (data?.done) {
+          clearInterval(pollTimer);
+          // App baru direlaunch oleh updater; tunggu port hidup lalu reload.
+          setTimeout(() => globalThis.location.reload(), 4000);
+        }
+      } catch {
+        // Status server belum up atau sudah tutup — coba lagi di tick berikutnya.
+      }
+    };
+    tick();
+    pollTimer = setInterval(tick, UPDATER_CONFIG.statusPollIntervalMs);
+  };
+
   // Note: legacy updater poll removed. New flow: copy install cmd + shutdown server,
   // user runs the command manually in another terminal.
 
@@ -145,10 +182,18 @@ export default function Sidebar({ onClose }) {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowUpdateModal(true)}
-                  className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                  onClick={handleAutoUpdate}
+                  disabled={autoUpdating}
+                  className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-progress"
                 >
-                  Perbarui sekarang
+                  {autoUpdating ? "Menginstal…" : "Pasang & Mulai Ulang"}
+                </button>
+                <button
+                  onClick={() => setShowUpdateModal(true)}
+                  disabled={autoUpdating}
+                  className="px-2 py-1 rounded border border-green-600/40 dark:border-amber-500/40 text-green-700 dark:text-amber-400 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  Manual
                 </button>
                 <button
                   onClick={() => copy(INSTALL_CMD)}
@@ -318,9 +363,11 @@ export default function Sidebar({ onClose }) {
       />
 
       {/* Disconnected / Updating Overlay */}
-      {(isDisconnected || isUpdating) && (
+      {(isDisconnected || isUpdating || autoUpdating) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-          {isUpdating ? (
+          {autoUpdating ? (
+            <AutoUpdatePanel status={updateStatus} />
+          ) : isUpdating ? (
             <ManualUpdatePanel
               latestVersion={updateInfo?.latestVersion}
               installCmd={INSTALL_CMD}
@@ -409,4 +456,64 @@ ManualUpdatePanel.propTypes = {
   onCancel: PropTypes.func.isRequired,
   countdown: PropTypes.number,
   isDisconnected: PropTypes.bool,
+};
+
+function AutoUpdatePanel({ status }) {
+  const phase = status?.phase || "starting";
+  const label = {
+    starting: "Memulai updater…",
+    waitingForExit: "Mematikan server lama…",
+    installing: "Menginstal versi baru…",
+    done: "Selesai — memulai ulang…",
+    error: "Gagal",
+  }[phase] || phase;
+
+  return (
+    <div className="w-full max-w-lg rounded-xl bg-neutral-900/95 border border-white/10 p-6 text-white">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-center size-11 rounded-full bg-green-500/20 text-green-400">
+          <span className="material-symbols-outlined text-[24px]">
+            {phase === "error" ? "error" : "downloading"}
+          </span>
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">Memperbarui Multiver</h2>
+          <p className="text-xs text-white/60">
+            Instalasi otomatis berjalan di latar belakang. Server akan hidup kembali sendiri.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 text-sm text-white/80 mb-3">
+        {phase !== "error" && phase !== "done" && (
+          <span className="material-symbols-outlined animate-spin text-[18px] text-green-400">progress_activity</span>
+        )}
+        <span>{label}</span>
+      </div>
+
+      {status?.logTail?.length > 0 && (
+        <div className="w-full px-3 py-2 rounded bg-white/5 mb-4 max-h-40 overflow-auto">
+          {status.logTail.slice(-8).map((line, i) => (
+            <code key={i} className="block text-[11px] font-mono text-white/70 break-all">{line}</code>
+          ))}
+        </div>
+      )}
+
+      {phase === "error" ? (
+        <div className="text-xs text-red-400 mb-4">
+          {status?.error || "Instalasi gagal. Coba update manual via terminal."}
+        </div>
+      ) : null}
+
+      {phase === "error" && (
+        <Button variant="secondary" fullWidth onClick={() => globalThis.location.reload()}>
+          Muat Ulang Halaman
+        </Button>
+      )}
+    </div>
+  );
+}
+
+AutoUpdatePanel.propTypes = {
+  status: PropTypes.object,
 };
