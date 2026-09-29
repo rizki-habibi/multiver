@@ -15,6 +15,7 @@ const navItems = [
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
   { href: "/dashboard/combos", label: "Kombinasi & Adaptor Vision", icon: "layers" },
   { href: "/dashboard/conversations", label: "Riwayat Percakapan", icon: "chat" },
+  { href: "/dashboard/office", label: "Office Bot", icon: "business_center" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
   { href: "/dashboard/provider-intelligence", label: "Kuota & Data AI", icon: "monitoring" },
   { href: "/dashboard/token-saver", label: "Penghemat Token", icon: "savings" },
