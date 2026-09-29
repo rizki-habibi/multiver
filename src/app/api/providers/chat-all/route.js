@@ -215,9 +215,7 @@ async function testProvider(provider, message, requestHeaders) {
       body: JSON.stringify({
         model: `${provider}/${model}`,
         messages: [{ role: "user", content: message }],
-        stream: true,
-        temperature: 0,
-        max_tokens: 120,
+        stream: false,
       }),
     });
 
