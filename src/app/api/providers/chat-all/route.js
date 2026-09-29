@@ -460,11 +460,15 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
             reject(error);
           }, CHAT_ALL_PROVIDER_TIMEOUT_MS);
         });
-        const response = await Promise.race([
-          handleChat(internalRequest, null, { internal: true }),
+        const resultPromise = (async () => {
+          const response = await handleChat(internalRequest, null, { internal: true });
+          const parsed = await readResponse(response);
+          return { response, parsed };
+        })();
+        const { response, parsed } = await Promise.race([
+          resultPromise,
           timeoutPromise,
         ]);
-        const parsed = await readResponse(response);
       const latencyMs = Date.now() - startedAt;
 
       if (response.ok && parsed.assistantText) {
@@ -535,7 +539,9 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       }
     } catch (error) {
       const latencyMs = Date.now() - startedAt;
-      const rawError = error?.name === "AbortError" ? "Timeout 15 detik" : error?.message || String(error);
+      const rawError = error?.name === "AbortError"
+        ? `Timeout ${CHAT_ALL_PROVIDER_TIMEOUT_MS}ms`
+        : error?.message || String(error);
       const diagnosis = diagnose(null, rawError);
       lastFailure = { model, diagnosis, detail: rawError.slice(0, 800), latencyMs };
 
