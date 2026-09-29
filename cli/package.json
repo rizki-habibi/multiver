@@ -42,12 +42,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rizki/multiver.git"
+    "url": "https://github.com/rizki-habibi/multiver.git"
   },
   "author": "Rizki",
-  "homepage": "https://github.com/rizki/multiver#readme",
+  "homepage": "https://github.com/rizki-habibi/multiver#readme",
   "bugs": {
-    "url": "https://github.com/rizki/multiver/issues"
+    "url": "https://github.com/rizki-habibi/multiver/issues"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
