@@ -270,28 +270,107 @@ export default function ProvidersPage() {
   const handleChatAllServices = async () => {
     if (chatTesting) return;
     const message = chatInput.trim() || "Halo, apa kabar?";
+
+    // Buka popup SEBELUM request dimulai. Hasil kemudian masuk satu per satu
+    // melalui SSE sehingga pengguna tidak perlu menunggu semua provider selesai.
     setChatTesting(true);
-    setChatResults(null);
+    setChatResults({
+      message,
+      mode: "chat-all",
+      streaming: true,
+      results: [],
+      pendingProviders: [],
+      summary: { total: 0, passed: 0, failed: 0, skipped: 0 },
+    });
+
     try {
-      const res = await fetch("/api/providers/chat-all", {
+      const res = await fetch("/api/providers/chat-all?stream=1", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({ message }),
       });
-      const data = await res.json().catch(() => ({}));
-      setChatResults(data);
-      if (!res.ok) {
-        notify.error(data.error || "Pengujian chat semua layanan gagal");
-      } else if (data.summary) {
-        const { passed, failed, total } = data.summary;
-        if (failed === 0) notify.success(`Semua ${total} layanan menjawab`);
-        else notify.warning(`${passed}/${total} layanan menjawab, ${failed} bermasalah`);
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const handleEvent = (block) => {
+        const lines = block.split(/\r?\n/);
+        const event = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+        const dataLine = lines.find((line) => line.startsWith("data:"))?.slice(5).trim();
+        if (!dataLine) return;
+        let data;
+        try { data = JSON.parse(dataLine); } catch { return; }
+
+        if (event === "start") {
+          setChatResults((prev) => ({
+            ...(prev || {}),
+            message: data.message || message,
+            pendingProviders: data.providers || [],
+            summary: { total: data.total || 0, passed: 0, failed: 0, skipped: 0 },
+            streaming: true,
+          }));
+        } else if (event === "result") {
+          setChatResults((prev) => {
+            const results = [...(prev?.results || []), data];
+            const completed = data.progress?.completed || results.length;
+            const total = data.progress?.total || prev?.summary?.total || completed;
+            return {
+              ...(prev || {}),
+              results,
+              pendingProviders: (prev?.pendingProviders || []).filter(
+                (item) => item.provider !== data.provider,
+              ),
+              summary: {
+                total,
+                passed: results.filter((item) => item.status === "ok").length,
+                failed: results.filter((item) => item.status === "failed").length,
+                skipped: results.filter((item) => item.status === "skipped").length,
+              },
+              streaming: true,
+            };
+          });
+        } else if (event === "done") {
+          setChatResults((prev) => ({
+            ...(prev || {}),
+            summary: data.summary || prev?.summary,
+            testedAt: data.testedAt,
+            pendingProviders: [],
+            streaming: false,
+          }));
+          setChatTesting(false);
+          const summary = data.summary || {};
+          if (summary.failed === 0) notify.success(`Semua ${summary.total || 0} layanan selesai diuji`);
+          else notify.warning(`${summary.passed || 0}/${summary.total || 0} layanan menjawab, ${summary.failed || 0} bermasalah`);
+        } else if (event === "error") {
+          setChatResults((prev) => ({ ...(prev || {}), error: data.error, streaming: false }));
+          setChatTesting(false);
+          notify.error(data.error || "Pengujian chat semua layanan gagal");
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || "";
+        blocks.forEach(handleEvent);
+      }
+      if (buffer.trim()) handleEvent(buffer);
     } catch (error) {
-      setChatResults({ error: error.message || "Tidak dapat menjalankan pengujian chat" });
-      notify.error("Pengujian chat semua layanan gagal");
-    } finally {
+      setChatResults((prev) => ({
+        ...(prev || {}),
+        error: error.message || "Tidak dapat menjalankan pengujian chat",
+        streaming: false,
+      }));
       setChatTesting(false);
+      notify.error("Pengujian chat semua layanan gagal");
     }
   };
 
@@ -423,9 +502,9 @@ export default function ProvidersPage() {
           aria-label="Chat semua layanan"
         >
           <span className={`material-symbols-outlined text-[14px]${chatTesting ? " animate-spin" : ""}`}>
-            chat
+            {chatTesting ? "autorenew" : "chat"}
           </span>
-          {chatTesting ? "Menguji chat…" : "Chat Semua Layanan"}
+          {chatTesting ? "Menguji satu per satu…" : "Chat Semua Layanan"}
         </button>
         <button
           onClick={() => handleBatchTest("all")}
@@ -931,9 +1010,17 @@ function ProviderChatResultsView({ results }) {
 
   const summary = results.summary || {};
   const items = results.results || [];
+  const pending = results.pendingProviders || [];
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
+      {results.streaming && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400">
+          <span className="material-symbols-outlined animate-spin text-[16px]">autorenew</span>
+          <span>Pengujian berjalan satu per satu — hasil tampil segera setelah layanan menjawab.</span>
+          <span className="ml-auto font-mono">{items.length}/{summary.total || "…"}</span>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 font-medium">
           Mode: {results.mode === "chat-all" ? "Chat Semua Layanan" : "Chat"}
@@ -955,6 +1042,20 @@ function ProviderChatResultsView({ results }) {
           {summary.total || items.length} layanan diperiksa
         </span>
       </div>
+
+      {results.streaming && pending.length > 0 && (
+        <div className="rounded-lg border border-border bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
+          <div className="mb-2 text-[11px] font-medium text-text-muted">Masih menunggu</div>
+          <div className="flex flex-wrap gap-1.5">
+            {pending.map((item) => (
+              <span key={item.provider} className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-1 text-[11px] text-text-muted">
+                <span className="material-symbols-outlined animate-spin text-[12px]">autorenew</span>
+                {item.name || item.provider}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {items.map((item, index) => {
         const ok = item.status === "ok";
