@@ -55,9 +55,9 @@ const TIER_RANK = {
 };
 
 const TASK_KEYWORDS = {
-  coding: /\\b(code|coding|program|programming|debug|debugging|refactor|repository|repo|function|class|bug|error|stack trace|typescript|javascript|php|python|sql|laravel|react|next\\.js)\\b/i,
-  analysis: /\\b(analy[sz]e|analysis|compare|comparison|audit|architecture|research|reason|explain|investigate)\\b/i,
-  writing: /\\b(write|rewrite|draft|email|essay|summary|summarize|translate|translation)\\b/i,
+  coding: /\b(code|coding|program|programming|debug|debugging|refactor|repository|repo|function|class|bug|error|stack trace|typescript|javascript|php|python|sql|laravel|react|next\.js)\b/i,
+  analysis: /\b(analy[sz]e|analysis|compare|comparison|audit|architecture|research|reason|explain|investigate)\b/i,
+  writing: /\b(write|rewrite|draft|email|essay|summary|summarize|translate|translation)\b/i,
 };
 
 function providerAndModel(modelStr) {
