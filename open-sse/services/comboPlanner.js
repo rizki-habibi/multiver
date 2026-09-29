@@ -267,5 +267,5 @@ export function summarizeSmartPlan(plan) {
   const top = plan.ranked?.[0];
   if (!top) return "no candidate";
   const reason = top.reasons?.slice(0, 3).join(", ") || "priority default";
-  return \`\${plan.analysis.level}/\${plan.analysis.taskType} → \${top.model} (\${top.tier}; \${reason})\`;
+  return `${plan.analysis.level}/${plan.analysis.taskType} → ${top.model} (${top.tier}; ${reason})`;
 }
