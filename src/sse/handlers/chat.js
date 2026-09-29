@@ -262,6 +262,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       const comboStrategies = chatSettings.comboStrategies || {};
       const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
       const comboStrategy = comboSpecificStrategy || chatSettings.comboStrategy || "fallback";
+      const smartConfig = comboStrategies[modelStr]?.smartRouting || chatSettings.comboSmartRouting || {};
       const requiredCapabilities = detectRequiredCapabilities(body);
       const augmentedModels = augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, chatSettings);
       const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
@@ -315,7 +316,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         log,
         comboName: modelStr,
         comboStrategy,
-        comboStickyLimit
+        comboStickyLimit,
+        smartConfig
       });
     }
     log.warn("CHAT", "Format model tidak valid", { model: modelStr });
