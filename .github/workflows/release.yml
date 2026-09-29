@@ -12,7 +12,7 @@ on:
         default: "true"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -69,3 +69,21 @@ jobs:
           path: /tmp/multiver-*.tgz
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Publish GitHub Release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          TARBALL=$(ls /tmp/multiver-*.tgz | head -n 1)
+          if [ -z "$TARBALL" ]; then
+            echo "ERROR: CLI tarball tidak ditemukan"
+            exit 1
+          fi
+          cp "$TARBALL" /tmp/multiver-latest.tgz
+          if ! gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release create "v$VERSION" \
+              --title "v$VERSION" \
+              --generate-notes
+          fi
+          gh release upload "v$VERSION" "$TARBALL" /tmp/multiver-latest.tgz --clobber
