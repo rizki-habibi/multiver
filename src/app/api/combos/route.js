@@ -23,6 +23,19 @@ export async function POST(request) {
     const body = await request.json();
     const { name, models, kind } = body;
 
+    if (models !== undefined && !Array.isArray(models)) {
+      return NextResponse.json({ error: "Models must be an array" }, { status: 400 });
+    }
+    if (Array.isArray(models)) {
+      const normalizedModels = models.map((model) => typeof model === "string" ? model.trim() : "");
+      if (normalizedModels.some((model) => !model)) {
+        return NextResponse.json({ error: "Every combo model must be a non-empty string" }, { status: 400 });
+      }
+      if (new Set(normalizedModels).size !== normalizedModels.length) {
+        return NextResponse.json({ error: "Combo models must be unique" }, { status: 400 });
+      }
+    }
+
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
