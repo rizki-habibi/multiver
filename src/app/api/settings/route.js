@@ -13,6 +13,7 @@ const SETTINGS_RESPONSE_HEADERS = {
 
 // Secrets must never be mass-assigned from request body (CWE-915)
 const PROTECTED_SETTING_KEYS = ["password", "mitmSudoEncrypted"];
+const VALID_COMBO_STRATEGIES = new Set(["fallback", "smart", "round-robin", "max", "fusion"]);
 
 export async function GET() {
   try {
@@ -75,6 +76,32 @@ export async function PATCH(request) {
     if (Object.prototype.hasOwnProperty.call(body, "oidcClientSecret")) {
       if (!body.oidcClientSecret || !String(body.oidcClientSecret).trim()) {
         delete body.oidcClientSecret;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "comboStrategy")) {
+      const strategy = String(body.comboStrategy || "").trim().toLowerCase();
+      if (!VALID_COMBO_STRATEGIES.has(strategy)) {
+        return NextResponse.json({ error: "Invalid combo strategy" }, { status: 400 });
+      }
+      body.comboStrategy = strategy;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "comboStrategies")) {
+      if (!body.comboStrategies || typeof body.comboStrategies !== "object" || Array.isArray(body.comboStrategies)) {
+        return NextResponse.json({ error: "comboStrategies must be an object" }, { status: 400 });
+      }
+      for (const [comboName, config] of Object.entries(body.comboStrategies)) {
+        if (!config || typeof config !== "object" || Array.isArray(config)) {
+          return NextResponse.json({ error: `Invalid strategy config for combo: ${comboName}` }, { status: 400 });
+        }
+        if (config.fallbackStrategy !== undefined) {
+          const strategy = String(config.fallbackStrategy || "").trim().toLowerCase();
+          if (!VALID_COMBO_STRATEGIES.has(strategy)) {
+            return NextResponse.json({ error: `Invalid combo strategy for: ${comboName}` }, { status: 400 });
+          }
+          config.fallbackStrategy = strategy;
+        }
       }
     }
 

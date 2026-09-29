@@ -47,9 +47,10 @@ function normalizeCapEntry(entry) {
 }
 
 const STRATEGY_OPTIONS = [
-  { value: "fallback", label: "Fallback — try in order" },
-  { value: "round-robin", label: "Round Robin — rotate" },
-  { value: "max", label: "MAX — all models in parallel" },
+  { value: "fallback", label: "Fallback — urut sesuai prioritas" },
+  { value: "smart", label: "Smart — analisis otomatis" },
+  { value: "round-robin", label: "Round Robin — rotasi" },
+  { value: "max", label: "MAX — semua model paralel" },
   { value: "fusion", label: "Fusion — panel + judge" },
 ];
 
@@ -315,8 +316,9 @@ export default function CombosPage() {
     try {
       const updated = { ...comboStrategies };
       const next = { ...(updated[comboName] || {}), ...patch };
-      // Prune to keep settings clean: default fallback with no extras = no entry.
-      if (!next.fallbackStrategy || next.fallbackStrategy === "fallback") {
+      // Fallback is an explicit per-combo mode. Keep it persisted so a global
+      // Round Robin/Smart setting cannot silently override what the user selected.
+      if (!next.fallbackStrategy) {
         delete updated[comboName];
       } else {
         updated[comboName] = next;
@@ -334,7 +336,7 @@ export default function CombosPage() {
     try {
       const updated = { ...comboStrategies };
       for (const combo of selectedCombos) {
-        if (!strategy || strategy === "fallback") {
+        if (!strategy) {
           delete updated[combo.name];
         } else {
           updated[combo.name] = {
@@ -370,8 +372,9 @@ export default function CombosPage() {
             Group models under one name, then pick a strategy per combo:
           </p>
           <ul className="text-sm text-text-muted mt-2 flex flex-col gap-1">
-            <li><span className="font-medium text-text-main">Fallback</span> — tries models in order (next on failure)</li>
-            <li><span className="font-medium text-text-main">Round Robin</span> — rotates models across requests to spread load</li>
+            <li><span className="font-medium text-text-main">Fallback</span> — mencoba model sesuai prioritas dan pindah saat gagal</li>
+            <li><span className="font-medium text-text-main">Smart</span> — menganalisis capability, context, tools, kompleksitas, tipe tugas, lalu menyusun kandidat sebelum fallback</li>
+            <li><span className="font-medium text-text-main">Round Robin</span> — merotasi model antar-request untuk menyebarkan beban</li>
             <li><span className="font-medium text-text-main">MAX</span> — runs ALL models in parallel, preserving each response (partial success allowed)</li>
             <li><span className="font-medium text-text-main">Fusion</span> — queries all models in parallel, then a judge synthesizes one answer. Best quality, but costs the most: every request bills all panel models + the judge (N+1 calls)</li>
           </ul>

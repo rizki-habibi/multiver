@@ -27,9 +27,30 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
+    if (body.models !== undefined) {
+      if (!Array.isArray(body.models)) {
+        return NextResponse.json({ error: "Models must be an array" }, { status: 400 });
+      }
+      const normalizedModels = body.models.map((model) => typeof model === "string" ? model.trim() : "");
+      if (normalizedModels.some((model) => !model)) {
+        return NextResponse.json({ error: "Every combo model must be a non-empty string" }, { status: 400 });
+      }
+      if (new Set(normalizedModels).size !== normalizedModels.length) {
+        return NextResponse.json({ error: "Combo models must be unique" }, { status: 400 });
+      }
+      body.models = normalizedModels;
+    }
+
+    if (body.name !== undefined && Array.isArray(body.models) && body.models.includes(body.name.trim())) {
+      return NextResponse.json({ error: "Combo cannot contain itself" }, { status: 400 });
+    }
+
     // Validate name format if provided
-    if (body.name) {
+    if (body.name !== undefined) {
+      if (typeof body.name !== "string" || !body.name.trim()) {
+        return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      }
       if (!VALID_NAME_REGEX.test(body.name)) {
         return NextResponse.json({ error: "Name can only contain letters, numbers, -, _ and ." }, { status: 400 });
       }

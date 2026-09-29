@@ -121,6 +121,7 @@ export async function handleChat(request, clientRawRequest = null, options = {})
     const comboStrategies = settings.comboStrategies || {};
     const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
     const comboStrategy = comboSpecificStrategy || settings.comboStrategy || "fallback";
+    const smartConfig = comboStrategies[modelStr]?.smartRouting || settings.comboSmartRouting || {};
     const augmentedModels = augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, settings);
     const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
 
@@ -167,23 +168,6 @@ export async function handleChat(request, clientRawRequest = null, options = {})
       });
     }
 
-    if (comboStrategy === "max") {
-      log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: max)`);
-      return handleMaxChat({
-        body,
-        models: augmentedModels,
-        handleSingleModel: (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
-        log,
-        comboName: modelStr,
-        judgeModel: comboStrategies[modelStr]?.judgeModel,
-        enableJudge: !!comboStrategies[modelStr]?.maxEnableJudge,
-        maxConcurrent: comboStrategies[modelStr]?.maxConcurrent || settings.maxConcurrent || 6,
-        timeoutMs: comboStrategies[modelStr]?.maxTimeoutMs || settings.maxTimeoutMs || 90000,
-        retryPerModel: comboStrategies[modelStr]?.maxRetry || settings.maxRetry || 0,
-        requestId,
-      });
-    }
-
     const comboStickyLimit = settings.comboStickyRoundRobinLimit;
     log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
@@ -196,7 +180,8 @@ export async function handleChat(request, clientRawRequest = null, options = {})
       log,
       comboName: modelStr,
       comboStrategy,
-      comboStickyLimit
+      comboStickyLimit,
+      smartConfig
     });
   }
 
@@ -279,6 +264,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       const comboStrategies = chatSettings.comboStrategies || {};
       const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
       const comboStrategy = comboSpecificStrategy || chatSettings.comboStrategy || "fallback";
+      const smartConfig = comboStrategies[modelStr]?.smartRouting || chatSettings.comboSmartRouting || {};
       const requiredCapabilities = detectRequiredCapabilities(body);
       const augmentedModels = augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, chatSettings);
       const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
@@ -332,7 +318,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         log,
         comboName: modelStr,
         comboStrategy,
-        comboStickyLimit
+        comboStickyLimit,
+        smartConfig
       });
     }
     log.warn("CHAT", "Format model tidak valid", { model: modelStr });

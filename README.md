@@ -115,6 +115,7 @@ multiver --version
 
 ## ✨ Fitur
 
+- **Smart Combo** – analisis capability, context, tools, kompleksitas tugas, dan tier sebelum fallback.
 - **MAX** – semua model paralel, hasil dipertahankan masing-masing.
 - **Fusion** – panel model + judge untuk sintesis jawaban terbaik.
 - **RTK Token Saver** – kompresi hasil otomatis.
@@ -158,7 +159,8 @@ multiver/
 │   ├── config/                 # registry, constants
 │   ├── executors/              # per-provider adapters
 │   ├── handlers/               # chat / image / tts / stt
-│   └── services/combo.js       # MAX / Fusion / fallback
+│   ├── services/combo.js       # Smart / MAX / Fusion / fallback
+│   └── services/comboPlanner.js # analisis + ranking Smart Combo
 ├── src/
 │   ├── app/                    # Next.js UI
 │   │   ├── (dashboard)/dashboard/
@@ -231,6 +233,12 @@ ENABLE_REQUEST_LOGS=true
 ```
 
 ---
+
+## 🧠 Smart Combo
+
+Smart Combo terinspirasi dari pola fallback bertingkat 9Router, tetapi Multiver menambahkan ranking deterministik berdasarkan capability, context window, tools, kompleksitas request, tipe tugas, tier, dan urutan combo. Detail arsitektur ada di `docs/SMART-COMBO.md`.
+
+Smart Combo tidak mengklaim quota atau health provider secara prediktif. Executor fallback tetap menjadi sumber kebenaran ketika request benar-benar dikirim ke provider.
 
 ## ❓ FAQ
 
