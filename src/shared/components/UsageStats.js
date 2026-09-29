@@ -104,9 +104,9 @@ function sortData(dataMap, pendingMap = {}, sortBy, sortOrder) {
 function getGroupKey(item, keyField) {
   switch (keyField) {
     case "rawModel": return item.rawModel || "Unknown Model";
-    case "accountName": return item.accountName || `Account ${item.connectionId?.slice(0, 8)}...` || "Unknown Account";
+    case "accountName": return item.accountName || `Akun ${item.connectionId?.slice(0, 8)}...` || "Akun Tidak Dikenal";
     case "keyName": return item.keyName || "Unknown Key";
-    case "endpoint": return item.endpoint || "Unknown Endpoint";
+    case "endpoint": return item.endpoint || "Titik Akhir Tidak Dikenal";
     default: return item[keyField] || "Unknown";
   }
 }
@@ -326,7 +326,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           ),
           renderDetailCells: (item) => (
             <>
-              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.accountName || `Account ${item.connectionId?.slice(0, 8)}...`}</td>
+              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.accountName || `Akun ${item.connectionId?.slice(0, 8)}...`}</td>
               <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.rawModel}</td>
               <td className="px-6 py-3"><Badge variant={item.pending > 0 ? "primary" : "neutral"} size="sm">{item.provider}</Badge></td>
               <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
