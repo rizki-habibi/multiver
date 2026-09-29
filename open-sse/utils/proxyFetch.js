@@ -364,9 +364,16 @@ async function patchedFetch(url, options = {}) {
   return proxyAwareFetch(url, options, null);
 }
 
-// Idempotency guard — only patch once to avoid wrapping multiple times
-if (globalThis.fetch !== patchedFetch) {
-  globalThis.fetch = patchedFetch;
+// Install the global patch lazily. Applying it at module-eval time breaks
+// Next.js "Collecting page data" (it runs route modules to prerender and
+// chokes on a replaced global fetch — `util.markAsUncloneable is not a
+// function`). Nothing in-tree needs the global: every consumer imports the
+// named `proxyAwareFetch` export. Call installGlobalFetchPatch() from runtime
+// entry points (custom-server.js / server.js / CLI) where the patch belongs.
+export function installGlobalFetchPatch() {
+  if (globalThis.fetch !== patchedFetch) {
+    globalThis.fetch = patchedFetch;
+  }
 }
 
 export default patchedFetch;

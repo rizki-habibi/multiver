@@ -110,6 +110,20 @@ http.createServer = function (options, listener) {
   return server;
 };
 
+// Install the proxy-aware global fetch patch before Next serves a single
+// request. open-sse no longer does this at import time — patching globalThis
+// during module evaluation breaks Next.js "Collecting page data" at build.
+try {
+  require("./.next/standalone/open-sse/utils/proxyFetch.js").installGlobalFetchPatch();
+} catch {
+  // Dev layout: open-sse lives at the project root.
+  try {
+    require("./open-sse/utils/proxyFetch.js").installGlobalFetchPatch();
+  } catch {
+    /* standalone bundle not built yet — native fetch still works */
+  }
+}
+
 // Load the generated Next.js standalone server. It calls http.createServer() above.
 // Layout under cli/app: server.js + .next/standalone (runtime cwd is cli/app).
 try {
