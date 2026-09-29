@@ -56,9 +56,15 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Publish to npm
+      - name: Publish to npm (optional)
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
-        run: npm publish --prefix cli --access public
+        continue-on-error: true
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "NPM_TOKEN tidak tersedia — lewati npm publish; GitHub Release tetap menjadi sumber update."
+            exit 0
+          fi
+          npm publish --prefix cli --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
