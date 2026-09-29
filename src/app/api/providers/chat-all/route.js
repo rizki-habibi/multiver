@@ -54,6 +54,12 @@ function diagnose(status, rawError = "") {
   const text = String(rawError || "").trim();
   const lower = text.toLowerCase();
 
+  if (/suspend|suspended|disabled|banned|deactivated|ditangguhkan|dinonaktifkan/.test(lower)) {
+    return {
+      code: "SUSPEND",
+      message: "Akun atau layanan kemungkinan ditangguhkan/dinonaktifkan oleh penyedia. Periksa status akun dan sesi OAuth/kunci API.",
+    };
+  }
   if (status === 401 || status === 403 || /unauthorized|invalid api key|token invalid|expired|forbidden/.test(lower)) {
     return {
       code: "AUTH",
