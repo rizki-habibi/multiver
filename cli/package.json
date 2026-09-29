@@ -1,6 +1,6 @@
 {
   "name": "multiver",
-  "version": "12.1.44",
+  "version": "12.1.45",
   "description": "Multiver CLI - Advanced Multi-AI Fusion Router Manager",
   "bin": {
     "multiver": "./cli.js"
