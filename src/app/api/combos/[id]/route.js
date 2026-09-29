@@ -47,7 +47,10 @@ export async function PUT(request, { params }) {
     }
 
     // Validate name format if provided
-    if (body.name) {
+    if (body.name !== undefined) {
+      if (typeof body.name !== "string" || !body.name.trim()) {
+        return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      }
       if (!VALID_NAME_REGEX.test(body.name)) {
         return NextResponse.json({ error: "Name can only contain letters, numbers, -, _ and ." }, { status: 400 });
       }
