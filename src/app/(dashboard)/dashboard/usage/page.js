@@ -11,10 +11,10 @@ import DiagnosticsTab from "./components/DiagnosticsTab";
 
 const PERIODS = [
   { value: "today", label: "Hari ini" },
-  { value: "24h", label: "24j" },
-  { value: "7d", label: "7H" },
-  { value: "30d", label: "30H" },
-  { value: "60d", label: "60H" },
+  { value: "24h", label: "24 jam" },
+  { value: "7d", label: "7 hari" },
+  { value: "30d", label: "30 hari" },
+  { value: "60d", label: "60 hari" },
   { value: "all", label: "Semua" },
 ];
 
