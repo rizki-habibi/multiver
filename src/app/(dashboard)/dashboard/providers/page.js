@@ -846,7 +846,7 @@ function ApiKeyProviderCard({
                     )}
                     {!isCompatible && (
                       <Badge variant="default" size="sm">
-                        Messages
+                        Pesan
                       </Badge>
                     )}
                     {errorTime && (
@@ -1016,7 +1016,7 @@ function ProviderTestResultsView({ results }) {
       apikey: "API Key",
       provider: "Provider",
       compatible: "API Keys Kompatibel",
-      all: "All",
+      all: "Semua",
     }[mode] || mode;
 
   return (
