@@ -6,7 +6,10 @@ export const ERROR_TYPES = {
   403: { type: "permission_error", code: "insufficient_quota" },
   404: { type: "invalid_request_error", code: "model_not_found" },
   406: { type: "invalid_request_error", code: "model_not_supported" },
+  408: { type: "timeout_error", code: "request_timeout" },
+  413: { type: "invalid_request_error", code: "payload_too_large" },
   429: { type: "rate_limit_error", code: "rate_limit_exceeded" },
+  529: { type: "server_error", code: "overloaded" },
   500: { type: "server_error", code: "internal_server_error" },
   502: { type: "server_error", code: "bad_gateway" },
   503: { type: "server_error", code: "service_unavailable" },
@@ -21,7 +24,10 @@ export const DEFAULT_ERROR_MESSAGES = {
   403: "You exceeded your current quota",
   404: "Model not found",
   406: "Model not supported",
+  408: "Request timed out",
+  413: "Request payload or context is too large",
   429: "Rate limit exceeded",
+  529: "Provider is overloaded",
   500: "Internal server error",
   502: "Bad gateway - upstream provider error",
   503: "Service temporarily unavailable",
@@ -66,12 +72,26 @@ export const ERROR_RULES = [
   { text: "quota exceeded", backoff: true },
   { text: "capacity", backoff: true },
   { text: "overloaded", backoff: true },
+  { text: "maximum context", cooldownMs: 0 },
+  { text: "context length", cooldownMs: 0 },
+  { text: "context window", cooldownMs: 0 },
+  { text: "too many tokens", cooldownMs: 0 },
+  { text: "token limit", cooldownMs: 0 },
+  { text: "tokens limit", cooldownMs: 0 },
+  { text: "input is too long", cooldownMs: 0 },
+  { text: "prompt is too long", cooldownMs: 0 },
+  { text: "request too large", cooldownMs: 0 },
+  { text: "payload too large", cooldownMs: 0 },
+  { text: "context_length_exceeded", cooldownMs: 0 },
+  { text: "max context", cooldownMs: 0 },
 
   // --- Status-based rules (fallback when text doesn't match) ---
+  { status: 408, cooldownMs: 0 },
   { status: 401, cooldownMs: COOLDOWN.long },
   { status: 402, cooldownMs: COOLDOWN.long },
   { status: 403, cooldownMs: COOLDOWN.long },
   { status: 404, cooldownMs: COOLDOWN.long },
+  { status: 413, cooldownMs: 0 },
   { status: 429, backoff: true },
   // 409 = konflik state, paling sering kuota habis / limit bersamaan
   // (antigravity memancarkan 409 untuk pool exhaustion). Sebelumnya 409
@@ -81,9 +101,10 @@ export const ERROR_RULES = [
   { status: 409, backoff: true },
   // 5xx upstream failures are usually transient. Keep the cooldown short so
   // one unhealthy gateway does not poison the whole combo for 30 seconds.
-  { status: 502, cooldownMs: 2000 },
-  { status: 504, cooldownMs: 2000 },
-  { status: 500, cooldownMs: 2000 },
+  { status: 502, cooldownMs: 500 },
+  { status: 504, cooldownMs: 500 },
+  { status: 529, cooldownMs: 500 },
+  { status: 500, cooldownMs: 500 },
 ];
 
 // Backward compat: COOLDOWN_MS object (used by index.js re-export)
