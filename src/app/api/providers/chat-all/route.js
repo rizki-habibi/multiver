@@ -183,11 +183,11 @@ async function resolveCompatibleModel(provider, connections) {
     const headers = { "Content-Type": "application/json" };
     if (connection.apiKey) {
       if (isAnthropicCompatibleProvider(provider)) {
-        headers["x-api-key"] = connection.apiKey;
-        headers.Authorization = "Bearer " + connection.apiKey;
+        headers["x-api-key"] = connectionApiKey;
+        headers.Authorization = "Bearer " + connectionApiKey;
         headers["anthropic-version"] = "2023-06-01";
       } else {
-        headers.Authorization = "Bearer " + connection.apiKey;
+        headers.Authorization = "Bearer " + (connectionApiKey || connectionAccessToken);
       }
     }
     try {
@@ -281,8 +281,11 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     id: connection.id,
     name: connection.displayName || connection.name || connection.email || connection.id,
     authType: connection.authType || null,
-    hasApiKey: Boolean(connection.apiKey),
-    hasAccessToken: Boolean(connection.accessToken),
+    hasApiKey: Boolean(connection.apiKey || connection.providerSpecificData?.apiKey),
+    hasAccessToken: Boolean(connection.accessToken || connection.providerSpecificData?.accessToken),
+    credentialSource: connection.apiKey || connection.accessToken
+      ? "connection"
+      : (connection.providerSpecificData?.apiKey || connection.providerSpecificData?.accessToken ? "providerSpecificData" : "none"),
     hasRefreshToken: Boolean(connection.refreshToken),
     hasProviderBaseUrl: Boolean(connection.providerSpecificData?.baseUrl),
     isActive: connection.isActive !== false,
