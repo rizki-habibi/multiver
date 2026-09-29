@@ -293,7 +293,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     hasProviderBaseUrl: Boolean(connection.providerSpecificData?.baseUrl),
     isActive: connection.isActive !== false,
   }));
-  const hasUsableCredential = hasNoAuth || credentialInfo.some((item) => item.hasApiKey || item.hasAccessToken);
+  const hasUsableCredential = hasNoAuth || credentialInfo.some((item) => item.hasApiKey || item.hasAccessToken || item.hasRefreshToken);
 
   if (activeConnections.length === 0 && !hasNoAuth) {
     return {
@@ -322,6 +322,22 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       connectionCount: connections.length,
       activeConnectionCount: activeConnections.length,
       hasUsableCredential,
+      credentialInfo,
+      latencyMs: Date.now() - startedAt,
+    };
+  }
+
+  if (!hasUsableCredential) {
+    return {
+      provider,
+      name: providerName(provider, displayNames),
+      model,
+      status: "skipped",
+      code: "NO_CREDENTIAL",
+      message: "Model ditemukan, tetapi layanan belum memiliki kredensial yang bisa dipakai. Daftarkan API key, login OAuth, access token, atau refresh token pada koneksi layanan ini.",
+      connectionCount: connections.length,
+      activeConnectionCount: activeConnections.length,
+      hasUsableCredential: false,
       credentialInfo,
       latencyMs: Date.now() - startedAt,
     };
