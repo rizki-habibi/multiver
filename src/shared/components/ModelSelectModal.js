@@ -10,19 +10,36 @@ import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, AI_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, getProviderAlias } from "@/shared/constants/providers";
 
 // Provider order: OAuth first, then Free Tier, then API Key (matches dashboard/providers)
+const HIDDEN_PROVIDER_IDS = new Set([
+  "cline",
+  "clinepass",
+  "codebuddy-intl",
+  "codebuddy-cn",
+  "qoder-cn",
+  "kimi",
+  "grok-cli",
+  "cloudflare-ai",
+  "poolside",
+  "byteplus",
+  "kimchi",
+  "api-airforce",
+  "bazaarlink",
+  "kilo-gateway",
+]);
+
 const PROVIDER_ORDER = [
   ...Object.keys(OAUTH_PROVIDERS),
   ...Object.keys(FREE_PROVIDERS),
   ...Object.keys(FREE_TIER_PROVIDERS),
   ...Object.keys(APIKEY_PROVIDERS),
-];
+].filter((id) => !HIDDEN_PROVIDER_IDS.has(id));
 
 // Providers that need no auth — always show in model selector
 const NO_AUTH_PROVIDER_IDS = Object.keys(FREE_PROVIDERS).filter(id => FREE_PROVIDERS[id].noAuth);
 
 // Providers with per-account live catalogs via /api/providers/[id]/models.
 // Static registry stays as fallback when live fetch fails or is empty.
-const LIVE_CATALOG_PROVIDERS = ["cursor", "cline", "clinepass"];
+const LIVE_CATALOG_PROVIDERS = ["cursor"];
 
 // Fetch a provider's account-scoped catalog for every active connection and merge
 // the results. Entries collapse by model id on purpose: two connections of the
@@ -84,8 +101,9 @@ export default function ModelSelectModal({
 }) {
   // Filter activeProviders by serviceKinds when kindFilter set (e.g. "webSearch", "webFetch")
   const filteredActiveProviders = useMemo(() => {
-    if (!kindFilter) return activeProviders;
-    return activeProviders.filter((p) => {
+    const visibleProviders = activeProviders.filter((p) => !HIDDEN_PROVIDER_IDS.has(p?.provider));
+    if (!kindFilter) return visibleProviders;
+    return visibleProviders.filter((p) => {
       const info = AI_PROVIDERS[p.provider];
       const kinds = info?.serviceKinds || ["llm"];
       return kinds.includes(kindFilter);
