@@ -158,6 +158,20 @@ async function getExactQuota(connection) {
   return null;
 }
 
+async function mapConcurrent(items, limit, worker) {
+  const results = new Array(items.length);
+  let cursor = 0;
+  async function run() {
+    while (true) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return results;
+}
+
 export async function scanProviderIntelligence({ deep = true } = {}) {
   const [connections, nodes, aliases, customModels] = await Promise.all([
     getProviderConnections(),
@@ -168,7 +182,7 @@ export async function scanProviderIntelligence({ deep = true } = {}) {
   const nodeMap = new Map(nodes.map(node => [node.id, node]));
   const providers = [];
 
-  for (const connection of connections) {
+  return mapConcurrent(connections, 8, async (connection) => {
     const psd = connection.providerSpecificData || {};
     const node = nodeMap.get(connection.provider);
     const compatible = isOpenAICompatibleProvider(connection.provider) || isAnthropicCompatibleProvider(connection.provider);
