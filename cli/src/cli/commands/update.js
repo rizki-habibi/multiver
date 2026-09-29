@@ -361,27 +361,61 @@ function gitUpdate({ force }) {
   return true;
 }
 
-// ─── Update via npm registry (fallback) ─────────────────────────────────────
+// ─── Update via npm registry / official GitHub Release fallback ───────────────
+function fetchLatestGitHubReleaseVersion() {
+  return new Promise((resolve) => {
+    const req = https.get(
+      "https://api.github.com/repos/rizki-habibi/multiver/releases/latest",
+      { timeout: 8000, headers: { "User-Agent": "Multiver-Updater", Accept: "application/vnd.github+json" } },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => {
+          try {
+            if (res.statusCode !== 200) return resolve(null);
+            const release = JSON.parse(data);
+            const version = String(release.tag_name || "").replace(/^v/i, "");
+            resolve(/^\d+\.\d+\.\d+$/.test(version) ? version : null);
+          } catch { resolve(null); }
+        });
+      }
+    );
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => { req.destroy(); resolve(null); });
+  });
+}
+
 async function npmUpdate({ force, pkgName }) {
-  log("Mode: npm registry");
+  log("Mode: npm registry / GitHub Release");
   const current = PKG.version;
-  const latest = await fetchLatestNpmVersion(pkgName);
+  const npmLatest = await fetchLatestNpmVersion(pkgName);
+  const githubLatest = await fetchLatestGitHubReleaseVersion();
+  const latest = [githubLatest, npmLatest].filter(Boolean).sort((a, b) => compareVersions(b, a))[0];
   if (!latest) {
-    console.error("\n❌ Tidak dapat mengecek versi terbaru (npm registry 404 / tidak terjangkau).");
-    console.error("   Multiver tidak dipublikasikan ke npm. Update via git: cd repo && git pull && npm run build");
-    console.error("   Atau paksa: multiver update --force");
+    console.error("\n❌ Tidak dapat mengecek versi terbaru dari GitHub Release maupun npm registry.");
+    console.error("   Cek koneksi internet lalu jalankan lagi: multiver update --force");
     process.exit(1);
   }
   if (!force && compareVersions(latest, current) <= 0) {
-    log(`Sudah versi terbaru (v${latest}). Tidak perlu update.`);
+    log(`Sudah versi terbaru (v${current}). Tidak perlu update.`);
     return false;
   }
   log(`Update tersedia: v${current} → v${latest}`);
-  const target = force ? `${pkgName}@latest` : `${pkgName}@${latest}`;
-  npmExec(["i", "-g", target, "--prefer-online"], { stdio: "inherit" });
-  return true;
+  const releaseUrl = "https://github.com/rizki-habibi/multiver/releases/latest/download/multiver-latest.tgz";
+  try {
+    log("Menginstal asset resmi GitHub Release...");
+    const result = npmExec(["i", "-g", releaseUrl, "--no-audit", "--no-fund", "--prefer-online", "--allow-remote"], { stdio: "inherit" });
+    if (result.status === 0) return true;
+    throw new Error(`npm install release gagal (exit ${result.status})`);
+  } catch (githubError) {
+    if (npmLatest && compareVersions(npmLatest, current) > 0) {
+      log("GitHub Release gagal; mencoba npm registry...");
+      const result = npmExec(["i", "-g", `${pkgName}@${npmLatest}`, "--prefer-online", "--no-audit", "--no-fund"], { stdio: "inherit" });
+      if (result.status === 0) return true;
+    }
+    throw githubError;
+  }
 }
-
 // ─── Relaunch ───────────────────────────────────────────────────────────────
 /**
  * Resolve node executable untuk relaunch. Hindari npx.cmd (shim npm-prefix
