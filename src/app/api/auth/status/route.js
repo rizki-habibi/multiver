@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getSettings } from "@/lib/localDb";
 import { isOidcConfigured } from "@/lib/auth/oidc";
 import { isSamlConfigured } from "@/lib/auth/saml.js";
+import { isGithubConfigured } from "@/lib/auth/github";
 import { getDashboardAuthSession } from "@/lib/auth/dashboardSession";
 
 export async function GET() {
@@ -17,54 +18,31 @@ export async function GET() {
     const oidcEmail = String(session?.oidcEmail || "").trim();
     const samlName = String(session?.samlName || "").trim();
     const samlEmail = String(session?.samlEmail || "").trim();
-
-    const displayName =
-      samlName ||
-      samlEmail ||
-      oidcName ||
-      oidcEmail ||
-      (session?.saml ? "SAML user" : session?.oidc ? "OIDC user" : "Password user");
-
-    const loginMethod = session?.saml ? "SAML" : session?.oidc ? "OIDC" : "Password";
-
     return NextResponse.json({
-      requireLogin,
-      authMode,
-      ssoType,
+      requireLogin, authMode, ssoType,
       oidcConfigured: isOidcConfigured(settings),
       oidcLoginLabel: (settings.oidcLoginLabel || "Sign in with OIDC").trim() || "Sign in with OIDC",
       samlConfigured: isSamlConfigured(settings),
       samlLoginLabel: (settings.samlLoginLabel || "Sign in with SAML SSO").trim() || "Sign in with SAML SSO",
+      githubConfigured: isGithubConfigured(),
       hasPassword: !!settings.password,
-      displayName,
-      loginMethod,
       authenticated: !!session,
-      oidcName: oidcName || null,
-      oidcEmail: oidcEmail || null,
-      oidcLogin: !!session?.oidc,
-      samlName: samlName || null,
-      samlEmail: samlEmail || null,
-      samlLogin: !!session?.saml,
-    });
+      role: session?.role || null,
+      authProvider: session?.authProvider || null,
+      githubId: session?.githubId || null,
+      githubLogin: session?.githubLogin || null,
+      displayName: String(session?.githubName || samlName || samlEmail || oidcName || oidcEmail || (session?.authProvider === "github" ? "GitHub user" : "Password user")),
+      loginMethod: session?.authProvider === "github" ? "GitHub" : session?.saml ? "SAML" : session?.oidc ? "OIDC" : "Password",
+      oidcName: oidcName || null, oidcEmail: oidcEmail || null, oidcLogin: !!session?.oidc,
+      samlName: samlName || null, samlEmail: samlEmail || null, samlLogin: !!session?.saml,
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({
-      requireLogin: true,
-      authMode: "password",
-      ssoType: "oidc",
-      oidcConfigured: false,
-      oidcLoginLabel: "Sign in with OIDC",
-      samlConfigured: false,
-      samlLoginLabel: "Sign in with SAML SSO",
-      hasPassword: false,
-      displayName: "Password user",
-      loginMethod: "Password",
-      authenticated: false,
-      oidcName: null,
-      oidcEmail: null,
-      oidcLogin: false,
-      samlName: null,
-      samlEmail: null,
-      samlLogin: false,
-    });
+      requireLogin: true, authMode: "password", ssoType: "oidc",
+      oidcConfigured: false, samlConfigured: false, githubConfigured: false,
+      hasPassword: false, authenticated: false, role: null, authProvider: null,
+      githubId: null, githubLogin: null, displayName: "Password user", loginMethod: "Password",
+      oidcName: null, oidcEmail: null, oidcLogin: false, samlName: null, samlEmail: null, samlLogin: false,
+    }, { headers: { "Cache-Control": "no-store" } });
   }
 }

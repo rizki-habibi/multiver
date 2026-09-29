@@ -11,9 +11,13 @@ const SESSION_MAX_AGE_SEC = 24 * 60 * 60;
 
 function loadJwtSecret() {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET is required in production");
+  }
   const file = path.join(DATA_DIR, "jwt-secret");
   try {
-    return fs.readFileSync(file, "utf8").trim();
+    const value = fs.readFileSync(file, "utf8").trim();
+    if (value) return value;
   } catch {}
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const generated = crypto.randomBytes(32).toString("hex");
@@ -24,14 +28,21 @@ function loadJwtSecret() {
 const SECRET = new TextEncoder().encode(loadJwtSecret());
 
 export function shouldUseSecureCookie(request) {
-  const forceSecureCookie = process.env.AUTH_COOKIE_SECURE === "true";
-  const forwardedProto = request?.headers?.get?.("x-forwarded-proto");
-  const isHttpsRequest = forwardedProto === "https";
-  return forceSecureCookie || isHttpsRequest;
+  if (process.env.AUTH_COOKIE_SECURE === "true") return true;
+  if (process.env.NODE_ENV !== "production") {
+    return request?.headers?.get?.("x-forwarded-proto") === "https" || request?.url?.startsWith("https://");
+  }
+  if (process.env.TRUST_PROXY === "true") return request?.headers?.get?.("x-forwarded-proto") === "https";
+  return request?.url?.startsWith("https://");
 }
 
 export async function createDashboardAuthToken(claims = {}) {
-  return new SignJWT({ authenticated: true, ...claims })
+  const safeClaims = {
+    authenticated: true,
+    role: claims.role || "user",
+    ...claims,
+  };
+  return new SignJWT(safeClaims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")
@@ -39,19 +50,14 @@ export async function createDashboardAuthToken(claims = {}) {
 }
 
 export async function verifyDashboardAuthToken(token) {
-  if (!token) return false;
-  try {
-    await jwtVerify(token, SECRET);
-    return true;
-  } catch {
-    return false;
-  }
+  return !!(await getDashboardAuthSession(token));
 }
 
 export async function getDashboardAuthSession(token) {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET);
+    if (payload.authenticated !== true) return null;
     return payload;
   } catch {
     return null;
@@ -73,7 +79,6 @@ export function clearDashboardAuthCookie(cookieStore) {
   cookieStore.delete("auth_token");
 }
 
-// Verify the current dashboard password (re-auth for sensitive actions).
 export async function verifyDashboardPassword(password) {
   if (typeof password !== "string" || !password) return false;
   const settings = await getSettings();
