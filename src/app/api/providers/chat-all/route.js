@@ -277,6 +277,17 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
 
   const activeConnections = connections.filter((connection) => connection.isActive !== false);
   const hasNoAuth = FREE_PROVIDERS[provider]?.noAuth === true;
+  const credentialInfo = activeConnections.map((connection) => ({
+    id: connection.id,
+    name: connection.displayName || connection.name || connection.email || connection.id,
+    authType: connection.authType || null,
+    hasApiKey: Boolean(connection.apiKey),
+    hasAccessToken: Boolean(connection.accessToken),
+    hasRefreshToken: Boolean(connection.refreshToken),
+    hasProviderBaseUrl: Boolean(connection.providerSpecificData?.baseUrl),
+    isActive: connection.isActive !== false,
+  }));
+  const hasUsableCredential = hasNoAuth || credentialInfo.some((item) => item.hasApiKey || item.hasAccessToken);
 
   if (activeConnections.length === 0 && !hasNoAuth) {
     return {
@@ -287,6 +298,9 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       message: connections.length > 0
         ? "Semua koneksi layanan sedang nonaktif."
         : "Belum ada koneksi atau kunci aktif untuk layanan ini.",
+      connectionCount: connections.length,
+      activeConnectionCount: 0,
+      credentialInfo: [],
       latencyMs: Date.now() - startedAt,
     };
   }
@@ -299,6 +313,10 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       status: "failed",
       code: "NO_MODEL",
       message: "Belum ada model chat yang bisa dipakai. Atur model bawaan, alias model, atau koneksi layanan terlebih dahulu.",
+      connectionCount: connections.length,
+      activeConnectionCount: activeConnections.length,
+      hasUsableCredential,
+      credentialInfo,
       latencyMs: Date.now() - startedAt,
     };
   }
@@ -351,6 +369,10 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
         status: "ok",
         code: "OK",
         message: parsed.assistantText.slice(0, 1200),
+        connectionCount: connections.length,
+        activeConnectionCount: activeConnections.length,
+        hasUsableCredential,
+        credentialInfo,
         latencyMs,
       };
     }
@@ -410,6 +432,10 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       code: diagnosis.code,
       message: diagnosis.message,
       error: rawError.slice(0, 800),
+      connectionCount: connections.length,
+      activeConnectionCount: activeConnections.length,
+      hasUsableCredential,
+      credentialInfo,
       latencyMs,
     };
   } finally {
