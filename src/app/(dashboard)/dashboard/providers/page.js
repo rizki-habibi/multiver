@@ -18,7 +18,6 @@ import {
   WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
-  getProviderPriceLabel,
 } from "@/shared/constants/providers";
 import Link from "next/link";
 import { getErrorCode, getRelativeTime } from "@/shared/utils";
@@ -361,7 +360,24 @@ export default function ProvidersPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => handleBatchTest("all")}
+          disabled={!!testingMode}
+          className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${testingMode === "all"
+            ? "bg-primary/20 border-primary/40 text-primary animate-pulse"
+            : "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+            }`}
+          title="Uji semua koneksi dari semua penyedia"
+          aria-label="Uji semua koneksi dari semua penyedia"
+        >
+          <span
+            className={`material-symbols-outlined text-[14px]${testingMode === "all" ? " animate-spin" : ""}`}
+          >
+            play_arrow
+          </span>
+          {testingMode === "all" ? "Menguji semua…" : "Uji Semua Layanan"}
+        </button>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -619,7 +635,6 @@ export default function ProvidersPage() {
 function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isNoAuth = !!provider.noAuth;
-  const priceLabel = getProviderPriceLabel(provider);
 
   const dotColors = {
     free: "bg-green-500",
@@ -680,11 +695,6 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                     )}
                   </>
                 )}
-                {priceLabel && (
-                  <Badge variant={priceLabel.variant} size="sm">
-                    {priceLabel.text}
-                  </Badge>
-                )}
               </div>
             </div>
           </div>
@@ -743,7 +753,6 @@ function ApiKeyProviderCard({
   const isAnthropicCompatible = providerId.startsWith(
     ANTHROPIC_COMPATIBLE_PREFIX,
   );
-  const priceLabel = getProviderPriceLabel(provider);
 
   const dotColors = {
     free: "bg-green-500",
@@ -813,11 +822,6 @@ function ApiKeyProviderCard({
                       <span className="text-text-muted">{errorTime}</span>
                     )}
                   </>
-                )}
-                {priceLabel && (
-                  <Badge variant={priceLabel.variant} size="sm">
-                    {priceLabel.text}
-                  </Badge>
                 )}
               </div>
             </div>

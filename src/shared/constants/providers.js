@@ -110,18 +110,6 @@ export const AUTH_METHODS = {
   cookie: { id: "cookie" },
 };
 
-// Helper: Get provider by alias
-export function getProviderPriceLabel(provider) {
-  if (!provider) return null;
-  const { category, hasFree, noAuth } = provider;
-  if (category === "free") return { text: "Free", variant: "success" };
-  if (category === "freeTier") return { text: "Free Tier", variant: "success" };
-  if (noAuth) return { text: "Free", variant: "success" };
-  if (hasFree) return { text: "Paid · Free models", variant: "default" };
-  if (category) return { text: "Paid", variant: "default" };
-  return null;
-}
-
 // Modality support for graceful rejection. `serviceKinds` is the registry
 // source of truth; LLM providers that omit it default to chat-only.
 export function getProviderModalities(provider) {
@@ -143,11 +131,8 @@ export function providerSupportsModality(provider, kind) {
   return kinds.includes(kind);
 }
 
-
 // Helper: Get provider by alias
 export function getProviderByAlias(alias) {
-
-
   for (const provider of Object.values(AI_PROVIDERS)) {
     if (provider.alias === alias || provider.id === alias) {
       return provider;
