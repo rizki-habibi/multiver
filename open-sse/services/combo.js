@@ -183,6 +183,23 @@ export function detectRequiredCapabilities(body) {
   return required;
 }
 
+// Errors that are deterministic for the current model/request and should
+// immediately advance the combo instead of returning the error or waiting for
+// provider cooldown. This is especially important for context/token exhaustion.
+function isFastFallbackError(status, errorText) {
+  const text = String(errorText || "").toLowerCase();
+  if (status === 413 || status === 408 || status === 429 || status === 529) return true;
+  if (status === 400 && /(maximum context|context length|context window|context_length_exceeded|too many tokens|token limit|tokens limit|input is too long|prompt is too long|request too large|payload too large|max context)/i.test(text)) {
+    return true;
+  }
+  // Some gateways incorrectly return 422 for unsupported parameters or an
+  // over-sized request. Only switch when the error clearly names the cause.
+  if (status === 422 && /(context|token|payload|request too large|unsupported parameter)/i.test(text)) {
+    return true;
+  }
+  return false;
+}
+
 function normalizeStickyLimit(stickyLimit) {
   const parsed = Number.parseInt(stickyLimit, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
@@ -352,12 +369,24 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
         try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
       }
 
-      // Check if should fallback to next model
+      // Context/token exhaustion and provider capacity errors are model-local:
+      // do not return them to the client when another combo member can answer.
+      // Move immediately so a full-context model cannot stall the whole combo.
+      const fastFallback = isFastFallbackError(result.status, errorText);
       const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
 
-      // 401/402/403 = kredensial/quota, 400 = permintaan ditolak. Tidak guna
-      // mencoba model ini lagi dalam permintaan ini; langsung ke model berikutnya
-      // tanpa cooldown ulang (menghindari loop "semua akun terkunci").
+      if (fastFallback) {
+        log.warn("COMBO", `Model ${modelStr} → next model (fast fallback)`, {
+          status: result.status,
+          reason: String(errorText).slice(0, 240),
+        });
+        lastError = errorText || String(result.status);
+        if (!lastStatus) lastStatus = result.status;
+        continue;
+      }
+
+      // 401/402/403 = credentials/quota. Move to the next model immediately;
+      // never sleep inside the active request.
       if (!shouldFallback || result.status === 400 || result.status === 401 || result.status === 402 || result.status === 403) {
         if (!shouldFallback) {
           log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
@@ -378,9 +407,9 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       // so a briefly-overloaded provider gets a chance to recover rather than being
       // skipped immediately (fixes: combo falls through on transient 503)
       if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
-        (result.status === 503 || result.status === 502 || result.status === 504)) {
-        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
-        await new Promise(r => setTimeout(r, cooldownMs));
+        (result.status === 503 || result.status === 502 || result.status === 504 || result.status === 529)) {
+        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${Math.min(cooldownMs, 500)}ms before next`);
+        await new Promise(r => setTimeout(r, Math.min(cooldownMs, 500)));
       }
 
       // Fallback to next model
