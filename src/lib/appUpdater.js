@@ -156,12 +156,17 @@ export async function killAppProcesses() {
   }
 }
 
-// Resolve npx/Multiver binary to relaunch after update (cross-platform)
+// Resolve the globally installed Multiver executable without contacting npm.
 function resolveRelaunchCommand() {
   const isWin = process.platform === "win32";
-  // Prefer `npx Multiver` — works regardless of global bin path changes after npm i -g
-  const npx = isWin ? "npx.cmd" : "npx";
-  return { cmd: npx, args: [UPDATER_CONFIG.npmPackageName] };
+  try {
+    const prefix = execSync(isWin ? "npm.cmd config get prefix" : "npm config get prefix", {
+      encoding: "utf8", windowsHide: true, timeout: 5000,
+    }).trim();
+    const bin = isWin ? path.join(prefix, "multiver.cmd") : path.join(prefix, "bin", "multiver");
+    if (fs.existsSync(bin)) return { cmd: bin, args: [] };
+  } catch { /* fall through */ }
+  return { cmd: isWin ? "multiver.cmd" : "multiver", args: [] };
 }
 
 // Spawn detached headless updater (Node process) then exit current server
