@@ -238,7 +238,7 @@ export async function scanProviderIntelligence({ deep = true } = {}) {
       lastErrorType: errorType,
       checkedAt: new Date().toISOString(),
     });
-  }
+  });
 
   return {
     updatedAt: new Date().toISOString(),
