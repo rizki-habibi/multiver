@@ -220,6 +220,12 @@ async function resolveDynamicModel(provider, connections, modelAliases, customMo
   const staticDefault = getDefaultModel(provider);
   if (staticDefault) return staticDefault;
 
+  // Some registry providers (notably OpenCode Free) keep their live/static
+  // model catalog on the provider registry instead of providerModels.js.
+  // Prefer a declared chat model there before reporting NO_MODEL.
+  const registryModel = firstChatModel(PROVIDERS[provider]?.models || []);
+  if (registryModel) return normalizeModelId(registryModel, provider);
+
   const aliased = Object.values(modelAliases || {})
     .filter((fullModel) => typeof fullModel === "string" && fullModel.startsWith(provider + "/"))
     .map((fullModel) => ({ id: normalizeModelId(fullModel, provider), kind: "llm" }));
