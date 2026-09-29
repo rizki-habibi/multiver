@@ -507,25 +507,42 @@ function checkGitUpdate() {
   });
 }
 
-// Check if new version available, return latest version or null
+// Check if a newer release is available.
+// GitHub Releases is authoritative because Multiver is not required to be published to npm.
+function fetchLatestGitHubReleaseVersion() {
+  return new Promise((resolve) => {
+    const req = https.get(
+      "https://api.github.com/repos/rizki-habibi/multiver/releases/latest",
+      {
+        timeout: 5000,
+        headers: { "User-Agent": "Multiver-Updater", Accept: "application/vnd.github+json" },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => {
+          try {
+            if (res.statusCode !== 200) return resolve(null);
+            const release = JSON.parse(data);
+            const tag = String(release.tag_name || "").replace(/^v/i, "");
+            resolve(/^\d+\.\d+\.\d+$/.test(tag) ? tag : null);
+          } catch { resolve(null); }
+        });
+      }
+    );
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => { req.destroy(); resolve(null); });
+  });
+}
+
 function checkForUpdate() {
   return new Promise((resolve) => {
-    if (skipUpdate) {
-      resolve(null);
-      return;
-    }
-
+    if (skipUpdate) return resolve(null);
     const spinner = createSpinner("Checking for updates...").start();
     let resolved = false;
-
     const safetyTimeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        spinner.stop();
-        resolve(null);
-      }
-    }, 8000);
-
+      if (!resolved) { resolved = true; spinner.stop(); resolve(null); }
+    }, 9000);
     const done = (version) => {
       if (resolved) return;
       resolved = true;
@@ -533,40 +550,45 @@ function checkForUpdate() {
       spinner.stop();
       resolve(version);
     };
-
-    // Sumber 1: git (install via clone repo — cara utama memasang multiver).
-    // Sumber 2: npm registry (fallback bila terinstal dari registry).
-    // Pakai yang mana saja yang melaporkan versi lebih baru.
-    let gitDone = false, npmDone = false;
-    let gitResult = null, npmResult = null;
     const current = pkg.version;
-
+    let gitDone = !inGitRepo();
+    let npmDone = false;
+    let releaseDone = false;
+    let gitResult = null;
+    let npmResult = null;
+    let releaseResult = null;
     const finishIfReady = () => {
-      if (!gitDone || !npmDone) return;
-      const pick = (v) => v && compareVersions(v, current) > 0 ? v : null;
-      done(pick(gitResult) || pick(npmResult));
+      if (!gitDone || !npmDone || !releaseDone) return;
+      const candidates = [releaseResult, gitResult, npmResult]
+        .filter(Boolean)
+        .filter((v) => compareVersions(v, current) > 0);
+      done(candidates.length ? candidates[0] : null);
     };
-
-    checkGitUpdate().then((v) => { gitResult = v; gitDone = true; finishIfReady(); });
-
-    const req = https.get(`https://registry.npmjs.org/${pkg.name}/latest`, { timeout: 3000 }, (res) => {
-      let data = "";
-      res.on("data", chunk => data += chunk);
-      res.on("end", () => {
-        try {
-          const latest = JSON.parse(data);
-          npmResult = latest.version || null;
-        } catch (e) { npmResult = null; }
-        npmDone = true;
-        finishIfReady();
-      });
-    });
-
+    if (!gitDone) {
+      checkGitUpdate().then((v) => { gitResult = v; gitDone = true; finishIfReady(); });
+    }
+    const req = https.get(
+      "https://registry.npmjs.org/multiver/latest",
+      { timeout: 2500, headers: { "User-Agent": "Multiver-Updater" } },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => {
+          try { npmResult = JSON.parse(data).version || null; } catch { npmResult = null; }
+          npmDone = true;
+          finishIfReady();
+        });
+      }
+    );
     req.on("error", () => { npmDone = true; finishIfReady(); });
     req.on("timeout", () => { req.destroy(); npmDone = true; finishIfReady(); });
+    fetchLatestGitHubReleaseVersion().then((v) => {
+      releaseResult = v;
+      releaseDone = true;
+      finishIfReady();
+    });
   });
 }
-
 // Open browser
 function openBrowser(url) {
   const platform = process.platform;
@@ -937,4 +959,32 @@ function startServer(updatePromise) {
   }
 
   attachServerEvents();
+}
+
+async function bootstrapMultiver() {
+  if (skipUpdate) {
+    startServer(Promise.resolve(null));
+    return;
+  }
+  const latestVersion = await checkForUpdate();
+  if (latestVersion && compareVersions(latestVersion, pkg.version) > 0) {
+    console.log(`\n⬆ Update otomatis tersedia: v${pkg.version} → v${latestVersion}`);
+    console.log("   Multiver akan memperbarui dirinya sendiri sebelum dijalankan.\n");
+    try {
+      const { run: runUpdate } = require("./src/cli/commands/update");
+      await runUpdate([]);
+      return;
+    } catch (error) {
+      console.error(`❌ Auto-update gagal: ${error?.message || error}`);
+      console.error("   Multiver tetap dijalankan dengan versi saat ini.\n");
+    }
+  }
+  startServer(Promise.resolve(null));
+}
+
+if (require.main === module) {
+  bootstrapMultiver().catch((error) => {
+    console.error(`❌ Multiver gagal dijalankan: ${error?.message || error}`);
+    process.exit(1);
+  });
 }
