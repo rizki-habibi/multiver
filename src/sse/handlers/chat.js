@@ -24,6 +24,11 @@ import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
+import { SYMBOLS } from "../utils/logger.js";
+
+// chatCore menerima `log` sebagai argumen (package open-sse tidak boleh import
+// langsung ke src/), jadi SYMBOLS dilewatkan dengan menempelkannya ke objek log.
+const logWithSymbols = Object.assign(Object.create(null), log, { SYMBOLS });
 import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog";
 import { logger as centralLogger, createRequestId, redactSecrets } from "@/lib/logger";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
@@ -412,7 +417,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       body: { ...body, model: `${provider}/${model}` },
       modelInfo: { provider, model },
       credentials: refreshedCredentials,
-      log,
+      log: logWithSymbols,
       clientRawRequest,
       connectionId: credentials.connectionId,
       userAgent,

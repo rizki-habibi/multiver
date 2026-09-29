@@ -98,18 +98,6 @@ export async function PATCH(request) {
       resetComboRotation();
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(body, "claudeAutoPing") ||
-      Object.prototype.hasOwnProperty.call(body, "codexAutoPing")
-    ) {
-      // Keep the scheduler absent when no account opted in; load its provider graph only on demand.
-      import("@/shared/services/quotaAutoPing")
-        .then(({ configureQuotaAutoPing }) => {
-          configureQuotaAutoPing(settings);
-        })
-        .catch((error) => console.warn("[AutoPing] settings update failed:", error.message));
-    }
-
     // ponytail: mitmSudoEncrypted is the encrypted sudo password for the MITM proxy —
     // same class as oidcClientSecret. Keep it out of every settings response body.
     const { password, oidcClientSecret, mitmSudoEncrypted, ...safeSettings } = settings;

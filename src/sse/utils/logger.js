@@ -32,6 +32,16 @@ export function tagForSession(seed) {
   return REQ_TAGS[Math.abs(h) % REQ_TAGS.length];
 }
 
+// Request-lifecycle glyphs. Dipakai sebagai argumen `symbol` di line()/errorLine()
+// supaya satu request tetap satu warna sesuai tag sesi (tagForSession).
+export const SYMBOLS = {
+  start: "🚀",   // request mulai dikirim ke provider
+  done: "✅",    // selesai sukses
+  savers: "🔧",  // token saver (RTK/Caveman/Ponytail/PXPIPE)
+  abort: "⚡",   // client putus / abort
+  fail: "💥",    // error
+};
+
 // Print one correlated line: [time] tag symbol message
 export function line(tag, symbol, message) {
   if (LEVEL > LOG_LEVELS.INFO) return;
@@ -66,31 +76,40 @@ function formatData(data) {
   }
 }
 
+// Level icons: satu tempat, langsung jelas mana info / warning / error.
+// ponytail: emoji penuh (bukan simbol kecil) supaya mudah dibaca saat scan log.
+const LEVEL_ICONS = {
+  debug: "🧪",
+  info: "ℹ️",
+  warn: "⚠️",
+  error: "⛔",
+};
+
 export function debug(tag, message, data) {
   if (LEVEL <= LOG_LEVELS.DEBUG) {
     const dataStr = data ? ` ${formatData(data)}` : "";
-    console.log(`[${formatTime()}] 🔍 [${tag}] ${message}${dataStr}`);
+    console.log(`[${formatTime()}] ${LEVEL_ICONS.debug} [${tag}] ${message}${dataStr}`);
   }
 }
 
 export function info(tag, message, data) {
   if (LEVEL <= LOG_LEVELS.INFO) {
     const dataStr = data ? ` ${formatData(data)}` : "";
-    console.log(`[${formatTime()}] ℹ️  [${tag}] ${message}${dataStr}`);
+    console.log(`[${formatTime()}] ${LEVEL_ICONS.info} [${tag}] ${message}${dataStr}`);
   }
 }
 
 export function warn(tag, message, data) {
   if (LEVEL <= LOG_LEVELS.WARN) {
     const dataStr = data ? ` ${formatData(data)}` : "";
-    console.warn(`[${formatTime()}] ⚠️  [${tag}] ${message}${dataStr}`);
+    console.warn(`[${formatTime()}] ${LEVEL_ICONS.warn} [${tag}] ${message}${dataStr}`);
   }
 }
 
 export function error(tag, message, data) {
   if (LEVEL <= LOG_LEVELS.ERROR) {
     const dataStr = data ? ` ${formatData(data)}` : "";
-    console.log(`[${formatTime()}] ❌ [${tag}] ${message}${dataStr}`);
+    console.log(`[${formatTime()}] ${LEVEL_ICONS.error} [${tag}] ${message}${dataStr}`);
   }
 }
 

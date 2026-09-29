@@ -75,11 +75,11 @@ export function createStreamController({ onDisconnect, onError, log, provider, m
       }
 
       if (error.name === "AbortError") {
-        logStream("⚡", "ABORTED");
+        logStream(log?.SYMBOLS?.abort, "ABORTED");
         return;
       }
 
-      logStream("✗", `ERROR: ${error.message}${error.stack ? `\n    ${error.stack}` : ""}`, true);
+      logStream(log?.SYMBOLS?.fail, `ERROR: ${error.message}${error.stack ? `\n    ${error.stack}` : ""}`, true);
       onError?.(error);
     },
 
@@ -137,8 +137,8 @@ export function createDisconnectAwareStream(transformStream, streamController, o
         const msg0 = error?.message || "";
         const isControllerClosed = msg0.includes("already closed") || msg0.includes("Invalid state");
         if (!isControllerClosed) streamController.handleError(error);
-        reader.cancel().catch(() => {});
-        writer.abort().catch(() => {});
+        reader.cancel().catch(() => { });
+        writer.abort().catch(() => { });
 
         // Treat network resets / socket hang up / abort as graceful close
         const msg = error?.message || "";

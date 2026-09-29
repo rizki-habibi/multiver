@@ -296,9 +296,24 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
+  // ponytail: provider tanpa kredensial apapun dicatat sekali, lalu semua modelnya
+  // di-skip sisa combo ini. Tanpa ini, setiap request membakar ~14 baris log
+  // mencoba ulang provider yang tidak akan pernah punya token.
+  const deadProviders = new Set();
+  const skipModel = (modelStr, reason) => {
+    log.debug("COMBO", `skip ${modelStr} — ${reason}`);
+  };
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+    const slashIdx = modelStr.indexOf("/");
+    const modelProvider = slashIdx > 0 ? modelStr.slice(0, slashIdx) : "";
+    if (modelProvider && deadProviders.has(modelProvider)) {
+      skipModel(modelStr, `${modelProvider} has no credentials`);
+      lastError = lastError || `No active credentials for provider: ${modelProvider}`;
+      if (!lastStatus) lastStatus = 404;
+      continue;
+    }
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
@@ -326,6 +341,12 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
         earliestRetryAfter = retryAfter;
       }
 
+      // Provider ini sama sekali tidak punya kredensial → sisa modelnya di-skip
+      // di combo ini (404 + pesan "No active credentials" dari auth pre-filter).
+      if (modelProvider && result.status === 404 && /no active credentials/i.test(String(errorText))) {
+        deadProviders.add(modelProvider);
+      }
+
       // Normalize error text to string (Worker-safe)
       if (typeof errorText !== "string") {
         try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
@@ -341,6 +362,11 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
         if (!shouldFallback) {
           log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
           return result;
+        }
+        // Auth/quota untuk seluruh provider ini habis → tandai supaya sisa model
+        // dari provider yang sama tidak dicoba lagi di combo ini.
+        if (modelProvider && (result.status === 401 || result.status === 402 || result.status === 403)) {
+          deadProviders.add(modelProvider);
         }
         log.warn("COMBO", `Model ${modelStr} gagal (HTTP ${result.status}) → lanjut model berikutnya`, { status: result.status });
         lastError = errorText || String(result.status);

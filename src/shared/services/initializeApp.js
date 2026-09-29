@@ -67,7 +67,7 @@ export async function initializeApp() {
     }
 
     setTunnelUnexpectedExitCallback(() => {
-      safeRestartTunnel("unexpected-exit").catch(() => {});
+      safeRestartTunnel("unexpected-exit").catch(() => { });
     });
 
     // Defer the heavy work — nothing here blocks incoming requests.
@@ -97,32 +97,21 @@ async function runHeavyStartup() {
     safeRestartTailscale("startup").catch((e) => console.log("[InitApp] Tailscale resume failed:", e.message));
   }
 
-  if (settings.tunnelEnabled) ensureCloudflared().catch(() => {});
+  if (settings.tunnelEnabled) ensureCloudflared().catch(() => { });
 
   if (settings.mitmEnabled) {
     // Sync mitmAlias DB → JSON cache so standalone MITM server can read it.
-    syncMitmAliasCache().catch(() => {});
+    syncMitmAliasCache().catch(() => { });
     autoStartMitm(settings);
   }
 
   configureTunnelMonitoring(settings);
-
-  if (hasQuotaAutoPingEnabled(settings)) {
-    import("@/shared/services/quotaAutoPing")
-      .then(({ startQuotaAutoPing }) => startQuotaAutoPing())
-      .catch((e) => console.log("[AutoPing] scheduler start failed:", e.message));
-  }
 
   // Proactive OAuth token refresh (e.g. grok-cli ~6h TTL). Module is idempotent
   // and also started from custom-server.js when that entry is used.
   import("@/sse/services/backgroundTokenRefresh.js")
     .then(({ startBackgroundTokenRefresh }) => startBackgroundTokenRefresh())
     .catch((e) => console.log("[BackgroundTokenRefresh] scheduler start failed:", e.message));
-}
-
-function hasQuotaAutoPingEnabled(settings) {
-  return [settings?.claudeAutoPing, settings?.codexAutoPing]
-    .some((config) => Object.values(config?.connections || {}).some(Boolean));
 }
 
 async function autoStartMitm(settings) {
@@ -241,8 +230,8 @@ async function safeRestartTailscale(reason) {
 function startWatchdog() {
   if (g.watchdogInterval) return;
   g.watchdogInterval = setInterval(() => {
-    safeRestartTunnel("watchdog").catch(() => {});
-    safeRestartTailscale("watchdog").catch(() => {});
+    safeRestartTunnel("watchdog").catch(() => { });
+    safeRestartTailscale("watchdog").catch(() => { });
   }, WATCHDOG_INTERVAL_MS);
   if (g.watchdogInterval.unref) g.watchdogInterval.unref();
 }
@@ -303,9 +292,9 @@ function startNetworkMonitor() {
 
       const reason = onlineEdge ? "online"
         : wasSleep && networkChanged ? "sleep+netchange"
-        : wasSleep ? "sleep" : "netchange";
-      safeRestartTunnel(reason).catch(() => {});
-      safeRestartTailscale(reason).catch(() => {});
+          : wasSleep ? "sleep" : "netchange";
+      safeRestartTunnel(reason).catch(() => { });
+      safeRestartTailscale(reason).catch(() => { });
     } catch (err) {
       console.log("[NetworkMonitor] error:", err.message);
     }

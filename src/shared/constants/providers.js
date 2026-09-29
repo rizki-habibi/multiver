@@ -146,14 +146,14 @@ export function providerSupportsModality(provider, kind) {
 
 // Helper: Get provider by alias
 export function getProviderByAlias(alias) {
-  
 
-for (const provider of Object.values(AI_PROVIDERS)) {
-  if (provider.alias === alias || provider.id === alias) {
-    return provider;
+
+  for (const provider of Object.values(AI_PROVIDERS)) {
+    if (provider.alias === alias || provider.id === alias) {
+      return provider;
+    }
   }
-}
-return null;
+  return null;
 }
 
 // Helper: Get provider ID from alias
@@ -193,12 +193,3 @@ export function getProvidersByKind(kind) {
     })
     .sort((a, b) => (a.priority ?? a.mediaPriority ?? 999) - (b.priority ?? b.mediaPriority ?? 999));
 }
-
-// Derive từ registry features flags
-export const USAGE_SUPPORTED_PROVIDERS = REGISTRY
-  .filter(r => r.features?.usage)
-  .map(r => r.id);
-
-export const USAGE_APIKEY_PROVIDERS = REGISTRY
-  .filter(r => r.features?.usageApikey)
-  .map(r => r.id);

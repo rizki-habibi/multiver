@@ -16,7 +16,6 @@ const navItems = [
   { href: "/dashboard/combos", label: "Kombinasi & Adaptor Vision", icon: "layers" },
   { href: "/dashboard/conversations", label: "Riwayat Percakapan", icon: "chat" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
-  { href: "/dashboard/quota", label: "Pelacak Kuota", icon: "data_usage" },
   { href: "/dashboard/token-saver", label: "Penghemat Token", icon: "savings" },
 ];
 
