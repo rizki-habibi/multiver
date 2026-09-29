@@ -60,13 +60,27 @@ jobs:
             NEXT=$(echo "$CURRENT" | cut -d. -f1).$(echo "$CURRENT" | cut -d. -f2).$PATCH
           fi
 
-          # Jika package.json version lebih besar dari tag, pakai itu
+          # Jika package.json version lebih besar/sama dari tag, bandingkan sebagai
+          # numeric semver (bukan string lexicographic: 12.1.9 > 12.1.38 itu salah).
           if [ -n "$LATEST_TAG" ]; then
             BASE="${LATEST_TAG#v}"
-            HIGHER=$(node -p "require('./package.json').version >= '$BASE' ? 'yes' : 'no'")
+            HIGHER=$(CURRENT="$CURRENT" BASE="$BASE" node <<'NODE'
+          const parse = (value) => {
+            const m = String(value || "").trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+            if (!m) throw new Error(`Invalid numeric semver: ${value}`);
+            return m.slice(1).map(Number);
+          };
+          const a = parse(process.env.CURRENT);
+          const b = parse(process.env.BASE);
+          let cmp = 0;
+          for (let i = 0; i < 3; i += 1) {
+            if (a[i] !== b[i]) { cmp = a[i] - b[i]; break; }
+          }
+          process.stdout.write(cmp >= 0 ? "yes" : "no");
+          NODE
+          )
             if [ "$HIGHER" = "yes" ]; then
-              NEXT=$(node -p "require('./package.json').version")
-              # Tetap bump patch agar selalu naik
+              NEXT="$CURRENT"
               PATCH=$(echo "$NEXT" | cut -d. -f3)
               PATCH=$((PATCH + 1))
               NEXT=$(echo "$NEXT" | cut -d. -f1).$(echo "$NEXT" | cut -d. -f2).$PATCH
@@ -80,20 +94,58 @@ jobs:
           echo "Current: $CURRENT → Next: $NEXT (tag: ${LATEST_TAG:-none})"
           echo "Changed: $CHANGED"
 
-      - name: Update package.json versions
+      - name: Update package and lockfile versions
         if: steps.bump.outputs.changed == 'true'
         shell: bash
         run: |
           NEXT="${{ steps.bump.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            for (const f of ['package.json', 'cli/package.json']) {
-              const p = JSON.parse(fs.readFileSync(f, 'utf8'));
-              p.version = '$NEXT';
-              fs.writeFileSync(f, JSON.stringify(p, null, 2) + '\n');
-              console.log('bumped', f, '→', '$NEXT');
+          NEXT="$NEXT" node <<'NODE'
+          const fs = require("fs");
+          const next = process.env.NEXT;
+
+          const updateJson = (file, mutate) => {
+            const data = JSON.parse(fs.readFileSync(file, "utf8"));
+            mutate(data);
+            fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
+            console.log("bumped", file, "→", next);
+          };
+
+          updateJson("package.json", (p) => { p.version = next; });
+          updateJson("cli/package.json", (p) => { p.version = next; });
+
+          for (const file of ["package-lock.json", "cli/package-lock.json"]) {
+            if (!fs.existsSync(file)) continue;
+            updateJson(file, (lock) => {
+              lock.version = next;
+              if (lock.packages && lock.packages[""]) {
+                lock.packages[""].version = next;
+              }
+            });
+          }
+          NODE
+
+      - name: Verify version consistency
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        run: |
+          NEXT="${{ steps.bump.outputs.version }}"
+          NEXT="$NEXT" node <<'NODE'
+          const fs = require("fs");
+          const expected = process.env.NEXT;
+          const files = ["package.json", "cli/package.json", "package-lock.json", "cli/package-lock.json"];
+
+          for (const file of files) {
+            if (!fs.existsSync(file)) continue;
+            const data = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (data.version !== expected) {
+              throw new Error(file + ": version " + data.version + " != " + expected);
             }
-          "
+            if (file.endsWith("package-lock.json") && data.packages?.[""]?.version !== expected) {
+              throw new Error(file + ': packages[""].version ' + data.packages?.[""]?.version + " != " + expected);
+            }
+          }
+          console.log("Version metadata konsisten:", expected);
+          NODE
 
       - name: Commit version bump
         if: steps.bump.outputs.changed == 'true'
@@ -102,7 +154,7 @@ jobs:
           NEXT="${{ steps.bump.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json cli/package.json
+          git add package.json cli/package.json package-lock.json cli/package-lock.json
           git commit -m "chore: bump version to v$NEXT [skip version]"
           git push
 
