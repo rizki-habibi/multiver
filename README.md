@@ -234,6 +234,40 @@ ENABLE_REQUEST_LOGS=true
 
 ---
 
+## 🔧 Perbaikan Data Layanan Otomatis
+
+Multiver sekarang memiliki **perbaikan data layanan kompatibel otomatis**. Layanan yang sebelumnya tersimpan sebagai **Anthropic Compatible** atau **OpenAI/ChatGPT Compatible** tetap mempertahankan transport internalnya, tetapi metadata pengguna diseragamkan sebagai **API Keys Kompatibel**.
+
+### Yang diperbaiki otomatis
+
+- Metadata kompatibilitas diseragamkan menjadi `compatibility: compatible`.
+- Protokol internal tetap dicatat sebagai `openai` atau `anthropic` agar routing tidak rusak.
+- Base URL yang tidak sengaja berisi `/models`, `/messages`, `/chat/completions`, `/responses`, atau slash berlebih dinormalisasi.
+- `prefix`, `baseUrl`, `apiType`, dan nama node disinkronkan ke koneksi layanan kompatibel.
+- **API Key tidak diubah, tidak dipindahkan, tidak dihapus, dan tidak ditampilkan.**
+- Perbaikan otomatis **tidak memanggil layanan AI**, sehingga tidak menambah latency jaringan atau penggunaan kuota.
+- Hanya data yang perlu diubah yang ditulis kembali, sehingga tetap ringan untuk jumlah layanan yang besar.
+
+### Perbaikan manual
+
+Endpoint yang tersedia:
+
+```text
+POST /api/providers/repair
+```
+
+Saat Multiver berjalan di komputer sendiri:
+
+```bat
+curl -X POST http://localhost:20222/api/providers/repair
+```
+
+Perbaikan data tidak mengganti Base URL atau API Key dengan nilai tebakan. Setelah data rapi, gunakan **Uji Semua Layanan** atau **Chat Semua Layanan** untuk pemeriksaan koneksi nyata.
+
+### Menambah layanan baru
+
+Layanan baru tetap boleh ditambahkan dengan Base URL dan API Key masing-masing. Multiver memakai istilah **Kompatibel** pada metadata pengguna, tetapi tetap menyimpan protokol internal yang dibutuhkan mesin routing.
+
 ## 🧠 Smart Combo
 
 Smart Combo terinspirasi dari pola fallback bertingkat 9Router, tetapi Multiver menambahkan ranking deterministik berdasarkan capability, context window, tools, kompleksitas request, tipe tugas, tier, dan urutan combo. Detail arsitektur ada di `docs/SMART-COMBO.md`.
