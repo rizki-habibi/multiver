@@ -54,8 +54,8 @@ const getPageInfo = (pathname) => {
   if (pathname.includes("/usage")) {
     const tab = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("tab");
     const TAB_INFO = {
-      console: { title: "Konsol Log", desc: "Log eksekusi realtime dengan secret teredaksi", icon: "console" },
-      mitm: { title: "Kiro MITM", desc: "Sadap lalu lintas Kiro IDE dan rutekan melalui Multiver", icon: "security" },
+      console: { title: "Konsol Log", desc: "Log eksekusi waktu nyata dengan rahasia disamarkan", icon: "console" },
+      mitm: { title: "Kiro MITM", desc: "Pantau lalu lintas Kiro IDE dan rutekan melalui Multiver", icon: "security" },
       diagnostics: { title: "Diagnostik", desc: "Pemeriksaan nyata kondisi runtime", icon: "health_and_safety" },
     };
     const info = TAB_INFO[tab];
@@ -106,7 +106,7 @@ const getPageInfo = (pathname) => {
   if (pathname.includes("/translator"))
     return {
       title: "Translator",
-      description: "Debug alur penerjemahan antar format",
+      description: "Periksa alur penerjemahan antarformat",
       icon: "translate",
       breadcrumbs: [],
     };
@@ -302,7 +302,7 @@ function HeaderSearch() {
           type="button"
           onClick={() => setQuery("")}
           className="absolute right-1 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-main p-0.5 rounded"
-          aria-label="Clear search"
+          aria-label="Hapus pencarian"
         >
           <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
