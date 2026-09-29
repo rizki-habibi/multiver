@@ -25,6 +25,24 @@ import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
 import AddCompatibleModal from "./components/AddCompatibleModal";
 import { STATUS_FILTER_OPTIONS, matchesStatusFilter } from "./utils";
 
+// Penyedia yang sengaja tidak digunakan tidak ditampilkan di dasbor.
+const HIDDEN_PROVIDER_IDS = new Set([
+  "cline",
+  "clinepass",
+  "codebuddy-intl",
+  "codebuddy-cn",
+  "qoder-cn",
+  "kimi",
+  "grok-cli",
+  "cloudflare-ai",
+  "poolside",
+  "byteplus",
+  "kimchi",
+  "api-airforce",
+  "bazaarlink",
+  "kilo-gateway",
+]);
+
 function getStatusDisplay(connected, error, errorCode) {
   const parts = [];
   if (connected > 0) {
@@ -100,6 +118,9 @@ export default function ProvidersPage() {
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [chatTesting, setChatTesting] = useState(false);
+  const [chatInput, setChatInput] = useState("Halo, apa kabar?");
+  const [chatResults, setChatResults] = useState(null);
   const notify = useNotificationStore();
   const searchQuery = useHeaderSearchStore((s) => s.query);
   const registerSearch = useHeaderSearchStore((s) => s.register);
@@ -245,6 +266,34 @@ export default function ProvidersPage() {
     }
   };
 
+  const handleChatAllServices = async () => {
+    if (chatTesting) return;
+    const message = chatInput.trim() || "Halo, apa kabar?";
+    setChatTesting(true);
+    setChatResults(null);
+    try {
+      const res = await fetch("/api/providers/chat-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setChatResults(data);
+      if (!res.ok) {
+        notify.error(data.error || "Pengujian chat semua layanan gagal");
+      } else if (data.summary) {
+        const { passed, failed, total } = data.summary;
+        if (failed === 0) notify.success(`Semua ${total} layanan menjawab`);
+        else notify.warning(`${passed}/${total} layanan menjawab, ${failed} bermasalah`);
+      }
+    } catch (error) {
+      setChatResults({ error: error.message || "Tidak dapat menjalankan pengujian chat" });
+      notify.error("Pengujian chat semua layanan gagal");
+    } finally {
+      setChatTesting(false);
+    }
+  };
+
   const compatibleProviders = providerNodes
     .filter((node) => node.type === "openai-compatible")
     .map((node) => ({
@@ -291,6 +340,7 @@ export default function ProvidersPage() {
   const oauthEntries = sortByPriority(
     Object.entries(OAUTH_PROVIDERS).filter(
       ([key, info]) =>
+        !HIDDEN_PROVIDER_IDS.has(key) &&
         !info.hidden &&
         matchSearch(info.name) &&
         matchStatus(getProviderStats(key, dualAuthTypes(info, key)), info.noAuth),
@@ -346,6 +396,21 @@ export default function ProvidersPage() {
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
       <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleChatAllServices}
+          disabled={chatTesting || !!testingMode}
+          className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${chatTesting
+            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 animate-pulse"
+            : "bg-bg border-border text-text-muted hover:text-text-main hover:border-emerald-500/40"
+            }`}
+          title="Kirim satu pesan ke setiap layanan yang dapat diuji"
+          aria-label="Chat semua layanan"
+        >
+          <span className={`material-symbols-outlined text-[14px]${chatTesting ? " animate-spin" : ""}`}>
+            chat
+          </span>
+          {chatTesting ? "Menguji chat…" : "Chat Semua Layanan"}
+        </button>
         <button
           onClick={() => handleBatchTest("all")}
           disabled={!!testingMode}
@@ -562,6 +627,39 @@ export default function ProvidersPage() {
           setShowAddCompatibleModal(false);
         }}
       />
+
+      {/* Chat Semua Layanan */}
+      {chatResults && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center px-3 pt-[5vh] sm:pt-[8vh]"
+          onClick={() => setChatResults(null)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative bg-surface border border-border rounded-xl w-full max-w-[760px] max-h-[88vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-surface/95 backdrop-blur-sm rounded-t-xl">
+              <div className="min-w-0">
+                <h3 className="font-semibold">Chat Semua Layanan</h3>
+                <p className="text-xs text-text-muted truncate">
+                  Pesan uji: {chatResults.message || chatInput || "Halo, apa kabar?"}
+                </p>
+              </div>
+              <button
+                onClick={() => setChatResults(null)}
+                className="p-1 rounded-lg hover:bg-bg text-text-muted hover:text-text-main transition-colors"
+                aria-label="Tutup hasil chat"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            <div className="p-5">
+              <ProviderChatResultsView results={chatResults} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Test Results Modal */}
       {testResults && (
@@ -801,6 +899,100 @@ ApiKeyProviderCard.propTypes = {
   }).isRequired,
   authType: PropTypes.string,
   onToggle: PropTypes.func,
+};
+
+function ProviderChatResultsView({ results }) {
+  if (results.error && !results.results) {
+    return (
+      <div className="text-center py-6">
+        <span className="material-symbols-outlined text-red-500 text-[32px] mb-2 block">
+          error
+        </span>
+        <p className="text-sm text-red-400">{results.error}</p>
+      </div>
+    );
+  }
+
+  const summary = results.summary || {};
+  const items = results.results || [];
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium">
+          {summary.passed || 0} menjawab
+        </span>
+        {summary.failed > 0 && (
+          <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">
+            {summary.failed} bermasalah
+          </span>
+        )}
+        {summary.skipped > 0 && (
+          <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
+            {summary.skipped} dilewati
+          </span>
+        )}
+        <span className="text-text-muted sm:ml-auto">
+          {summary.total || items.length} layanan diperiksa
+        </span>
+      </div>
+
+      {items.map((item, index) => {
+        const ok = item.status === "ok";
+        const skipped = item.status === "skipped";
+        return (
+          <div
+            key={item.provider || item.id || index}
+            className="rounded-lg bg-black/[0.03] px-3 py-3 text-xs dark:bg-white/[0.03]"
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <span className={`material-symbols-outlined text-[18px] shrink-0 ${ok ? "text-emerald-500" : skipped ? "text-amber-400" : "text-red-500"}`}>
+                {ok ? "check_circle" : skipped ? "pause_circle" : "error"}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{item.name || item.provider}</span>
+                  <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${ok ? "bg-emerald-500/15 text-emerald-400" : skipped ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400"}`}>
+                    {ok ? "OK" : skipped ? "DILEWATI" : item.code || "ERR"}
+                  </span>
+                  {item.latencyMs > 0 && (
+                    <span className="text-text-muted font-mono">{item.latencyMs} ms</span>
+                  )}
+                </div>
+                {item.model && (
+                  <div className="mt-1 text-text-muted">
+                    Model: <span className="font-mono">{item.model}</span>
+                  </div>
+                )}
+                <p className={`mt-1 break-words ${ok ? "text-text-main" : "text-red-400"}`}>
+                  {item.message || item.diagnosis || "Tidak ada keterangan"}
+                </p>
+                {item.error && (
+                  <p className="mt-1 break-words text-text-muted">
+                    Rincian: {item.error}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+ProviderChatResultsView.propTypes = {
+  results: PropTypes.shape({
+    message: PropTypes.string,
+    results: PropTypes.array,
+    summary: PropTypes.shape({
+      total: PropTypes.number,
+      passed: PropTypes.number,
+      failed: PropTypes.number,
+      skipped: PropTypes.number,
+    }),
+    error: PropTypes.string,
+  }).isRequired,
 };
 
 function ProviderTestResultsView({ results }) {
