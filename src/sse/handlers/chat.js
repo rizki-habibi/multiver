@@ -40,7 +40,7 @@ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
  * Supports: OpenAI, Claude, Gemini, OpenAI Responses API formats
  * Format detection and translation handled by translator
  */
-export async function handleChat(request, clientRawRequest = null) {
+export async function handleChat(request, clientRawRequest = null, options = {}) {
   // requestId correlates every log line for one request across gateway hops
   // (provider selection, account fallback, response). Surfaced in Log Konsol.
   const requestId = createRequestId();
@@ -86,7 +86,11 @@ export async function handleChat(request, clientRawRequest = null) {
 
   // Enforce API key if enabled in settings
   const settings = await getSettings();
-  if (settings.requireApiKey) {
+  // Internal server-side diagnostics (for example Chat Semua Layanan) already run
+  // inside the gateway and must not be forced to manufacture a client API key.
+  // Keep the bypass explicit in the function call so external HTTP requests cannot
+  // opt into it merely by setting a header.
+  if (settings.requireApiKey && options?.internal !== true) {
     if (!apiKey) {
       log.warn("AUTH", "Missing API key (requireApiKey=true)");
       return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Kunci API hilang");
