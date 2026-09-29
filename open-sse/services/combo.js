@@ -6,6 +6,7 @@ import { checkFallbackError, formatRetryAfter } from "./accountFallback.js";
 import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
+import { planSmartCombo, summarizeSmartPlan } from "./comboPlanner.js";
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
 // stripped). Must be prioritized. Soft (e.g. search) only degrades a feature.
@@ -294,20 +295,44 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, smartConfig = {} }) {
   // Apply rotation strategy if enabled
   let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
 
-  // Auto-switch: float models that satisfy the request's required capabilities to the front.
-  if (autoSwitch) {
-    const required = detectRequiredCapabilities(body);
-    if (required.size > 0) {
-      const reordered = reorderByCapabilities(rotatedModels, required);
-      if (reordered[0] !== rotatedModels[0]) {
-        log.info("COMBO", `auto-switch for [${[...required].join(",")}] → ${reordered[0]}`);
-      }
-      rotatedModels = reordered;
+  const required = detectRequiredCapabilities(body);
+
+  // Smart Combo is deterministic and request-aware: it ranks the existing
+  // candidates by capability, context fit, tool support, task complexity and
+  // tier, then lets the normal fallback executor try them. No extra provider
+  // call is made just to choose a model.
+  if (comboStrategy === "smart") {
+    const plan = planSmartCombo(
+      rotatedModels,
+      body,
+      required,
+      {
+        ...(smartConfig || {}),
+        getCapabilities: getCapabilitiesForModel,
+      },
+    );
+    rotatedModels = plan.models;
+    log.info("COMBO", `Smart Combo "${comboName || "default"}" | ${summarizeSmartPlan(plan)}`, {
+      level: plan.analysis.level,
+      task: plan.analysis.taskType,
+      estimatedInputTokens: plan.analysis.estimatedInputTokens,
+      candidates: plan.ranked.map((item) => ({
+        model: item.model,
+        tier: item.tier,
+        score: item.score,
+        reasons: item.reasons?.slice(0, 3),
+      })),
+    });
+  } else if (autoSwitch && required.size > 0) {
+    const reordered = reorderByCapabilities(rotatedModels, required);
+    if (reordered[0] !== rotatedModels[0]) {
+      log.info("COMBO", `auto-switch for [${[...required].join(",")}] → ${reordered[0]}`);
     }
+    rotatedModels = reordered;
   }
 
   let lastError = null;
