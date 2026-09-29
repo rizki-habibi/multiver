@@ -842,7 +842,7 @@ function ApiKeyProviderCard({
                     {isCompatible && (
                       <Badge variant="default" size="sm">
                         {provider.apiType === "responses"
-                          ? "Responses"
+                          ? "Respons"
                           : "Chat"}
                       </Badge>
                     )}
