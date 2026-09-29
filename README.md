@@ -2,7 +2,7 @@
 
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
-![Version](https://img.shields.io/badge/version-12.0.0-0969DA)
+![Version](https://img.shields.io/badge/version-12.1.0-0969DA)
 [![License](https://img.shields.io/npm/l/multiver.svg)](https://github.com/rizki-habibi/multiver/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/rizki-habibi/multiver)](https://github.com/rizki-habibi/multiver/releases)
 
@@ -23,7 +23,7 @@ multiver
 
 ```bash
 npm pack --prefix cli   # hasil: cli/multiver-<versi>.tgz
-npm install -g cli/multiver-12.0.0.tgz
+npm install -g cli/multiver-12.1.0.tgz
 multiver
 ```
 
@@ -121,6 +121,24 @@ multiver --version
 - **Provider-agnostic SSE engine** – 40+ provider.
 - **Cloud Sync** – backup ke Google Drive / WebDAV.
 - **MITM** – intersepsi traffic Kiro IDE (Windows).
+
+### MITM Kiro: startup dan routing
+
+MITM Multiver ditujukan hanya untuk Kiro. Gateway default berada di port `20222`, sedangkan MITM berada di `443`.
+
+- `mitmEnabled`: mengizinkan MITM digunakan.
+- `mitmAutoStart`: mengatur apakah MITM otomatis dijalankan saat Multiver start. Default `false`.
+- `MULTIVER_MITM_PORT`: port MITM, default `443`.
+- `MULTIVER_PORT`: port gateway, default `20222`.
+- `MITM_KIRO_STRICT`: default `true`; jika alias Kiro tidak ditemukan, request dihentikan dengan `ALIAS_NOT_FOUND` agar tidak silent passthrough.
+
+Alur yang diharapkan:
+
+```text
+Kiro → MITM :443 → aliases.json → Gateway :20222 → provider → response Kiro
+```
+
+Alias cache disinkronkan dari database sebelum auto-start MITM. Cache ditulis secara atomic menggunakan temporary file unik agar concurrent write tidak saling menimpa.
 - **Riwayat Percakapan** – simpan prompt + respons + parameter per request.
 - **Konsol Log CMD** – monitoring realtime bergaya terminal hitam.
 - **Sidebar collapsible** – buka/tutup biar layar lega.
@@ -261,6 +279,13 @@ MIT — lihat file LICENSE.
 - Filter log konsol ditingkatkan.
 - UI ikon provider diganti fallback teks.
 - Penambahan MySQL adapter.
+
+### v12.1.0
+
+- Menstabilkan startup MITM Kiro dan sinkronisasi alias cache.
+- Menjadikan auto-start MITM sebagai pengaturan terpisah dan opt-in.
+- Menambahkan strict Kiro alias routing dan health diagnostics.
+- Menyelaraskan workflow versioning ke Node.js 22.
 
 ### v12.0.0
 - **Update langsung dari dashboard**: tombol "Pasang & Mulai Ulang" menjalankan

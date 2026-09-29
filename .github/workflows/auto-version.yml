@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
 
       - name: Compute next version
@@ -75,8 +75,10 @@ jobs:
 
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
-          echo "changed=$([ "$NEXT" != "$CURRENT" ] && echo true || echo false)"
+          CHANGED=$([ "$NEXT" != "$CURRENT" ] && echo true || echo false)
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
           echo "Current: $CURRENT → Next: $NEXT (tag: ${LATEST_TAG:-none})"
+          echo "Changed: $CHANGED"
 
       - name: Update package.json versions
         if: steps.bump.outputs.changed == 'true'

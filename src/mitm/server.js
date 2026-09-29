@@ -12,7 +12,11 @@ const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATT
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { generateCert, getCertForDomain } = require("./cert/generate");
 const { getMitmAlias } = require("./dbReader");
-const LOCAL_PORT = 443;
+const LOCAL_PORT = Number(process.env.MULTIVER_MITM_PORT || 443);
+if (!Number.isInteger(LOCAL_PORT) || LOCAL_PORT < 1 || LOCAL_PORT > 65535) {
+  throw new Error("Invalid MULTIVER_MITM_PORT: " + process.env.MULTIVER_MITM_PORT);
+}
+const STRICT_KIRO = String(process.env.MITM_KIRO_STRICT ?? "true").toLowerCase() !== "false";
 const IS_WIN = process.platform === "win32";
 const ENABLE_FILE_LOG = IS_DEV;
 
@@ -327,14 +331,20 @@ async function passthroughHttps(req, res, bodyBuffer, headers, targetHost, onRes
 const server = https.createServer(sslOptions, async (req, res) => {
   try {
     if (req.url === "/_mitm_health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        ok: true,
-        pid: process.pid,
-        stats: runtimeStats,
-        target: "kiro",
-        gatewayPort: Number(process.env.MULTIVER_PORT || 20222),
-      }));
+      let aliasCache = { exists: false, valid: false, kiro: false };
+      try {
+        const aliasFile = path.join(DATA_DIR, "mitm", "aliases.json");
+        aliasCache.exists = fs.existsSync(aliasFile);
+        if (aliasCache.exists) {
+          const parsed = JSON.parse(fs.readFileSync(aliasFile, "utf8"));
+          aliasCache.valid = !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
+          aliasCache.kiro = !!(aliasCache.valid && parsed.kiro && typeof parsed.kiro === "object");
+        }
+      } catch { aliasCache.valid = false; }
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ ok: true, pid: process.pid, stats: runtimeStats, target: "kiro",
+        mitmPort: LOCAL_PORT, gatewayPort: Number(process.env.MULTIVER_PORT || 20222),
+        strictKiro: STRICT_KIRO, aliasCache }));
       return;
     }
 
@@ -378,20 +388,27 @@ const server = https.createServer(sslOptions, async (req, res) => {
     const mappedModel = getMappedModel(tool, model);
     if (!mappedModel) {
       emitMitmLog({
-        level: "warning",
+        level: STRICT_KIRO ? "error" : "warning",
         source: "MITM",
         tool,
         event: "mitm.route",
-        message: "Alias tidak ditemukan, request passthrough",
+        message: STRICT_KIRO ? "Alias Kiro tidak ditemukan — request dihentikan" : "Alias Kiro tidak ditemukan — request passthrough",
         requestId,
         model: model || null,
         alias: String(model || "").replace(/^models\//, "") || null,
-        mappedModel: "NONE",
-        route: "PASSTHROUGH",
+        mappedModel: null,
+        route: STRICT_KIRO ? "BLOCKED" : "PASSTHROUGH",
         reason: "ALIAS_NOT_FOUND",
         durationMs: Date.now() - startedAt,
       });
-      log(`[mitm] ${req.headers.host}${req.url} model=${model || "?"} → passthrough (no alias mapping)`);
+      if (STRICT_KIRO && tool === "kiro") {
+        if (!res.headersSent) res.writeHead(502, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ error: {
+          message: "Kiro model \"" + (model || "unknown") + "\" belum memiliki alias Multiver.",
+          type: "mitm_alias_not_found", code: "ALIAS_NOT_FOUND", model: model || null, tool, requestId
+        }}));
+        return;
+      }
       return passthrough(req, res, bodyBuffer);
     }
 

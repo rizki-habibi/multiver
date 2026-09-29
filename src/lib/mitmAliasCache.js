@@ -15,9 +15,14 @@ const CACHE_FILE = path.join(DATA_DIR, "mitm", "aliases.json");
 function writeAtomic(data) {
   const dir = path.dirname(CACHE_FILE);
   fs.mkdirSync(dir, { recursive: true });
-  const tmp = `${CACHE_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
-  fs.renameSync(tmp, CACHE_FILE);
+  // A fixed .tmp path can collide when two UI saves/startup syncs happen concurrently.
+  const tmp = CACHE_FILE + "." + process.pid + "." + Date.now() + ".tmp";
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf8", mode: 0o600 });
+    fs.renameSync(tmp, CACHE_FILE);
+  } finally {
+    try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch { /* best-effort cleanup */ }
+  }
 }
 
 // Sync entire mitmAlias map from DB → JSON file

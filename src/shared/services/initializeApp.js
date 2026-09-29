@@ -99,10 +99,24 @@ async function runHeavyStartup() {
 
   if (settings.tunnelEnabled) ensureCloudflared().catch(() => { });
 
-  if (settings.mitmEnabled) {
-    // Sync mitmAlias DB → JSON cache so standalone MITM server can read it.
-    syncMitmAliasCache().catch(() => { });
-    autoStartMitm(settings);
+  if (settings.mitmEnabled && settings.mitmAutoStart === true) {
+    // The alias cache is a read-replica for the standalone MITM process.
+    // Wait for synchronization before starting MITM so Kiro cannot race
+    // against a stale/missing aliases.json during application startup.
+    try {
+      const syncResult = await syncMitmAliasCache();
+      if (!syncResult?.success) {
+        console.error("[InitApp] MITM alias sync failed:", syncResult?.error || "unknown error");
+        console.log("[InitApp] MITM auto-start skipped because alias cache is unavailable");
+        return;
+      }
+    } catch (e) {
+      console.error("[InitApp] MITM alias sync failed:", e.message);
+      console.log("[InitApp] MITM auto-start skipped because alias cache is unavailable");
+      return;
+    }
+
+    await autoStartMitm(settings);
   }
 
   configureTunnelMonitoring(settings);

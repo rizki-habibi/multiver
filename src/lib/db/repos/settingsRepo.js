@@ -48,6 +48,8 @@ const DEFAULT_SETTINGS = {
   outboundProxyUrl: "",
   outboundNoProxy: "",
   mitmRouterBaseUrl: DEFAULT_MITM_ROUTER_BASE,
+  // MITM Kiro is opt-in at application startup. Manual start remains available.
+  mitmAutoStart: false,
   dnsToolEnabled: {},
   rtkEnabled: true,
   headroomEnabled: false,
