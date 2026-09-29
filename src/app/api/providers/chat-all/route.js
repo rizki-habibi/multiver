@@ -521,7 +521,81 @@ export async function POST(request) {
     }
 
     const providers = [...configuredProviders].filter(isChatProvider).sort();
-    const results = await runWithConcurrency(
+    // Chat Semua Layanan uses sequential testing when the UI asks for a stream.
+  // This prevents a slow provider from hiding fast results behind Promise.all.
+  const streamMode = new URL(request.url).searchParams.get("stream") === "1";
+  if (streamMode) {
+    const encoder = new TextEncoder();
+    const send = (controller, type, payload) => {
+      controller.enqueue(encoder.encode(`event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`));
+    };
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const summary = { total: providers.length, passed: 0, failed: 0, skipped: 0 };
+        try {
+          send(controller, "start", {
+            message,
+            mode: "chat-all",
+            total: providers.length,
+            providers: providers.map((provider) => ({
+              provider,
+              name: providerName(provider, displayNames),
+              status: "pending",
+            })),
+          });
+
+          // Deliberately one at a time: the first available result is shown
+          // immediately, and a slow provider cannot occupy all test slots.
+          for (const provider of providers) {
+            const result = await testProvider(
+              provider,
+              message,
+              request.headers,
+              displayNames,
+              modelAliases,
+              customModels,
+            );
+            if (result.status === "ok") summary.passed++;
+            else if (result.status === "failed") summary.failed++;
+            else summary.skipped++;
+
+            send(controller, "result", {
+              ...result,
+              progress: {
+                completed: summary.passed + summary.failed + summary.skipped,
+                total: summary.total,
+              },
+            });
+          }
+
+          send(controller, "done", {
+            message,
+            mode: "chat-all",
+            testedAt: new Date().toISOString(),
+            summary,
+          });
+        } catch (error) {
+          send(controller, "error", {
+            error: error?.message || "Pengujian chat semua layanan gagal",
+          });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  const results = await runWithConcurrency(
       providers,
       (provider) => testProvider(provider, message, request.headers, displayNames, modelAliases, customModels),
       5,
