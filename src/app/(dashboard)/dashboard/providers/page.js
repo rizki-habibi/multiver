@@ -935,6 +935,9 @@ function ProviderChatResultsView({ results }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 font-medium">
+          Mode: {results.mode === "chat-all" ? "Chat Semua Layanan" : "Chat"}
+        </span>
         <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium">
           {summary.passed || 0} menjawab
         </span>
