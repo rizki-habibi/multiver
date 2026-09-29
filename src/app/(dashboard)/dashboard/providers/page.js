@@ -397,7 +397,20 @@ export default function ProvidersPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <input
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value.slice(0, 2000))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleChatAllServices();
+            }
+          }}
+          placeholder="Tulis pesan untuk semua layanan..."
+          aria-label="Pesan untuk semua layanan"
+          className="h-8 min-w-[220px] flex-1 max-w-[420px] rounded-lg border border-border bg-bg px-3 text-xs text-text-main outline-none focus:border-emerald-500/50"
+        />
         <button
           onClick={handleChatAllServices}
           disabled={chatTesting || !!testingMode}
