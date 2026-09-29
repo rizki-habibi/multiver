@@ -56,11 +56,9 @@ export default function TokenSaverClient() {
   const [showPxpipeModal, setShowPxpipeModal] = useState(false);
   const [pxpipeActionLoading, setPxpipeActionLoading] = useState(false);
   const [pxpipeActionError, setPxpipeActionError] = useState("");
-  const [locale, setLocale] = useState("en");
 
   const { copied, copy } = useCopyToClipboard();
 
-  const isWenyanLocale = false;
   const visibleCavemanLevels = CAVEMAN_LEVELS;
 
   const patchSetting = async (patch) => {
@@ -292,9 +290,9 @@ export default function TokenSaverClient() {
 
   const handleRemoveExtra = useCallback((extra) => {
     setExtrasConfirm({
-      title: `Remove [${extra}]`,
-      message: `Remove [${extra}] and its packages?`,
-      confirmText: "Remove",
+      title: `Hapus [${extra}]`,
+      message: `Hapus [${extra}] beserta paketnya?`,
+      confirmText: "Hapus",
       variant: "danger",
       onConfirm: () => removeExtraConfirmed(extra),
     });
@@ -517,7 +515,7 @@ export default function TokenSaverClient() {
               </button>
             </div>
             <p className="text-sm text-text-muted mt-1">
-              Kompres permintaan lewat /v1/compress sebelum diteruskan ke model
+              Kompres permintaan melalui /v1/compress sebelum diteruskan ke model
             </p>
           </div>
           <Toggle
@@ -538,7 +536,7 @@ export default function TokenSaverClient() {
                 const extraTitle =
                   extra === "code"
                     ? "kompresi AST tree-sitter untuk keluaran kode"
-                    : "model HF Kompress-v2 untuk teks/agentic (~+1GB)";
+                    : "model HF Kompress-v2 untuk teks/agen (~+1 GB)";
 
                 if (installed) {
                   const active = extra === "code" ? codeAware : kompress;
@@ -617,7 +615,7 @@ export default function TokenSaverClient() {
               hanya <code>[proxy]</code> (SmartCrusher untuk JSON). Menambah{" "}
               <code>[code]</code> mengaktifkan kompresi AST
               (Python/JS/TS/Go/Rust/Java/C/C++/Perl). Menambah <code>[ml]</code>{" "}
-              mengaktifkan model HF Kompress-v2 untuk teks/agentic, tetapi
+              mengaktifkan model HF Kompress-v2 untuk teks/agen, tetapi
               menambah ~1 GB (torch + huggingface-hub).
             </p>
           </div>
@@ -790,11 +788,11 @@ export default function TokenSaverClient() {
               rel="noreferrer"
               className="w-full rounded border border-border px-4 py-2 text-center text-sm hover:bg-surface-2"
             >
-              Buka Dasbor Headroom
+              Buka Panel Headroom
             </a>
           )}
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">URL Proxy</p>
+            <p className="text-sm font-medium">Alamat Proxy</p>
             <Input
               value={headroomUrl}
               onChange={(e) => setHeadroomUrl(e.target.value)}
@@ -808,7 +806,7 @@ export default function TokenSaverClient() {
             </p>
           </div>
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">Batas waktu (ms)</p>
+            <p className="text-sm font-medium">Batas waktu (milidetik)</p>
             <Input
               value={String(headroomTimeoutMs)}
               onChange={(e) => setHeadroomTimeoutMs(e.target.value)}
