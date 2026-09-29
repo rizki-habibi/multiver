@@ -122,6 +122,9 @@ export default function ProvidersPage() {
   const [chatTesting, setChatTesting] = useState(false);
   const [chatInput, setChatInput] = useState("Halo, apa kabar?");
   const [chatResults, setChatResults] = useState(null);
+  const [showChatResults, setShowChatResults] = useState(false);
+  const [chatSort, setChatSort] = useState("completion");
+  const [chatElapsedMs, setChatElapsedMs] = useState(0);
   const notify = useNotificationStore();
   const searchQuery = useHeaderSearchStore((s) => s.query);
   const registerSearch = useHeaderSearchStore((s) => s.register);
@@ -131,6 +134,20 @@ export default function ProvidersPage() {
     registerSearch("Cari penyedia...");
     return () => unregisterSearch();
   }, [registerSearch, unregisterSearch]);
+
+  useEffect(() => {
+    if (!chatResults?.streaming) {
+      if (chatResults?.startedAt && chatResults?.finishedAt) {
+        setChatElapsedMs(Math.max(0, chatResults.finishedAt - chatResults.startedAt));
+      }
+      return undefined;
+    }
+    const startedAt = Number(chatResults.startedAt) || Date.now();
+    const update = () => setChatElapsedMs(Math.max(0, Date.now() - startedAt));
+    update();
+    const timer = setInterval(update, 100);
+    return () => clearInterval(timer);
+  }, [chatResults?.streaming, chatResults?.startedAt, chatResults?.finishedAt]);
 
   const matchSearch = (name) => {
     if (!searchQuery.trim()) return true;
@@ -274,10 +291,15 @@ export default function ProvidersPage() {
     // Buka popup SEBELUM request dimulai. Hasil kemudian masuk satu per satu
     // melalui SSE sehingga pengguna tidak perlu menunggu semua provider selesai.
     setChatTesting(true);
+    setShowChatResults(true);
+    setChatSort("completion");
+    const startedAt = Date.now();
+    setChatElapsedMs(0);
     setChatResults({
       message,
       mode: "chat-all",
       streaming: true,
+      startedAt,
       results: [],
       pendingProviders: [],
       summary: { total: 0, passed: 0, failed: 0, skipped: 0 },
@@ -313,6 +335,9 @@ export default function ProvidersPage() {
             message: data.message || message,
             pendingProviders: data.providers || [],
             summary: { total: data.total || 0, passed: 0, failed: 0, skipped: 0 },
+            startedAt: data.startedAt || prev?.startedAt,
+            concurrency: data.concurrency || prev?.concurrency || 1,
+            timeoutMs: data.timeoutMs || prev?.timeoutMs || 12000,
             streaming: true,
           }));
         } else if (event === "result") {
@@ -340,6 +365,7 @@ export default function ProvidersPage() {
             ...(prev || {}),
             summary: data.summary || prev?.summary,
             testedAt: data.testedAt,
+            finishedAt: Date.now(),
             pendingProviders: [],
             streaming: false,
           }));
@@ -504,8 +530,20 @@ export default function ProvidersPage() {
           <span className={`material-symbols-outlined text-[14px]${chatTesting ? " animate-spin" : ""}`}>
             {chatTesting ? "autorenew" : "chat"}
           </span>
-          {chatTesting ? "Menguji satu per satu…" : "Chat Semua Layanan"}
+          {chatTesting ? "Menguji…" : "Chat Semua Layanan"}
         </button>
+        {chatResults && !showChatResults && (
+          <button
+            onClick={() => setShowChatResults(true)}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 text-xs font-medium text-sky-400 hover:bg-sky-500/20"
+            title="Buka kembali hasil chat yang tersimpan"
+          >
+            <span className="material-symbols-outlined text-[14px]">
+              {chatResults.streaming ? "sync" : "history"}
+            </span>
+            Lihat Hasil ({chatResults.results?.length || 0}/{chatResults.summary?.total || 0})
+          </button>
+        )}
         <button
           onClick={() => handleBatchTest("all")}
           disabled={!!testingMode}
@@ -724,14 +762,14 @@ export default function ProvidersPage() {
       />
 
       {/* Chat Semua Layanan */}
-      {chatResults && (
+      {chatResults && showChatResults && (
         <div
           className="fixed inset-0 z-50 flex items-start justify-center px-3 pt-[5vh] sm:pt-[8vh]"
-          onClick={() => setChatResults(null)}
+          onClick={() => setShowChatResults(false)}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative bg-surface border border-border rounded-xl w-full max-w-[760px] max-h-[88vh] overflow-y-auto shadow-2xl"
+            className="relative bg-surface border border-border rounded-xl w-full max-w-[860px] max-h-[88vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-surface/95 backdrop-blur-sm rounded-t-xl">
@@ -740,17 +778,36 @@ export default function ProvidersPage() {
                 <p className="text-xs text-text-muted truncate">
                   Pesan uji: {chatResults.message || chatInput || "Halo, apa kabar?"}
                 </p>
+                <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-text-muted">
+                  <span>Waktu: <b className="font-mono text-text-main">{(chatElapsedMs / 1000).toFixed(1)} dtk</b></span>
+                  {chatResults.concurrency > 0 && <span>Paralel: <b className="font-mono text-text-main">{chatResults.concurrency}</b></span>}
+                  {chatResults.timeoutMs > 0 && <span>Batas/layanan: <b className="font-mono text-text-main">{(chatResults.timeoutMs / 1000).toFixed(1)} dtk</b></span>}
+                </div>
               </div>
-              <button
-                onClick={() => setChatResults(null)}
-                className="p-1 rounded-lg hover:bg-bg text-text-muted hover:text-text-main transition-colors"
-                aria-label="Tutup hasil chat"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <select
+                  value={chatSort}
+                  onChange={(e) => setChatSort(e.target.value)}
+                  className="h-8 rounded-lg border border-border bg-bg px-2 text-xs text-text-main outline-none"
+                  aria-label="Urutan hasil layanan"
+                >
+                  <option value="completion">Urutan respons masuk</option>
+                  <option value="fastest">Paling cepat</option>
+                  <option value="slowest">Paling lambat</option>
+                  <option value="status">Berhasil dahulu</option>
+                </select>
+                <button
+                  onClick={() => setShowChatResults(false)}
+                  className="p-1 rounded-lg hover:bg-bg text-text-muted hover:text-text-main transition-colors"
+                  aria-label="Tutup popup tanpa menghapus hasil"
+                  title="Tutup popup. Hasil tetap tersimpan."
+                >
+                  <span className="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
             </div>
             <div className="p-5">
-              <ProviderChatResultsView results={chatResults} />
+              <ProviderChatResultsView results={chatResults} sortMode={chatSort} />
             </div>
           </div>
         </div>
@@ -996,7 +1053,7 @@ ApiKeyProviderCard.propTypes = {
   onToggle: PropTypes.func,
 };
 
-function ProviderChatResultsView({ results }) {
+function ProviderChatResultsView({ results, sortMode = "completion" }) {
   if (results.error && !results.results) {
     return (
       <div className="text-center py-6">
@@ -1009,15 +1066,26 @@ function ProviderChatResultsView({ results }) {
   }
 
   const summary = results.summary || {};
-  const items = results.results || [];
-  const pending = results.pendingProviders || [];
+  const items = Array.isArray(results.results) ? results.results : [];
+  const pending = Array.isArray(results.pendingProviders) ? results.pendingProviders : [];
+  const sortedItems = [...items].sort((a, b) => {
+    if (sortMode === "fastest") return (Number(a?.latencyMs) || Number.MAX_SAFE_INTEGER) - (Number(b?.latencyMs) || Number.MAX_SAFE_INTEGER);
+    if (sortMode === "slowest") return (Number(b?.latencyMs) || -1) - (Number(a?.latencyMs) || -1);
+    if (sortMode === "status") {
+      const rank = (item) => item?.status === "ok" ? 0 : item?.status === "skipped" ? 1 : 2;
+      return rank(a) - rank(b) || (Number(a?.latencyMs) || Number.MAX_SAFE_INTEGER) - (Number(b?.latencyMs) || Number.MAX_SAFE_INTEGER);
+    }
+    return 0;
+  });
+  const maxVisible = 250;
+  const visibleItems = sortedItems.slice(0, maxVisible);
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {results.streaming && (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400">
           <span className="material-symbols-outlined animate-spin text-[16px]">autorenew</span>
-          <span>Pengujian berjalan satu per satu — hasil tampil segera setelah layanan menjawab.</span>
+          <span>Pengujian paralel terbatas — hasil tampil segera setelah layanan menjawab.</span>
           <span className="ml-auto font-mono">{items.length}/{summary.total || "…"}</span>
         </div>
       )}
@@ -1046,18 +1114,24 @@ function ProviderChatResultsView({ results }) {
       {results.streaming && pending.length > 0 && (
         <div className="rounded-lg border border-border bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
           <div className="mb-2 text-[11px] font-medium text-text-muted">Masih menunggu</div>
+          <div className="mb-1 text-[11px] text-text-muted">
+            {pending.length} layanan masih menunggu
+          </div>
           <div className="flex flex-wrap gap-1.5">
-            {pending.map((item) => (
+            {pending.slice(0, 100).map((item) => (
               <span key={item.provider} className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-1 text-[11px] text-text-muted">
                 <span className="material-symbols-outlined animate-spin text-[12px]">autorenew</span>
-                {item.name || item.provider}
+                {String(item.name || item.provider || "Layanan")}
               </span>
             ))}
+            {pending.length > 100 && (
+              <span className="px-2 py-1 text-[11px] text-text-muted">+{pending.length - 100} lainnya</span>
+            )}
           </div>
         </div>
       )}
 
-      {items.map((item, index) => {
+      {visibleItems.map((item, index) => {
         const ok = item.status === "ok";
         const skipped = item.status === "skipped";
         return (
@@ -1071,7 +1145,7 @@ function ProviderChatResultsView({ results }) {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold">{item.name || item.provider}</span>
+                  <span className="font-semibold">{String(item.name || item.provider || "Layanan")}</span>
                   <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${ok ? "bg-emerald-500/15 text-emerald-400" : skipped ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400"}`}>
                     {ok ? "OK" : skipped ? "DILEWATI" : item.code || "ERR"}
                   </span>
@@ -1085,11 +1159,11 @@ function ProviderChatResultsView({ results }) {
                   </div>
                 )}
                 <p className={`mt-1 break-words ${ok ? "text-text-main" : "text-red-400"}`}>
-                  {item.message || item.diagnosis || "Tidak ada keterangan"}
+                  {String(item.message ?? item.diagnosis ?? "Tidak ada keterangan")}
                 </p>
                 {item.error && (
                   <p className="mt-1 break-words text-text-muted">
-                    Rincian: {item.error}
+                    Rincian: {String(item.error)}
                   </p>
                 )}
               </div>
@@ -1097,6 +1171,11 @@ function ProviderChatResultsView({ results }) {
           </div>
         );
       })}
+      {sortedItems.length > maxVisible && (
+        <div className="rounded-lg border border-border px-3 py-2 text-center text-xs text-text-muted">
+          Menampilkan {maxVisible} dari {sortedItems.length} hasil. Semua hasil tetap tersimpan; urutan hanya mengubah tampilan.
+        </div>
+      )}
     </div>
   );
 }
@@ -1104,6 +1183,10 @@ function ProviderChatResultsView({ results }) {
 ProviderChatResultsView.propTypes = {
   results: PropTypes.shape({
     message: PropTypes.string,
+    startedAt: PropTypes.number,
+    finishedAt: PropTypes.number,
+    concurrency: PropTypes.number,
+    timeoutMs: PropTypes.number,
     results: PropTypes.array,
     summary: PropTypes.shape({
       total: PropTypes.number,
