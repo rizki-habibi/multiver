@@ -21,46 +21,61 @@ async function detectStyle(baseUrl, apiKey) {
     Authorization: `Bearer ${apiKey}`,
   };
 
-  // 1. Anthropic-native: /v1/messages exists and accepts x-api-key
-  try {
-    const msgBase = base.endsWith("/messages") ? base.slice(0, -9) : base;
-    const res = await fetchWithTimeout(`${msgBase.replace(/\/v1$/, "")}/v1/messages`, {
-      method: "POST",
-      headers: { ...auth, "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "ping", max_tokens: 1, messages: [{ role: "user", content: "ping" }] }),
-    });
-    // 400/404/500 = endpoint exists but rejected our dummy payload → Anthropic-style
-    if (res.status !== 401 && res.status !== 403) {
-      return { type: "anthropic-compatible" };
+  // Probe both dialects instead of returning the first non-auth error. Gateways
+  // such as Atria and xKiro expose both OpenAI and Anthropic APIs; choosing
+  // Anthropic merely because /messages returned 400 used to misclassify them.
+  const probeAnthropic = async () => {
+    try {
+      const msgBase = base.endsWith("/messages") ? base.slice(0, -9) : base;
+      const res = await fetchWithTimeout(
+        `${msgBase.replace(/\/v1$/, "")}/v1/messages`,
+        {
+          method: "POST",
+          headers: { ...auth, "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+          body: JSON.stringify({
+            model: "ping",
+            max_tokens: 1,
+            messages: [{ role: "user", content: "ping" }],
+          }),
+        },
+      );
+      return res.status !== 401 && res.status !== 403;
+    } catch {
+      return false;
     }
-  } catch {
-    // endpoint missing → keep probing
-  }
+  };
 
-  // 2. OpenAI-native: /models or /chat/completions
-  try {
-    const modelsRes = await fetchWithTimeout(`${base}/models`, { headers: auth });
-    if (modelsRes.status !== 401 && modelsRes.status !== 403) {
-      // /models worked (2xx) or errored for non-auth reasons → OpenAI-style
-      return { type: "openai-compatible", apiType: "chat" };
+  const probeOpenAI = async () => {
+    try {
+      const modelsRes = await fetchWithTimeout(`${base}/models`, { headers: auth });
+      if (modelsRes.status !== 401 && modelsRes.status !== 403) return true;
+    } catch {
+      // /models missing → probe chat below
     }
-  } catch {
-    // /models missing
-  }
 
-  try {
-    const chatRes = await fetchWithTimeout(`${base}/chat/completions`, {
-      method: "POST",
-      headers: auth,
-      body: JSON.stringify({ model: "ping", messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
-    });
-    if (chatRes.status !== 401 && chatRes.status !== 403) {
-      return { type: "openai-compatible", apiType: "chat" };
+    try {
+      const chatRes = await fetchWithTimeout(`${base}/chat/completions`, {
+        method: "POST",
+        headers: auth,
+        body: JSON.stringify({
+          model: "ping",
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 1,
+        }),
+      });
+      return chatRes.status !== 401 && chatRes.status !== 403;
+    } catch {
+      return false;
     }
-  } catch {
-    // fall through
-  }
+  };
 
+  const [anthropic, openai] = await Promise.all([probeAnthropic(), probeOpenAI()]);
+
+  // Prefer OpenAI Chat Completions when both dialects exist. It is the more
+  // interoperable default for custom gateways and avoids falsely locking a
+  // dual-protocol service into the Anthropic transport.
+  if (openai) return { type: "openai-compatible", apiType: "chat", dualProtocol: anthropic };
+  if (anthropic) return { type: "anthropic-compatible", dualProtocol: false };
   return null;
 }
 
