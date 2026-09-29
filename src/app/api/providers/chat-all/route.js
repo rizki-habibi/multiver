@@ -323,7 +323,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
       }),
     });
 
-    const response = await handleChat(internalRequest);
+    const response = await handleChat(internalRequest, null, { internal: true });
     const parsed = await readResponse(response);
     const latencyMs = Date.now() - startedAt;
 
