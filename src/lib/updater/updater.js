@@ -1,5 +1,5 @@
 ﻿// Standalone detached updater process.
-// Spawns `npm i -g <pkg>@latest`, exposes progress via tiny HTTP server.
+// Downloads the official Multiver CLI tarball from GitHub Releases and installs it with npm.
 // Survives after parent Next server exits (detached + unref by spawner).
 
 const { spawn } = require("child_process");
@@ -131,50 +131,83 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function runInstall() {
-  state.attempt += 1;
-  setPhase("installing");
-  pushLog(`[updater] attempt ${state.attempt}/${maxRetries} — npm i -g ${packageName} --prefer-online`);
-
-  const isWin = process.platform === "win32";
-  const cmd = isWin ? "npm.cmd" : "npm";
-  const args = ["i", "-g", packageName, "--prefer-online"];
-
-  const child = spawn(cmd, args, {
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-    shell: isWin,
-  });
-
-  child.stdout.on("data", (buf) => {
-    buf.toString().split(/\r?\n/).forEach(pushLog);
-    persistStatus();
-  });
-  child.stderr.on("data", (buf) => {
-    buf.toString().split(/\r?\n/).forEach(pushLog);
-    persistStatus();
-  });
-
-  child.on("error", (e) => {
-    pushLog(`[updater] spawn error: ${e.message}`);
-    finalize(false, null, e.message);
-  });
-
-  child.on("close", (code) => {
-    pushLog(`[updater] npm exited with code ${code}`);
-    if (code === 0) {
-      finalize(true, code, null);
-      return;
-    }
-    if (state.attempt < maxRetries) {
-      pushLog(`[updater] retrying in ${Math.round(retryDelayMs / 1000)}s...`);
-      setTimeout(runInstall, retryDelayMs);
-      return;
-    }
-    finalize(false, code, `Install failed after ${maxRetries} attempts`);
+function downloadFile(url, destination, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error("Terlalu banyak redirect saat mengunduh update"));
+    const https = require("https");
+    const request = https.get(url, {
+      headers: { "User-Agent": "Multiver-Updater", Accept: "application/octet-stream" },
+    }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
+        const location = res.headers.location;
+        res.resume();
+        if (!location) return reject(new Error("Redirect update tidak memiliki Location"));
+        return downloadFile(new URL(location, url).toString(), destination, redirects + 1).then(resolve, reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`Download update gagal: HTTP ${res.statusCode}`));
+      }
+      const out = fs.createWriteStream(destination);
+      res.pipe(out);
+      out.on("finish", () => out.close(() => resolve(destination)));
+      out.on("error", (error) => { try { fs.unlinkSync(destination); } catch {} reject(error); });
+    });
+    request.setTimeout(30000, () => request.destroy(new Error("Timeout download update")));
+    request.on("error", reject);
   });
 }
 
+async function resolveReleaseTarball() {
+  const directUrl = process.env.UPDATER_RELEASE_URL ||
+    "https://github.com/rizki-habibi/multiver/releases/latest/download/multiver-latest.tgz";
+  const fileName = path.basename(new URL(directUrl).pathname) || "multiver-latest.tgz";
+  const destination = path.join(updateDir, fileName);
+  pushLog(`[updater] downloading official release: ${directUrl}`);
+  await downloadFile(directUrl, destination);
+  const stat = fs.statSync(destination);
+  if (!stat.size) throw new Error("Asset update kosong");
+  return destination;
+}
+
+async function runInstall() {
+  state.attempt += 1;
+  setPhase("installing");
+  let tarball = null;
+  try {
+    tarball = await resolveReleaseTarball();
+    pushLog(`[updater] attempt ${state.attempt}/${maxRetries} — npm i -g ${path.basename(tarball)}`);
+    const isWin = process.platform === "win32";
+    const cmd = isWin ? "npm.cmd" : "npm";
+    const args = ["i", "-g", tarball, "--no-audit", "--no-fund"];
+    const child = spawn(cmd, args, {
+      stdio: ["ignore", "pipe", "pipe"], windowsHide: true, shell: isWin,
+    });
+    child.stdout.on("data", (buf) => { buf.toString().split(/\r?\n/).forEach(pushLog); persistStatus(); });
+    child.stderr.on("data", (buf) => { buf.toString().split(/\r?\n/).forEach(pushLog); persistStatus(); });
+    child.on("error", (e) => { pushLog(`[updater] spawn error: ${e.message}`); finalize(false, null, e.message); });
+    child.on("close", (code) => {
+      try { if (tarball && fs.existsSync(tarball)) fs.unlinkSync(tarball); } catch {}
+      pushLog(`[updater] npm exited with code ${code}`);
+      if (code === 0) return finalize(true, code, null);
+      if (state.attempt < maxRetries) {
+        pushLog(`[updater] retrying in ${Math.round(retryDelayMs / 1000)}s...`);
+        setTimeout(() => runInstall().catch((e) => finalize(false, null, e.message)), retryDelayMs);
+        return;
+      }
+      finalize(false, code, `Install failed after ${maxRetries} attempts`);
+    });
+  } catch (error) {
+    try { if (tarball && fs.existsSync(tarball)) fs.unlinkSync(tarball); } catch {}
+    pushLog(`[updater] release download failed: ${error.message}`);
+    if (state.attempt < maxRetries) {
+      pushLog(`[updater] retrying in ${Math.round(retryDelayMs / 1000)}s...`);
+      setTimeout(() => runInstall().catch((e) => finalize(false, null, e.message)), retryDelayMs);
+    } else {
+      finalize(false, null, `GitHub Release update failed after ${maxRetries} attempts: ${error.message}`);
+    }
+  }
+}
 function openBrowser(url) {
   const platform = process.platform;
   const cmd = platform === "darwin" ? `open "${url}"`
