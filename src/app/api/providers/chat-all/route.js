@@ -13,6 +13,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+const CHAT_ALL_CONCURRENCY = Math.max(
+  1,
+  Math.min(32, Number(process.env.MULTIVER_CHAT_ALL_CONCURRENCY) || 12),
+);
+const CHAT_ALL_PROVIDER_TIMEOUT_MS = Math.max(
+  3000,
+  Math.min(30000, Number(process.env.MULTIVER_CHAT_ALL_TIMEOUT_MS) || 12000),
+);
+
 const HIDDEN_PROVIDER_IDS = new Set([
   "cline",
   "clinepass",
@@ -197,6 +206,7 @@ function firstChatModel(models = []) {
 
 async function resolveCompatibleModels(provider, connections) {
   const candidates = [];
+  const liveCandidates = [];
   const seen = new Set();
 
   const add = (model) => {
@@ -237,7 +247,10 @@ async function resolveCompatibleModels(provider, connections) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 6000);
       try {
-        const response = await fetch(baseUrl + "/models", { headers, signal: controller.signal });
+        const response = await fetch(baseUrl + "/models", {
+          headers: { ...headers, "Accept-Encoding": "gzip, deflate, br" },
+          signal: controller.signal,
+        });
         if (response.ok) {
           const data = await response.json().catch(() => null);
           const models = Array.isArray(data) ? data : (data?.data || data?.models || []);
@@ -246,7 +259,11 @@ async function resolveCompatibleModels(provider, connections) {
             if (!id) continue;
             const lower = String(id).toLowerCase();
             if (/embed|embedding|tts|audio|image|video|stt|transcrib|moderation|rerank/.test(lower)) continue;
-            add(id);
+            const normalized = normalizeModelId(id, provider);
+            if (normalized) {
+              liveCandidates.push(normalized);
+              add(normalized);
+            }
           }
         }
       } finally {
@@ -258,7 +275,14 @@ async function resolveCompatibleModels(provider, connections) {
     }
   }
 
-  return candidates;
+  // Prefer models confirmed by the provider's live /models catalog over stale
+  // configured defaults. This prevents a removed default model from consuming
+  // the first test attempt on compatible gateways such as xKiro.
+  const liveSet = new Set(liveCandidates.map((value) => String(value).toLowerCase()));
+  return [
+    ...liveCandidates,
+    ...candidates.filter((value) => !liveSet.has(String(value).toLowerCase())),
+  ];
 }
 
 async function resolveDynamicModels(provider, connections, modelAliases, customModels) {
@@ -401,7 +425,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
   for (let modelIndex = 0; modelIndex < maxModelAttempts; modelIndex++) {
     const model = models[modelIndex];
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), CHAT_ALL_PROVIDER_TIMEOUT_MS);
 
     try {
       const headers = new Headers({
@@ -426,8 +450,21 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
         }),
       });
 
-      const response = await handleChat(internalRequest, null, { internal: true });
-      const parsed = await readResponse(response);
+      let hardTimeout;
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          hardTimeout = setTimeout(() => {
+            controller.abort();
+            const error = new Error(`Provider test timeout after ${CHAT_ALL_PROVIDER_TIMEOUT_MS}ms`);
+            error.name = "AbortError";
+            reject(error);
+          }, CHAT_ALL_PROVIDER_TIMEOUT_MS);
+        });
+        const response = await Promise.race([
+          handleChat(internalRequest, null, { internal: true }),
+          timeoutPromise,
+        ]);
+        const parsed = await readResponse(response);
       const latencyMs = Date.now() - startedAt;
 
       if (response.ok && parsed.assistantText) {
@@ -493,6 +530,9 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
         status: "CONTINUE",
         reason: `${diagnosis.code}; mencoba kandidat model berikutnya`,
       }).catch(() => {});
+      } finally {
+        clearTimeout(hardTimeout);
+      }
     } catch (error) {
       const latencyMs = Date.now() - startedAt;
       const rawError = error?.name === "AbortError" ? "Timeout 15 detik" : error?.message || String(error);
@@ -596,8 +636,10 @@ export async function POST(request) {
     }
 
     const providers = [...configuredProviders].filter(isChatProvider).sort();
-    // Chat Semua Layanan uses sequential testing when the UI asks for a stream.
-  // This prevents a slow provider from hiding fast results behind Promise.all.
+    // Stream mode uses a bounded worker pool: results arrive as soon as each
+  // provider answers, while the gateway avoids creating one promise/connection
+  // per provider. This keeps the design viable for hundreds or thousands of
+  // configured services.
   const streamMode = new URL(request.url).searchParams.get("stream") === "1";
   if (streamMode) {
     const encoder = new TextEncoder();
@@ -609,10 +651,14 @@ export async function POST(request) {
       async start(controller) {
         const summary = { total: providers.length, passed: 0, failed: 0, skipped: 0 };
         try {
+          const startedAt = Date.now();
           send(controller, "start", {
             message,
             mode: "chat-all",
             total: providers.length,
+            concurrency: Math.min(CHAT_ALL_CONCURRENCY, providers.length),
+            timeoutMs: CHAT_ALL_PROVIDER_TIMEOUT_MS,
+            startedAt,
             providers: providers.map((provider) => ({
               provider,
               name: providerName(provider, displayNames),
@@ -620,29 +666,53 @@ export async function POST(request) {
             })),
           });
 
-          // Deliberately one at a time: the first available result is shown
-          // immediately, and a slow provider cannot occupy all test slots.
-          for (const provider of providers) {
-            const result = await testProvider(
-              provider,
-              message,
-              request.headers,
-              displayNames,
-              modelAliases,
-              customModels,
-            );
-            if (result.status === "ok") summary.passed++;
-            else if (result.status === "failed") summary.failed++;
-            else summary.skipped++;
+          let nextIndex = 0;
+          async function worker() {
+            while (true) {
+              const index = nextIndex++;
+              if (index >= providers.length) return;
+              const provider = providers[index];
+              let result;
+              try {
+                result = await testProvider(
+                  provider,
+                  message,
+                  request.headers,
+                  displayNames,
+                  modelAliases,
+                  customModels,
+                );
+              } catch (error) {
+                result = {
+                  provider,
+                  name: providerName(provider, displayNames),
+                  status: "failed",
+                  code: "ERR",
+                  message: error?.message || "Pengujian layanan gagal.",
+                  latencyMs: Date.now() - startedAt,
+                };
+              }
 
-            send(controller, "result", {
-              ...result,
-              progress: {
-                completed: summary.passed + summary.failed + summary.skipped,
-                total: summary.total,
-              },
-            });
+              if (result.status === "ok") summary.passed++;
+              else if (result.status === "failed") summary.failed++;
+              else summary.skipped++;
+
+              send(controller, "result", {
+                ...result,
+                progress: {
+                  completed: summary.passed + summary.failed + summary.skipped,
+                  total: summary.total,
+                },
+              });
+            }
           }
+
+          await Promise.all(
+            Array.from(
+              { length: Math.min(CHAT_ALL_CONCURRENCY, providers.length) },
+              () => worker(),
+            ),
+          );
 
           send(controller, "done", {
             message,
