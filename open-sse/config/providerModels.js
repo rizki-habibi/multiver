@@ -9,13 +9,36 @@ export { PROVIDER_MODELS };
 
 
 // Helper functions
+// Resolve a provider by canonical id, short alias, or secondary alias.
+// PROVIDER_MODELS is keyed by the registry alias for many OAuth providers
+// (for example codex -> cx and kiro -> kr).
+export function resolveProviderModelKey(aliasOrId) {
+  if (!aliasOrId) return aliasOrId;
+  if (PROVIDER_MODELS[aliasOrId]) return aliasOrId;
+  const entry = REGISTRY.find((provider) =>
+    provider?.id === aliasOrId ||
+    provider?.alias === aliasOrId ||
+    provider?.aliases?.includes?.(aliasOrId)
+  );
+  if (!entry) return aliasOrId;
+  if (entry.alias && PROVIDER_MODELS[entry.alias]) return entry.alias;
+  if (entry.id && PROVIDER_MODELS[entry.id]) return entry.id;
+  return aliasOrId;
+}
+
 export function getProviderModels(aliasOrId) {
-  return PROVIDER_MODELS[aliasOrId] || [];
+  const key = resolveProviderModelKey(aliasOrId);
+  return PROVIDER_MODELS[key] || [];
 }
 
 export function getDefaultModel(aliasOrId) {
-  const models = PROVIDER_MODELS[aliasOrId];
-  return models?.[0]?.id || null;
+  const models = getProviderModels(aliasOrId);
+  // Never select an embedding/image/TTS/video model as the default chat model.
+  const chatModel = models.find((model) => {
+    const kind = model?.kind || model?.type;
+    return !kind || kind === "llm" || kind === "chat";
+  });
+  return chatModel?.id || null;
 }
 
 // Providers whose registry uses dots in version numbers (e.g. "claude-sonnet-4.5").
@@ -40,15 +63,15 @@ function findModel(models, modelId, aliasOrId) {
 
 export function isValidModel(aliasOrId, modelId, passthroughProviders = new Set()) {
   if (passthroughProviders.has(aliasOrId)) return true;
-  const models = PROVIDER_MODELS[aliasOrId];
-  if (!models) return false;
+  const models = getProviderModels(aliasOrId);
+  if (!models.length) return false;
   return !!findModel(models, modelId, aliasOrId);
 }
 
 export function findModelName(aliasOrId, modelId) {
-  const models = PROVIDER_MODELS[aliasOrId];
-  if (!models) return modelId;
-  const found = findModel(models, modelId, aliasOrId);
+  const models = getProviderModels(aliasOrId);
+  if (!models.length) return modelId;
+  const found = findModel(models, modelId, resolveProviderModelKey(aliasOrId));
   return found?.name || modelId;
 }
 
@@ -56,8 +79,8 @@ export function getModelTargetFormat(aliasOrId, modelId) {
   if ((!aliasOrId || aliasOrId === "oc" || aliasOrId === "opencode" || aliasOrId === "ocg" || aliasOrId === "opencode-go" || aliasOrId === "ocz" || aliasOrId === "opencode-zen") && isMuseSparkModel(modelId)) {
     return FORMATS.OPENAI_RESPONSES;
   }
-  const models = PROVIDER_MODELS[aliasOrId];
-  if (!models) return null;
+  const models = getProviderModels(aliasOrId);
+  if (!models.length) return null;
   return modelTargetFormat(findModel(models, modelId, aliasOrId));
 }
 
@@ -82,8 +105,8 @@ export function getModelUpstreamId(aliasOrId, modelId) {
   const sufMatch = typeof modelId === "string" ? modelId.match(/\([^()]+\)\s*$/) : null;
   const suffix = sufMatch ? sufMatch[0] : "";
   const baseId = suffix ? modelId.slice(0, sufMatch.index).trim() : modelId;
-  const models = PROVIDER_MODELS[aliasOrId];
-  const found = findModel(models, baseId, aliasOrId);
+  const models = getProviderModels(aliasOrId);
+  const found = findModel(models, baseId, resolveProviderModelKey(aliasOrId));
   const resolvedId = found?.upstreamModelId || found?.id;
   if (resolvedId) {
     const presetMatch = resolvedId.match(/\([^()]+\)\s*$/);
@@ -121,5 +144,5 @@ export function getModelsByProviderId(providerId) {
 // Get strip list for a model entry (explicit opt-in only)
 // Returns array of content types to strip, e.g. ["image", "audio"]
 export function getModelStrip(alias, modelId) {
-  return modelStrip(findModel(PROVIDER_MODELS[alias], modelId, alias));
+  return modelStrip(findModel(getProviderModels(alias), modelId, resolveProviderModelKey(alias)));
 }
