@@ -87,15 +87,15 @@ export function getModelTargetFormat(aliasOrId, modelId) {
 // Declared upstream formats for a model (registry `supportedFormats`). Drives the
 // per-model guard on the sourceFormat-matched transport; null when undeclared.
 export function getModelSupportedFormats(aliasOrId, modelId) {
-  const models = PROVIDER_MODELS[aliasOrId];
-  if (!models) return null;
-  return modelSupportedFormats(findModel(models, modelId, aliasOrId));
+  const models = getProviderModels(aliasOrId);
+  if (!models.length) return null;
+  return modelSupportedFormats(findModel(models, modelId, resolveProviderModelKey(aliasOrId)));
 }
 
 export function getModelType(aliasOrId, modelId) {
-  const models = PROVIDER_MODELS[aliasOrId];
-  if (!models) return null;
-  const found = findModel(models, modelId, aliasOrId);
+  const models = getProviderModels(aliasOrId);
+  if (!models.length) return null;
+  const found = findModel(models, modelId, resolveProviderModelKey(aliasOrId));
   return found?.kind || found?.type || null;
 }
 
@@ -121,8 +121,8 @@ export function getModelUpstreamId(aliasOrId, modelId) {
 }
 
 export function getModelQuotaFamily(aliasOrId, modelId) {
-  const models = PROVIDER_MODELS[aliasOrId];
-  return modelQuotaFamily(findModel(models, modelId, aliasOrId));
+  const models = getProviderModels(aliasOrId);
+  return modelQuotaFamily(findModel(models, modelId, resolveProviderModelKey(aliasOrId)));
 }
 
 // OAuth short aliases — derived from registry `alias` (single source). everything else: alias = id.
