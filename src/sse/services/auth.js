@@ -271,7 +271,11 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   if (!shouldFallback) return { shouldFallback: false, cooldownMs: 0 };
 
   const reason = typeof errorText === "string" ? errorText.slice(0, 200) : "Provider error";
-  const lockUpdate = buildModelLockUpdate(githubResetAtMs ? null : model, cooldownMs);
+  // Invalid credentials are connection-wide: locking only one model would make
+  // the same broken key get retried against every other model on the next request.
+  // Keep quota/model failures scoped to the affected model.
+  const lockModel = status === 401 ? null : (githubResetAtMs ? null : model);
+  const lockUpdate = buildModelLockUpdate(lockModel, cooldownMs);
 
   await updateProviderConnection(connectionId, {
     ...lockUpdate,
