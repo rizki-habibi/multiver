@@ -30,6 +30,9 @@ jobs:
       - name: Install deps
         run: npm install --no-audit --no-fund
 
+      - name: Install CLI deps
+        run: npm install --prefix cli --no-audit --no-fund
+
       - name: Build app
         run: npm run build
 
