@@ -1016,7 +1016,7 @@ function ProviderTestResultsView({ results }) {
       oauth: "OAuth",
       free: "Free",
       apikey: "API Key",
-      provider: "Provider",
+      provider: "Penyedia",
       compatible: "API Keys Kompatibel",
       all: "Semua",
     }[mode] || mode;
