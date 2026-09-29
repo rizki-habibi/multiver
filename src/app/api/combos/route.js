@@ -45,6 +45,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "Name can only contain letters, numbers, -, _ and ." }, { status: 400 });
     }
 
+    if (Array.isArray(models) && models.includes(name.trim())) {
+      return NextResponse.json({ error: "Combo cannot contain itself" }, { status: 400 });
+    }
+
     // Check if name already exists
     const existing = await getComboByName(name);
     if (existing) {
