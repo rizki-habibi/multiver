@@ -246,7 +246,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     if (toolN) parts.push(`${toolN} TOOL`);
     if (think) parts.push(`THINK:${think}`);
     parts.push(`ACC:${acc}`);
-    log.line(reqTag, SYMBOLS.start, parts.join(" · "));
+    log.line(reqTag, log.SYMBOLS?.start, parts.join(" · "));
   }
 
   // TTS models don't support tool messages/function calling
@@ -310,7 +310,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     try { onPxpipeEvent?.({ provider, model, ...pxpipeSummary }); } catch { /* stats must not break requests */ }
   }
 
-  if (xf.length && log?.line) log.line(reqTag, SYMBOLS.savers, xf.join(" · "));
+  if (xf.length && log?.line) log.line(reqTag, log.SYMBOLS?.savers, xf.join(" · "));
 
   // Pin cache breakpoints to the final body — every saver above can reshape
   // system/tools/messages, and a stale anchor costs a full prefix rewrite.
