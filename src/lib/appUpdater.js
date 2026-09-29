@@ -122,12 +122,7 @@ function ensureRuntimeUpdater(bundledPath) {
     if (!bundledPath || !fs.existsSync(bundledPath)) return bundledPath;
     const runtimeDir = path.join(getDataDir(), "runtime", "updater");
     const runtimePath = path.join(runtimeDir, "updater.js");
-    if (fs.existsSync(runtimePath)) {
-      try {
-        if (fs.statSync(bundledPath).size === fs.statSync(runtimePath).size) return runtimePath;
-      } catch { /* recopy */ }
-    }
-    fs.mkdirSync(runtimeDir, { recursive: true });
+    // Always refresh the detached updater from the currently running bundle.\n    // A size-only comparison can leave a stale updater after an update.\n    fs.mkdirSync(runtimeDir, { recursive: true });
     fs.copyFileSync(bundledPath, runtimePath);
     return runtimePath;
   } catch {
