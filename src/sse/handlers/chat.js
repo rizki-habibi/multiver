@@ -167,23 +167,6 @@ export async function handleChat(request, clientRawRequest = null, options = {})
       });
     }
 
-    if (comboStrategy === "max") {
-      log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: max)`);
-      return handleMaxChat({
-        body,
-        models: augmentedModels,
-        handleSingleModel: (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, requestId),
-        log,
-        comboName: modelStr,
-        judgeModel: comboStrategies[modelStr]?.judgeModel,
-        enableJudge: !!comboStrategies[modelStr]?.maxEnableJudge,
-        maxConcurrent: comboStrategies[modelStr]?.maxConcurrent || settings.maxConcurrent || 6,
-        timeoutMs: comboStrategies[modelStr]?.maxTimeoutMs || settings.maxTimeoutMs || 90000,
-        retryPerModel: comboStrategies[modelStr]?.maxRetry || settings.maxRetry || 0,
-        requestId,
-      });
-    }
-
     const comboStickyLimit = settings.comboStickyRoundRobinLimit;
     log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
