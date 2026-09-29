@@ -551,22 +551,20 @@ function checkForUpdate() {
       resolve(version);
     };
     const current = pkg.version;
-    let gitDone = !inGitRepo();
+    // A globally installed CLI is not necessarily inside a Git repository.
+    // Git is intentionally not part of the startup update path; GitHub Release
+    // is authoritative and npm is only a fallback.
     let npmDone = false;
     let releaseDone = false;
-    let gitResult = null;
     let npmResult = null;
     let releaseResult = null;
     const finishIfReady = () => {
-      if (!gitDone || !npmDone || !releaseDone) return;
-      const candidates = [releaseResult, gitResult, npmResult]
+      if (!npmDone || !releaseDone) return;
+      const candidates = [releaseResult, npmResult]
         .filter(Boolean)
         .filter((v) => compareVersions(v, current) > 0);
       done(candidates.length ? candidates[0] : null);
     };
-    if (!gitDone) {
-      checkGitUpdate().then((v) => { gitResult = v; gitDone = true; finishIfReady(); });
-    }
     const req = https.get(
       "https://registry.npmjs.org/multiver/latest",
       { timeout: 2500, headers: { "User-Agent": "Multiver-Updater" } },
