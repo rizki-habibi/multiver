@@ -186,6 +186,7 @@ export function spawnUpdaterAndExit(packageName = UPDATER_CONFIG.npmPackageName)
     env: {
       ...process.env,
       UPDATER_PKG_NAME: packageName,
+      UPDATER_RELEASE_URL: UPDATER_CONFIG.releaseUrl,
       UPDATER_PORT: String(UPDATER_CONFIG.statusPort),
       UPDATER_TAIL_LINES: String(UPDATER_CONFIG.statusLogTailLines),
       UPDATER_RETRIES: String(UPDATER_CONFIG.installRetries),
