@@ -621,12 +621,9 @@ if (!fs.existsSync(serverPath)) {
   process.exit(1);
 }
 
-// Start server immediately; run update check in parallel (not on the critical path).
-const updatePromise = checkForUpdate();
-killAllAppProcesses(port)
-  .then(() => killProcessOnPort(port))
-  .then(() => startServer(updatePromise));
-
+// Server startup is handled exactly once by bootstrapMultiver() below.
+// Keeping startup in one place prevents two Next.js child processes from
+// racing for the same port (EADDRINUSE).
 // Show interface selection menu
 async function showInterfaceMenu(latestVersion) {
   const { selectMenu } = require("./src/cli/utils/input");
