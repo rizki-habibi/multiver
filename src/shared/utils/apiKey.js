@@ -10,13 +10,13 @@ if (!process.env.API_KEY_SECRET && !globalThis.__MV_API_KEY_SECRET__) {
 }
 
 /**
- * Generate 6-char random keyId
+ * Generate 6-char cryptographically secure keyId
  */
 function generateKeyId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars[crypto.randomInt(chars.length)];
   }
   return result;
 }
@@ -64,7 +64,9 @@ export function parseApiKey(apiKey) {
 
     // Validate CRC
     const expectedCrc = generateCrc(machineId, keyId);
-    if (crc !== expectedCrc) return null;
+    const actual = Buffer.from(String(crc));
+    const expected = Buffer.from(expectedCrc);
+    if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
 
     return { machineId, keyId, isNewFormat: true };
   }
