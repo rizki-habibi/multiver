@@ -27,7 +27,7 @@ npm install -g cli/multiver-12.1.0.tgz
 multiver
 ```
 
-### Instalasi global tanpa menyimpan source di `C:\\laragon\\www\\multi`
+### Instalasi global tanpa menyimpan source di `C:\\Users\\rizki\\multiver`
 
 Jika hanya ingin menjalankan Multiver sebagai aplikasi global, source repository tidak perlu disimpan permanen. Perintah Windows CMD berikut mengambil folder CLI secara sparse ke folder sementara, memasangnya secara global, lalu menghapus folder sementara:
 
@@ -35,7 +35,7 @@ Jika hanya ingin menjalankan Multiver sebagai aplikasi global, source repository
 set "M=%TEMP%\\multiver-install" && if exist "%M%" rmdir /s /q "%M%" && git clone --depth 1 --filter=blob:none --sparse https://github.com/rizki-habibi/multiver.git "%M%" && cd /d "%M%" && git sparse-checkout set cli && npm install -g "%M%\\cli" --force && rmdir /s /q "%M%" && multiver --version && multiver
 ```
 
-Setelah instalasi global selesai, folder kerja repository di `C:\\laragon\\www\\multi` boleh dihapus **selama tidak dipakai untuk pengembangan**. Data runtime Multiver tetap berada di lokasi data pengguna, bukan di folder source tersebut.
+Setelah instalasi global selesai, folder kerja repository di `C:\\Users\\rizki\\multiver` boleh dihapus **selama tidak dipakai untuk pengembangan**. Data runtime Multiver tetap berada di lokasi data pengguna, bukan di folder source tersebut.
 
 ### Source (development)
 
