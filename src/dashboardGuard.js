@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSettings, validateApiKey } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { getDashboardAuthSession } from "@/lib/auth/dashboardSession";
+import { getAdminGithubId } from "@/lib/auth/github";
 import { hasTrustedPeerHeaders } from "@/lib/auth/trustedPeer";
 
 const CLI_TOKEN_HEADER = "x-mv-cli-token";
@@ -19,8 +20,8 @@ async function hasValidCliToken(request) {
 }
 
 const PUBLIC_API_PATHS = [
-  "/api/health","/api/init","/api/locale","/api/auth/login","/api/auth/logout","/api/auth/status",
-  "/api/auth/oidc","/api/auth/saml","/api/auth/github","/api/version","/api/settings/require-login",
+  "/api/health","/api/init","/api/locale","/api/auth/logout","/api/auth/status",
+  "/api/auth/github","/api/version","/api/settings/require-login",
 ];
 const PUBLIC_PREFIXES = ["/v1","/v1beta","/api/v1","/api/v1beta","/codex","/responses"];
 const ALWAYS_PROTECTED = [
@@ -71,7 +72,7 @@ async function canAccessPublicLlmApi(request){if(await isGithubAdminSession(requ
 async function hasValidToken(request){return !!(await getDashboardAuthSession(request.cookies.get("auth_token")?.value));}
 async function loadSettings(){try{return await getSettings();}catch{return null;}}
 async function session(request){return await getDashboardAuthSession(request.cookies.get("auth_token")?.value);}
-async function isGithubAdminSession(request){const s=await session(request);return s?.authProvider==="github"&&s?.role==="admin"&&String(s?.githubId||"")==="150777189";}
+async function isGithubAdminSession(request){const s=await session(request);return s?.authProvider==="github"&&s?.role==="admin"&&String(s?.githubId||"")===getAdminGithubId();}
 async function isAuthenticated(request){return await isGithubAdminSession(request);}
 export { isAuthenticated };
 function isOfficePath(pathname){return pathname==="/dashboard/office"||pathname.startsWith("/dashboard/office/");}
