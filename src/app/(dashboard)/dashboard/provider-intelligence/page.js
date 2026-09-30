@@ -19,6 +19,7 @@ export default function ProviderIntelligencePage() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
+  const [autoCleanup, setAutoCleanup] = useState(false);
 
   const scan = useCallback(async () => {
     setLoading(true);
@@ -28,11 +29,36 @@ export default function ProviderIntelligencePage() {
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "Pemeriksaan gagal");
       setData(json);
+
+      if (autoCleanup) {
+        const removable = (json?.providers || [])
+          .filter((p) => ["INVALID_CREDENTIAL", "SUSPENDED"].includes(p.classification))
+          .map((p) => p.connectionId)
+          .filter(Boolean);
+        if (removable.length > 0) {
+          const cleanup = await fetch("/api/provider-intelligence", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete-invalid-suspended", ids: removable }),
+          });
+          if (!cleanup.ok) throw new Error("Pembersihan otomatis kredensial gagal");
+          const refreshed = await fetch("/api/provider-intelligence?deep=1", { cache: "no-store" });
+          const refreshedJson = await refreshed.json();
+          if (refreshed.ok) setData(refreshedJson);
+        }
+      }
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
+  }, [autoCleanup]);
+
+  useEffect(() => {
+    fetch("/api/settings", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((settings) => setAutoCleanup(settings?.providerAutoCleanup === true))
+      .catch(() => {});
   }, []);
 
   useEffect(() => { scan(); }, [scan]);
@@ -59,6 +85,7 @@ export default function ProviderIntelligencePage() {
   const providers = data?.providers || [];
   const invalid = providers.filter(p => ["INVALID_CREDENTIAL", "SUSPENDED", "ORPHAN"].includes(p.classification));
   const orphans = providers.filter(p => p.classification === "ORPHAN");
+  const removable = providers.filter(p => ["INVALID_CREDENTIAL", "SUSPENDED"].includes(p.classification));
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
@@ -92,13 +119,36 @@ export default function ProviderIntelligencePage() {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-50/5 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autoCleanup}
+            onChange={async (event) => {
+              const value = event.target.checked;
+              setAutoCleanup(value);
+              await fetch("/api/settings", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ providerAutoCleanup: value }),
+              });
+            }}
+          />
+          Hapus otomatis kredensial yang terbukti invalid/ditangguhkan
+        </label>
         <button
           onClick={() => action("disable-invalid", invalid.map(p => p.connectionId))}
           disabled={working || invalid.length === 0}
           className="rounded-lg border border-amber-300 px-3 py-2 text-sm hover:bg-amber-50 disabled:opacity-50"
         >
           Nonaktifkan kredensial bermasalah ({invalid.length})
+        </button>
+        <button
+          onClick={() => action("delete-invalid-suspended", removable.map(p => p.connectionId))}
+          disabled={working || removable.length === 0}
+          className="rounded-lg border border-red-300 px-3 py-2 text-sm hover:bg-red-50 disabled:opacity-50"
+        >
+          Hapus invalid/suspend ({removable.length})
         </button>
         <button
           onClick={() => action("delete-orphans", orphans.map(p => p.connectionId))}
@@ -171,6 +221,8 @@ export default function ProviderIntelligencePage() {
                   <td className="px-4 py-4 align-top">
                     <span className="rounded-full border border-border-subtle px-2 py-1 text-xs">{STATUS[p.classification] || p.classification}</span>
                     {p.lastErrorType !== "UNKNOWN" && <div className="mt-1 max-w-[220px] text-[11px] text-text-muted">{p.lastErrorType}</div>}
+                    {p.classification === "INVALID_CREDENTIAL" && <div className="mt-1 max-w-[260px] text-[11px] text-amber-300">Saran: perbarui atau hapus API key lalu uji ulang.</div>}
+                    {p.classification === "SUSPENDED" && <div className="mt-1 max-w-[260px] text-[11px] text-amber-300">Saran: periksa status akun. Hapus kredensial hanya jika suspend sudah terkonfirmasi.</div>}
                   </td>
                 </tr>
               ))}
