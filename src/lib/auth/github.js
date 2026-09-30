@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 export const GITHUB_STATE_COOKIE = "github_oauth_state";
+const DEFAULT_ADMIN_GITHUB_ID = "150777189";
 
 function required(name) {
   const value = String(process.env[name] || "").trim();
@@ -73,12 +74,14 @@ export async function fetchGithubIdentity(accessToken) {
   return user;
 }
 
+export function getAdminGithubId() {
+  return String(process.env.ADMIN_GITHUB_ID || DEFAULT_ADMIN_GITHUB_ID).trim();
+}
+
 export function githubRoleForUserId(id) {
-  const adminId = String(process.env.ADMIN_GITHUB_ID || "").trim();
-  if (!adminId) return "user";
-  return String(id) === adminId ? "admin" : "user";
+  return String(id) === getAdminGithubId() ? "admin" : null;
 }
 
 export function githubUsersAllowed() {
-  return process.env.ALLOW_GITHUB_USERS === "true";
+  return false;
 }
