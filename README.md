@@ -10,6 +10,24 @@ Multiver Max menjalankan **semua model** dalam combo secara bersamaan, mempertah
 
 ---
 
+## Kiro MITM + 9Router V3 Online
+
+Multiver Kiro MITM now uses the online 9Router V3 gateway as its default upstream:
+`https://9router-new-production.up.railway.app`
+
+Alur:
+`Kiro → hosts file → 127.0.0.1:443 → Multiver MITM → 9Router V3 /v1/chat/completions → provider/model → Kiro`
+
+Pengaturan:
+- Default endpoint: `https://9router-new-production.up.railway.app`
+- Override endpoint dengan `NINE_ROUTER_V3_BASE_URL` atau `MITM_ROUTER_BASE`.
+- Endpoint API model: `/v1/models`
+- Jangan menaruh API key di source code; masukkan melalui pengaturan MITM.
+- Setelah server MITM berjalan, aktifkan DNS **Kiro** agar host Kiro diarahkan ke `127.0.0.1`.
+- Sertifikat Root CA harus dipercaya Windows sebelum Kiro digunakan.
+
+Diagnostik MITM memeriksa listener lokal, sertifikat, DNS Kiro, kesehatan gateway online, katalog `/v1/models`, dan jumlah request Kiro yang benar-benar terintercept.
+
 ## 🚀 Instalasi
 
 ### npm global (rekomendasi)
