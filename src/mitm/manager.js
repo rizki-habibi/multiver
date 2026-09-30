@@ -18,11 +18,6 @@ const { log, err } = require("./logger");
 const { LSOF_BIN } = require("./config");
 const { DEFAULT_MITM_ROUTER_BASE } = require("../shared/constants/mitmRouter.js");
 
-// Gateway port (SSOT). src/mitm is CommonJS and runs standalone outside Next,
-// so it reads the same env the CLI/parent sets rather than importing the ESM
-// config module. Defaults mirror src/shared/constants/config.js NETWORK_CONFIG.
-const MULTIVER_PORT = Number(process.env.MULTIVER_PORT || 20222);
-
 // Canonical router base: where intercepted traffic is forwarded (Multiver gateway).
 
 function shellQuoteSingle(str) {
