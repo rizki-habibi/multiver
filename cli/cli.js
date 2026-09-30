@@ -973,7 +973,6 @@ function startServer(updatePromise) {
     }, delay);
   }
 
-  attachServerEvents();
 }
 
 async function bootstrapMultiver() {
