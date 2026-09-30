@@ -118,7 +118,7 @@ async function buildChecks(status, stats, state) {
   const port = getMultiverPort();
   const settings = await getSettings();
   const gatewayBaseUrl = String(settings.mitmRouterBaseUrl || DEFAULT_MITM_ROUTER_BASE).replace(/\/+$/, "");
-  const isLocalGateway = /^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(gatewayBaseUrl);
+  const isLocalGateway = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(gatewayBaseUrl);
 
   // Only probe the local gateway port when MITM is configured for localhost.
   // Online 9Router V3 deployments are checked over their public HTTPS URL.
