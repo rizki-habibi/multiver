@@ -1,6 +1,6 @@
 {
   "name": "multiver-app",
-  "version": "12.1.50",
+  "version": "12.1.51",
   "private": true,
   "description": "Multiver: Advanced Multi-AI Fusion Router",
   "scripts": {
