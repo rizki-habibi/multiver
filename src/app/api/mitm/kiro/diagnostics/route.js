@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getMitmStatus } from "@/mitm/manager";
 import { getMultiverPort } from "@/shared/constants/config";
+import { DEFAULT_MITM_ROUTER_BASE } from "@/shared/constants/mitmRouter.js";
+import { getSettings } from "@/lib/localDb";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +61,7 @@ export async function GET() {
         dnsKiro: !!status.dnsStatus?.kiro,
       },
       gatewayPort: getMultiverPort(),
+      gatewayBaseUrl: (await getSettings()).mitmRouterBaseUrl || DEFAULT_MITM_ROUTER_BASE,
     });
   } catch (error) {
     logger.error("MITM", `diagnostic failed: ${error.message}`);
@@ -113,12 +116,16 @@ async function resolveStatsPath() {
 async function buildChecks(status, stats, state) {
   const checks = [];
   const port = getMultiverPort();
+  const settings = await getSettings();
+  const gatewayBaseUrl = String(settings.mitmRouterBaseUrl || DEFAULT_MITM_ROUTER_BASE).replace(/\/+$/, "");
+  const isLocalGateway = /^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(gatewayBaseUrl);
 
-  // Gateway port — real listener probe
-  checks.push(await checkPort("Gateway port " + port, "GATEWAY", port));
-
-  // Gateway health
-  checks.push(await checkGateway("/health", "GATEWAY", port));
+  // Only probe the local gateway port when MITM is configured for localhost.
+  // Online 9Router V3 deployments are checked over their public HTTPS URL.
+  if (isLocalGateway) {
+    checks.push(await checkPort("Gateway port " + port, "GATEWAY", port));
+  }
+  checks.push(await checkConfiguredGateway(gatewayBaseUrl));
 
   // MITM process
   checks.push({
@@ -175,7 +182,7 @@ async function buildChecks(status, stats, state) {
   });
 
   // Provider
-  checks.push(await checkProvider(port));
+  checks.push(await checkProvider(gatewayBaseUrl));
 
   // Logging
   checks.push(await checkLogging());
@@ -202,29 +209,30 @@ async function checkPort(name, category, port) {
   }
 }
 
-async function checkGateway(name, category, port) {
+async function checkConfiguredGateway(baseUrl) {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(5000) });
     return {
-      name, category,
+      name: "Gateway online",
+      category: "GATEWAY",
       status: res.ok ? "PASS" : "FAIL",
-      reason: res.ok ? "Gateway merespon 200" : `Gateway balas ${res.status}`,
+      reason: res.ok ? `Gateway merespon 200: ${baseUrl}` : `Gateway balas ${res.status}: ${baseUrl}`,
     };
   } catch (e) {
-    return { name, category, status: "FAIL", reason: `Gateway tidak merespon: ${e.message}` };
+    return { name: "Gateway online", category: "GATEWAY", status: "FAIL", reason: `Gateway tidak merespon: ${baseUrl} — ${e.message}` };
   }
 }
 
-async function checkProvider(port) {
+async function checkProvider(baseUrl) {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/v1/models`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${baseUrl}/v1/models`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return { name: "Provider", category: "PROVIDER", status: "WARN", reason: `/v1/models balas ${res.status}` };
     const body = await res.json().catch(() => ({ data: [] }));
     const n = body.data?.length || 0;
     return {
       name: "Provider", category: "PROVIDER",
       status: n > 0 ? "PASS" : "WARN",
-      reason: n > 0 ? `${n} model terdaftar di gateway` : "0 model — cek koneksi provider",
+      reason: n > 0 ? `${n} model terdaftar di gateway` : "0 model — cek katalog 9Router V3",
     };
   } catch (e) {
     return { name: "Provider", category: "PROVIDER", status: "FAIL", reason: `/v1/models gagal: ${e.message}` };
