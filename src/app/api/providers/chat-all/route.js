@@ -18,8 +18,16 @@ const CHAT_ALL_CONCURRENCY = Math.max(
   Math.min(32, Number(process.env.MULTIVER_CHAT_ALL_CONCURRENCY) || 12),
 );
 const CHAT_ALL_PROVIDER_TIMEOUT_MS = Math.max(
-  3000,
-  Math.min(30000, Number(process.env.MULTIVER_CHAT_ALL_TIMEOUT_MS) || 12000),
+  2500,
+  Math.min(15000, Number(process.env.MULTIVER_CHAT_ALL_TIMEOUT_MS) || 7000),
+);
+const CHAT_ALL_MODEL_CONCURRENCY = Math.max(
+  1,
+  Math.min(4, Number(process.env.MULTIVER_CHAT_ALL_MODEL_CONCURRENCY) || 2),
+);
+const CHAT_ALL_MODEL_DISCOVERY_TIMEOUT_MS = Math.max(
+  1200,
+  Math.min(5000, Number(process.env.MULTIVER_CHAT_ALL_MODEL_DISCOVERY_TIMEOUT_MS) || 2500),
 );
 
 const HIDDEN_PROVIDER_IDS = new Set([
