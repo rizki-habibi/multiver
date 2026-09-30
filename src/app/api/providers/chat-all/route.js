@@ -224,23 +224,14 @@ function firstChatModel(models = []) {
 }
 
 async function resolveCompatibleModels(provider, connections) {
-  const candidates = [];
-  const liveCandidates = [];
-  const seen = new Set();
+  const active = connections.filter((item) => item.isActive !== false);
+  const discovered = await Promise.all(active.map(async (connection) => {
+    const defaults = [];
+    if (connection.defaultModel) defaults.push(connection.defaultModel);
 
-  const add = (model) => {
-    const normalized = normalizeModelId(model, provider);
-    if (!normalized) return;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    candidates.push(normalized);
-  };
-
-  for (const connection of connections.filter((item) => item.isActive !== false)) {
-    add(connection.defaultModel);
     const baseRaw = connection.providerSpecificData?.baseUrl;
-    if (!baseRaw) continue;
+    if (!baseRaw) return { defaults, live: [] };
+
     const baseUrl = String(baseRaw)
       .replace(/\/chat\/completions\/?$/i, "")
       .replace(/\/responses\/?$/i, "")
@@ -260,48 +251,74 @@ async function resolveCompatibleModels(provider, connections) {
       }
     }
 
-    // Discover models from the provider itself. SQL/SQLite connection data
-    // remains authoritative for Base URL, credential and defaultModel.
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
+      const timer = setTimeout(() => controller.abort(), CHAT_ALL_MODEL_DISCOVERY_TIMEOUT_MS);
       try {
         const response = await fetch(baseUrl + "/models", {
           headers: { ...headers, "Accept-Encoding": "gzip, deflate, br" },
           signal: controller.signal,
         });
-        if (response.ok) {
-          const data = await response.json().catch(() => null);
-          const models = Array.isArray(data) ? data : (data?.data || data?.models || []);
-          for (const item of models) {
-            const id = item?.id || item?.model || item?.name;
-            if (!id) continue;
-            const lower = String(id).toLowerCase();
-            if (/embed|embedding|tts|audio|image|video|stt|transcrib|moderation|rerank/.test(lower)) continue;
-            const normalized = normalizeModelId(id, provider);
-            if (normalized) {
-              liveCandidates.push(normalized);
-              add(normalized);
-            }
-          }
-        }
+        if (!response.ok) return { defaults, live: [] };
+        const data = await response.json().catch(() => null);
+        const rows = Array.isArray(data) ? data : (data?.data || data?.models || []);
+        const live = rows
+          .map((item) => item?.id || item?.model || item?.name)
+          .filter(Boolean)
+          .filter((id) => !/embed|embedding|tts|audio|image|video|stt|transcrib|moderation|rerank/i.test(String(id)))
+          .map((id) => normalizeModelId(id, provider))
+          .filter(Boolean);
+        return { defaults, live };
       } finally {
         clearTimeout(timer);
       }
     } catch {
-      // Keep configured/default models; a broken /models endpoint must not
-      // make an otherwise valid connection disappear.
+      return { defaults, live: [] };
+    }
+  }));
+
+  const candidates = [];
+  const liveCandidates = [];
+  const seen = new Set();
+  const add = (model, target = candidates) => {
+    const normalized = normalizeModelId(model, provider);
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    target.push(normalized);
+  };
+
+  for (const item of discovered) {
+    for (const model of item.live) {
+      const before = candidates.length;
+      add(model, liveCandidates);
+      if (candidates.length !== before) candidates.pop();
     }
   }
-
-  // Prefer models confirmed by the provider's live /models catalog over stale
-  // configured defaults. This prevents a removed default model from consuming
-  // the first test attempt on compatible gateways such as xKiro.
-  const liveSet = new Set(liveCandidates.map((value) => String(value).toLowerCase()));
-  return [
-    ...liveCandidates,
-    ...candidates.filter((value) => !liveSet.has(String(value).toLowerCase())),
-  ];
+  // Rebuild the ordering without sharing mutable state between parallel probes.
+  const orderedLive = [];
+  const orderedSeen = new Set();
+  for (const item of discovered) {
+    for (const model of item.live) {
+      const normalized = normalizeModelId(model, provider);
+      const key = String(normalized || "").toLowerCase();
+      if (!normalized || orderedSeen.has(key)) continue;
+      orderedSeen.add(key);
+      orderedLive.push(normalized);
+    }
+  }
+  const fallback = [];
+  for (const item of discovered) {
+    for (const model of item.defaults) {
+      const normalized = normalizeModelId(model, provider);
+      const key = String(normalized || "").toLowerCase();
+      if (!normalized || orderedSeen.has(key)) continue;
+      orderedSeen.add(key);
+      fallback.push(normalized);
+    }
+  }
+  return [...orderedLive, ...fallback];
 }
 
 async function resolveDynamicModels(provider, connections, modelAliases, customModels) {
