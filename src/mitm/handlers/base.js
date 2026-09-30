@@ -1,7 +1,8 @@
 ﻿const { log, err } = require("../logger");
+const { DEFAULT_MITM_ROUTER_BASE } = require("../../shared/constants/mitmRouter.js");
 
 const MULTIVER_PORT = Number(process.env.MULTIVER_PORT || 20222);
-const DEFAULT_LOCAL_ROUTER = `http://localhost:${MULTIVER_PORT}`;
+const DEFAULT_LOCAL_ROUTER = DEFAULT_MITM_ROUTER_BASE;
 const ROUTER_BASE = String(process.env.MITM_ROUTER_BASE || DEFAULT_LOCAL_ROUTER)
   .trim()
   .replace(/\/+$/, "") || DEFAULT_LOCAL_ROUTER;
