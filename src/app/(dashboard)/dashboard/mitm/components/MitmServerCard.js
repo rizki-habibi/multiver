@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, Button, Badge, Input } from "@/shared/components";
-import { getMultiverBaseUrl } from "@/shared/constants/config";
+import { DEFAULT_MITM_ROUTER_BASE } from "@/shared/constants/mitmRouter.js";
 
-const DEFAULT_MITM_ROUTER_BASE = getMultiverBaseUrl("localhost");
 
 /**
  * Shared MITM infrastructure card — manages SSL cert + server start/stop.
@@ -166,17 +165,17 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
           {/* Purpose & How it works */}
           <div className="px-2 py-2 rounded-lg bg-surface/50 border border-border/50 flex flex-col gap-2">
             <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">Tujuan:</span> Pakai Kiro IDE dengan provider/model apa pun dari Multiver
+              <span className="font-medium text-text-main">Tujuan:</span> Pakai Kiro IDE dengan provider/model dari gateway online 9Router V3 atau gateway Multiver lokal
             </p>
             <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">Cara kerja:</span> Request Kiro IDE → DNS dialihkan ke localhost:443 → MITM proxy menyadap → Multiver → respons kembali ke Kiro
+              <span className="font-medium text-text-main">Cara kerja:</span> Request Kiro IDE → DNS dialihkan ke localhost:443 → MITM proxy → gateway online 9Router V3 → respons kembali ke Kiro
             </p>
           </div>
 
           {/* Base URL + API Key — same row pattern as Claude Code / cli-tools */}
           <div className="flex flex-col gap-2">
             <div className="grid gap-1 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-              <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">URL Dasar Multiver</span>
+              <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">URL Dasar Gateway</span>
               <span className="material-symbols-outlined hidden text-text-muted text-[14px] sm:inline">arrow_forward</span>
               <input
                 type="text"
