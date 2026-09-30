@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
 import { resetComboRotation } from "open-sse/services/combo.js";
-import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,7 +19,8 @@ export async function GET() {
     const settings = await getSettings();
     // ponytail: mitmSudoEncrypted is the encrypted sudo password — never in a response body.
     const { password, oidcClientSecret, mitmSudoEncrypted, ...safeSettings } = settings;
-    safeSettings.oidcConfigured = !!(safeSettings.oidcIssuerUrl && safeSettings.oidcClientId && oidcClientSecret);
+    safeSettings.authMode = "github";
+    safeSettings.oidcConfigured = false;
     safeSettings.mitmSudoConfigured = !!mitmSudoEncrypted;
 
     const enableRequestLogs = process.env.ENABLE_REQUEST_LOGS === "true";
@@ -30,7 +30,8 @@ export async function GET() {
       ...safeSettings,
       enableRequestLogs,
       enableTranslator,
-      hasPassword: !!password
+      hasPassword: false,
+      githubOnly: true
     }, { headers: SETTINGS_RESPONSE_HEADERS });
   } catch (error) {
     console.log("Error getting settings:", error);
@@ -42,36 +43,19 @@ export async function PATCH(request) {
   try {
     const body = await request.json();
 
-    // Strip protected secrets before any internal handling sets them
-    for (const key of PROTECTED_SETTING_KEYS) delete body[key];
-
-    // If updating password, hash it
-    if (body.newPassword) {
-      const settings = await getSettings();
-      const currentHash = settings.password;
-
-      // Verify current password if it exists
-      if (currentHash) {
-        if (!body.currentPassword) {
-          return NextResponse.json({ error: "Current password required" }, { status: 400 });
-        }
-        const isValid = await bcrypt.compare(body.currentPassword, currentHash);
-        if (!isValid) {
-          return NextResponse.json({ error: "Invalid current password" }, { status: 401 });
-        }
-      } else {
-        // First time setting password, no current password needed
-        // Allow empty currentPassword or default "123456"
-        if (body.currentPassword && body.currentPassword !== "123456") {
-          return NextResponse.json({ error: "Invalid current password" }, { status: 401 });
-        }
-      }
-
-      const salt = await bcrypt.genSalt(10);
-      body.password = await bcrypt.hash(body.newPassword, salt);
-      delete body.newPassword;
-      delete body.currentPassword;
+    // Cloud authentication is fixed: GitHub owner only. Password/OIDC/SAML
+    // settings are rejected instead of merely hidden from the login page.
+    if (body.newPassword || body.currentPassword || body.password) {
+      return NextResponse.json({ error: "Password authentication is disabled. Use GitHub owner login." }, { status: 410 });
     }
+    for (const key of PROTECTED_SETTING_KEYS) delete body[key];
+    for (const key of [
+      "authMode", "ssoType", "oidcIssuerUrl", "oidcClientId", "oidcClientSecret",
+      "oidcScopes", "oidcLoginLabel", "samlEntryPoint", "samlIssuer", "samlCert",
+      "samlLoginLabel", "samlAttributeEmail", "samlAttributeName"
+    ]) delete body[key];
+    body.requireLogin = true;
+
 
     if (Object.prototype.hasOwnProperty.call(body, "oidcClientSecret")) {
       if (!body.oidcClientSecret || !String(body.oidcClientSecret).trim()) {
