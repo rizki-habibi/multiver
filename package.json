@@ -42,7 +42,8 @@
     "sql.js": "^1.14.2",
     "tailwindcss": "^4.3.3",
     "undici": "^8.11.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "postgres": "^3.4.9"
   },
   "engines": {
     "node": ">=18.0.0"
