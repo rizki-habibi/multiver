@@ -71,6 +71,7 @@ function diagnose(status, rawError = "") {
     return {
       code: "SUSPEND",
       message: "Akun atau layanan kemungkinan ditangguhkan/dinonaktifkan oleh penyedia. Periksa status akun dan sesi OAuth/kunci API.",
+      suggestion: "Nonaktifkan atau hapus kredensial ini jika status suspend sudah terkonfirmasi, lalu gunakan akun/kunci lain.",
     };
   }
   // Quota/billing must win over generic 403 AUTH: many compatible gateways
@@ -82,18 +83,21 @@ function diagnose(status, rawError = "") {
     return {
       code: "QUOTA",
       message: "Saldo, kredit, paket, atau kuota layanan sudah habis/tidak mencukupi. Pengujian dilanjutkan ke layanan berikutnya.",
+      suggestion: "Periksa saldo/kuota di dashboard provider. Jangan hapus API key hanya karena 402/429.",
     };
   }
   if (status === 429 || /rate.?limit|too many requests|throttl|rate.?limit|quota.*(?:limit|exhaust|reset)/.test(lower)) {
     return {
       code: "429",
       message: "Layanan membatasi permintaan. Kemungkinan terkena batas laju atau kuota.",
+      suggestion: "Tunggu reset rate limit, kurangi paralel, atau gunakan koneksi/model lain.",
     };
   }
   if (status === 405 || /method not allowed/.test(lower)) {
     return {
       code: "ENDPOINT_METHOD",
       message: "Alamat layanan aktif, tetapi metode/endpoint yang dipakai tidak cocok. Periksa Base URL dan jenis API (Chat/Responses/Anthropic).",
+      suggestion: "Periksa Base URL sampai level /v1 yang benar dan pilih jenis API yang sesuai.",
     };
   }
   if (
@@ -102,41 +106,48 @@ function diagnose(status, rawError = "") {
     return {
       code: "MODEL_INCOMPATIBLE",
       message: "Model terdeteksi tetapi tidak cocok dengan skema API yang digunakan. Multiver akan mencoba model chat lain dari katalog layanan.",
+      suggestion: "Gunakan model chat dari daftar model provider atau biarkan Multiver mencoba kandidat berikutnya.",
     };
   }
   if (status === 404 || /not found/.test(lower)) {
     return {
       code: "404",
       message: "Model atau titik akhir tidak ditemukan. Periksa model yang tersedia pada layanan.",
+      suggestion: "Gunakan model yang benar-benar muncul dari endpoint /models atau katalog provider.",
     };
   }
   if (status === 408 || status === 504 || /timeout|timed out|time out/.test(lower)) {
     return {
       code: "TIMEOUT",
       message: "Layanan tidak menjawab dalam batas waktu pengujian.",
+      suggestion: "Periksa jaringan/proksi, naikkan batas waktu jika perlu, atau coba model/provider lain.",
     };
   }
   if (/invalid json response|unexpected token|invalid json/.test(lower)) {
     return {
       code: "UPSTREAM_PROTOCOL",
       message: "Layanan merespons dengan format data yang tidak sesuai. Multiver mencatat error dan melanjutkan ke layanan berikutnya.",
+      suggestion: "Periksa Base URL dan pastikan endpoint benar-benar API OpenAI/Anthropic, bukan halaman web.",
     };
   }
   if (status >= 500 || /bad gateway|service unavailable|upstream/.test(lower)) {
     return {
       code: status ? String(status) : "5XX",
       message: "Layanan tujuan mengalami gangguan atau mengembalikan kesalahan server. Pengujian dilanjutkan.",
+      suggestion: "Coba ulang beberapa saat lagi dan gunakan fallback provider bila gangguan berlanjut.",
     };
   }
   if (/enotfound|econnrefused|econnreset|network|fetch failed|socket/.test(lower)) {
     return {
       code: "NET",
       message: "Tidak dapat terhubung ke layanan. Periksa jaringan, DNS, proksi, atau alamat layanan.",
+      suggestion: "Periksa DNS, koneksi internet, VPN/proksi, firewall, dan Base URL.",
     };
   }
   return {
     code: status ? String(status) : "ERR",
     message: "Layanan gagal menjawab. Lihat rincian kesalahan untuk penyebab aslinya.",
+    suggestion: "Buka rincian error, periksa kredensial/model/Base URL, lalu uji ulang koneksi tersebut.",
   };
 }
 
@@ -419,7 +430,7 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     };
   }
 
-  const maxModelAttempts = Math.min(models.length, 4);
+  const maxModelAttempts = Math.min(models.length, 8);
   let lastFailure = null;
 
   for (let modelIndex = 0; modelIndex < maxModelAttempts; modelIndex++) {
@@ -581,7 +592,9 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     hasUsableCredential,
     credentialInfo,
     discoveredModels: models.slice(0, 30),
-    attempts: maxModelAttempts,
+    attempts: Math.min(models.length, 8),
+    suggestion: failure.diagnosis.suggestion || "Periksa kredensial, Base URL, dan model; gunakan model lain dari daftar kandidat bila tersedia.",
+    modelCandidates: models.slice(0, 30),
     latencyMs: failure.latencyMs,
   };
 }
