@@ -489,13 +489,13 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
     };
   }
 
-  const maxModelAttempts = Math.min(models.length, 8);
-  let lastFailure = null;
-
-  for (let modelIndex = 0; modelIndex < maxModelAttempts; modelIndex++) {
-    const model = models[modelIndex];
+  // Every discovered chat model gets a real response probe. Models are tested
+  // with bounded concurrency so a large provider catalog does not freeze the UI.
+  // handleChat already performs ordered account fallback: key/account 1 -> 2 -> ...
+  const modelTests = await runWithConcurrency(models, async (model) => {
+    const startedModelAt = Date.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), CHAT_ALL_PROVIDER_TIMEOUT_MS);
+    let hardTimeout;
 
     try {
       const headers = new Headers({
@@ -503,7 +503,6 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
         "user-agent": "Multiver-Layanan-Test/1.0",
         "x-multiver-service-test": "1",
       });
-
       const authorization = requestHeaders.get("authorization");
       const xApiKey = requestHeaders.get("x-api-key");
       if (authorization) headers.set("authorization", authorization);
@@ -520,141 +519,158 @@ async function testProvider(provider, message, requestHeaders, displayNames, mod
         }),
       });
 
-      let hardTimeout;
-      try {
-        const timeoutPromise = new Promise((_, reject) => {
-          hardTimeout = setTimeout(() => {
-            controller.abort();
-            const error = new Error(`Provider test timeout after ${CHAT_ALL_PROVIDER_TIMEOUT_MS}ms`);
-            error.name = "AbortError";
-            reject(error);
-          }, CHAT_ALL_PROVIDER_TIMEOUT_MS);
-        });
-        const resultPromise = (async () => {
-          const response = await handleChat(internalRequest, null, { internal: true });
-          const parsed = await readResponse(response);
-          return { response, parsed };
-        })();
-        const { response, parsed } = await Promise.race([
-          resultPromise,
-          timeoutPromise,
-        ]);
-      const latencyMs = Date.now() - startedAt;
+      const timeoutPromise = new Promise((_, reject) => {
+        hardTimeout = setTimeout(() => {
+          controller.abort();
+          const error = new Error(`Provider test timeout after ${CHAT_ALL_PROVIDER_TIMEOUT_MS}ms`);
+          error.name = "AbortError";
+          reject(error);
+        }, CHAT_ALL_PROVIDER_TIMEOUT_MS);
+      });
 
-      if (response.ok && parsed.assistantText) {
+      const resultPromise = (async () => {
+        const response = await handleChat(internalRequest, null, { internal: true });
+        const parsed = await readResponse(response);
+        return { response, parsed };
+      })();
+
+      const { response, parsed } = await Promise.race([resultPromise, timeoutPromise]);
+      const latencyMs = Date.now() - startedModelAt;
+      const diagnosis = response.ok && parsed.assistantText
+        ? null
+        : diagnose(response.status, parsed.raw);
+      const ok = response.ok && Boolean(parsed.assistantText);
+
+      if (ok) {
         await appendMitmConsoleLog({
           level: "success",
           source: "LAYANAN-TEST",
-          event: "provider.chat_test.success",
-          message: `Chat uji berhasil — ${provider}/${model}`,
+          event: "provider.model_test.success",
+          message: `Model menjawab — ${provider}/${model}`,
           model: `${provider}/${model}`,
           route: "LAYANAN-TEST",
           status: "SUCCESS",
         }).catch(() => {});
-
-        return {
-          provider,
-          name: providerName(provider, displayNames),
-          model,
-          status: "ok",
-          code: "OK",
-          message: parsed.assistantText.slice(0, 1200),
-          connectionCount: connections.length,
-          activeConnectionCount: activeConnections.length,
-          hasUsableCredential,
-          credentialInfo,
-          discoveredModels: models.slice(0, 30),
-          attempts: modelIndex + 1,
-          latencyMs,
-        };
+      } else {
+        const detail = String(parsed.raw || diagnosis?.message || "Tidak ada respons").slice(0, 800);
+        await appendMitmConsoleLog({
+          level: "error",
+          source: "LAYANAN-TEST",
+          event: "provider.model_test.failed",
+          message: `Model tidak menjawab — ${provider}/${model} HTTP ${response.status || 0}`,
+          model: `${provider}/${model}`,
+          route: "LAYANAN-TEST",
+          status: diagnosis?.code || "ERR",
+          error: detail,
+          reason: diagnosis?.message || "Tidak ada respons valid",
+        }).catch(() => {});
       }
 
-      const diagnosis = diagnose(response.status, parsed.raw);
-      const detail = parsed.raw
-        .replace(/authorization\s*[:=]\s*[^\s,}]+/gi, "authorization=[REDAKSI]")
-        .replace(/api[_-]?key\s*[:=]\s*[^\s,}]+/gi, "apiKey=[REDAKSI]")
-        .slice(0, 800);
-
-      lastFailure = { model, diagnosis, detail, latencyMs };
-
-      await appendMitmConsoleLog({
-        level: "error",
-        source: "LAYANAN-TEST",
-        event: "provider.chat_test.detect",
-        message: `Deteksi error — ${provider}/${model} HTTP ${response.status}`,
-        model: `${provider}/${model}`,
-        route: "LAYANAN-TEST",
-        status: diagnosis.code,
-        error: detail || diagnosis.message,
-        reason: diagnosis.message,
-      }).catch(() => {});
-
-      const retryableModelError = ["MODEL_INCOMPATIBLE", "404", "ENDPOINT_METHOD", "UPSTREAM_PROTOCOL"].includes(diagnosis.code);
-      if (!retryableModelError || modelIndex + 1 >= maxModelAttempts) {
-        break;
-      }
-
-      await appendMitmConsoleLog({
-        level: "info",
-        source: "LAYANAN-TEST",
-        event: "provider.chat_test.continue",
-        message: `Lanjut otomatis — ${provider}: model berikutnya`,
-        model: `${provider}/${model}`,
-        route: "LAYANAN-TEST",
-        status: "CONTINUE",
-        reason: `${diagnosis.code}; mencoba kandidat model berikutnya`,
-      }).catch(() => {});
-      } finally {
-        clearTimeout(hardTimeout);
-      }
+      return {
+        model,
+        status: ok ? "ok" : "failed",
+        code: ok ? "OK" : (diagnosis?.code || String(response.status || "ERR")),
+        message: ok
+          ? parsed.assistantText.slice(0, 600)
+          : (diagnosis?.message || "Model tidak memberikan respons yang bisa dibaca."),
+        error: ok ? null : String(parsed.raw || "").slice(0, 800),
+        usage: parsed.usage || null,
+        latencyMs,
+        disabledForTest: !ok,
+      };
     } catch (error) {
-      const latencyMs = Date.now() - startedAt;
+      const latencyMs = Date.now() - startedModelAt;
       const rawError = error?.name === "AbortError"
         ? `Timeout ${CHAT_ALL_PROVIDER_TIMEOUT_MS}ms`
         : error?.message || String(error);
       const diagnosis = diagnose(null, rawError);
-      lastFailure = { model, diagnosis, detail: rawError.slice(0, 800), latencyMs };
-
       await appendMitmConsoleLog({
         level: "error",
         source: "LAYANAN-TEST",
-        event: "provider.chat_test.detect",
-        message: `Deteksi exception — ${provider}/${model}`,
+        event: "provider.model_test.exception",
+        message: `Model gagal — ${provider}/${model}`,
         model: `${provider}/${model}`,
         route: "LAYANAN-TEST",
         status: diagnosis.code,
         error: rawError.slice(0, 800),
         reason: diagnosis.message,
       }).catch(() => {});
-      break;
+      return {
+        model,
+        status: "failed",
+        code: diagnosis.code,
+        message: diagnosis.message,
+        error: rawError.slice(0, 800),
+        usage: null,
+        latencyMs,
+        disabledForTest: true,
+      };
     } finally {
-      clearTimeout(timer);
+      clearTimeout(hardTimeout);
     }
+  }, CHAT_ALL_MODEL_CONCURRENCY);
+
+  const passedModels = modelTests.filter((item) => item.status === "ok");
+  const failedModels = modelTests.filter((item) => item.status !== "ok");
+  const firstSuccess = passedModels[0] || null;
+  const firstFailure = failedModels[0] || null;
+  const latencyMs = Date.now() - startedAt;
+
+  if (firstSuccess) {
+    return {
+      provider,
+      name: providerName(provider, displayNames),
+      model: firstSuccess.model,
+      status: "ok",
+      code: failedModels.length > 0 ? "PARTIAL" : "OK",
+      message: firstSuccess.message,
+      connectionCount: connections.length,
+      activeConnectionCount: activeConnections.length,
+      hasUsableCredential,
+      credentialInfo,
+      discoveredModels: models,
+      modelCandidates: models,
+      modelTests,
+      modelSummary: {
+        total: modelTests.length,
+        passed: passedModels.length,
+        failed: failedModels.length,
+      },
+      attempts: modelTests.length,
+      usage: firstSuccess.usage || null,
+      latencyMs,
+    };
   }
 
-  const failure = lastFailure || {
+  const failure = firstFailure || {
     model: models[0],
-    diagnosis: diagnose(null, "Unknown provider test failure"),
-    detail: "Unknown provider test failure",
-    latencyMs: Date.now() - startedAt,
+    code: "ERR",
+    message: "Tidak ada model yang memberikan respons.",
+    error: "Tidak ada hasil pengujian model.",
   };
   return {
     provider,
     name: providerName(provider, displayNames),
     model: failure.model,
     status: "failed",
-    code: failure.diagnosis.code,
-    message: failure.diagnosis.message,
-    error: failure.detail || failure.diagnosis.message,
+    code: failure.code,
+    message: failure.message,
+    error: failure.error || failure.message,
     connectionCount: connections.length,
     activeConnectionCount: activeConnections.length,
     hasUsableCredential,
     credentialInfo,
-    discoveredModels: models.slice(0, 30),
-    attempts: Math.min(models.length, 8),
-    suggestion: failure.diagnosis.suggestion || "Periksa kredensial, Base URL, dan model; gunakan model lain dari daftar kandidat bila tersedia.",
-    modelCandidates: models.slice(0, 30),
-    latencyMs: failure.latencyMs,
+    discoveredModels: models,
+    modelCandidates: models,
+    modelTests,
+    modelSummary: {
+      total: modelTests.length,
+      passed: 0,
+      failed: failedModels.length,
+    },
+    attempts: modelTests.length,
+    suggestion: "Semua model yang ditemukan sudah diuji. Model yang gagal hanya ditandai nonaktif untuk sesi pengujian; tidak dihapus dari konfigurasi.",
+    latencyMs,
   };
 }
 
