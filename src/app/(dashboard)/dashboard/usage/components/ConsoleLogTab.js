@@ -219,6 +219,7 @@ export default function ConsoleLogTab() {
           ) : visibleLogs.map((log, idx) => {
             const color = LEVEL_COLOR[String(log.level || "info").toLowerCase()] || "text-gray-200";
             const hint = hintFor(log);
+            const detail = String(log.reason || log.error || "").trim();
             return (
               <button
                 key={`${log.timestamp}-${idx}`}
@@ -233,6 +234,7 @@ export default function ConsoleLogTab() {
                   <span className={color}>{log.message}</span>
                 </div>
                 {hint ? <div className="text-gray-500 pl-2">↳ {hint}</div> : null}
+                {detail ? <div className="text-red-300 pl-2 break-all whitespace-pre-wrap">↳ Sebab: {detail.slice(0, 360)}</div> : null}
                 <div className="text-gray-600 pl-2">
                   {log.model ? `model=${log.model} ` : ""}
                   {log.mappedModel ? `mapped=${log.mappedModel} ` : ""}
@@ -261,6 +263,7 @@ export default function ConsoleLogTab() {
             <div>Gateway: {selected.gateway || "-"}</div>
             <div>Status: {selected.status || "-"}{hintFor(selected) ? ` — ${hintFor(selected)}` : ""}</div>
             <div>Durasi: {Number.isFinite(selected.durationMs) ? `${selected.durationMs}ms` : "-"}</div>
+            <div>Sebab: {selected.reason || "-"}</div>
             <div>Error: {selected.error || "-"}</div>
           </div>
         </Card>
