@@ -12,6 +12,7 @@ import { createErrorResult, parseUpstreamError, formatProviderError } from "../u
 import { HTTP_STATUS, TOKEN_SAVER_HEADER } from "../config/runtimeConfig.js";
 import { handleBypassRequest } from "../utils/bypassHandler.js";
 import { trackPendingRequest, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
+import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog.js";
 import { getExecutor } from "../executors/index.js";
 import { supportsGrokCliReasoningEffort } from "../config/grokCli.js";
 import { buildRequestDetail, extractRequestConfig } from "./chatCore/requestDetail.js";
@@ -311,6 +312,46 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   }
 
   if (xf.length && log?.line) log.line(reqTag, log.SYMBOLS?.savers, xf.join(" · "));
+
+  // Sinkronkan penghemat token ke Konsol Log dashboard.
+  // RTK/PXPIPE memakai estimasi; usage provider tetap menjadi sumber kebenaran billing.
+  const saverLogParts = [];
+  const saverMeta = {};
+  if (rtkStats?.hits?.length) {
+    const savedBytes = Math.max(0, Number(rtkStats.bytesBefore || 0) - Number(rtkStats.bytesAfter || 0));
+    const estimatedTokens = Math.round(savedBytes / 4);
+    const pct = rtkStats.bytesBefore > 0 ? ((savedBytes / rtkStats.bytesBefore) * 100).toFixed(1) : "0.0";
+    saverLogParts.push(`RTK hemat ${savedBytes}B (≈${estimatedTokens} token, ${pct}%)`);
+    saverMeta.rtk = { bytesBefore: rtkStats.bytesBefore, bytesAfter: rtkStats.bytesAfter, savedBytes, estimatedTokens, hits: rtkStats.hits.length };
+  }
+  if (headroomStats?.tokens_saved > 0) {
+    saverLogParts.push(`Headroom hemat ${headroomStats.tokens_saved} token (${headroomStats.tokens_before || 0}→${headroomStats.tokens_after || 0})`);
+    saverMeta.headroom = { tokensBefore: headroomStats.tokens_before || 0, tokensAfter: headroomStats.tokens_after || 0, tokensSaved: headroomStats.tokens_saved };
+  } else if (tokenSaverEnabled && headroomEnabled && headroomDiagnostics.reason) {
+    saverLogParts.push(`Headroom dilewati: ${headroomDiagnostics.reason}`);
+    saverMeta.headroom = { skipped: true, reason: headroomDiagnostics.reason };
+  }
+  if (pxpipeSummary?.applied) {
+    saverLogParts.push(`PXPIPE hemat ≈${pxpipeSummary.tokensSavedEst || 0} token (${pxpipeSummary.savedPct || 0}%)`);
+    saverMeta.pxpipe = { tokensBeforeEst: pxpipeSummary.tokensBeforeEst, tokensAfterEst: pxpipeSummary.tokensAfterEst, tokensSavedEst: pxpipeSummary.tokensSavedEst, savedPct: pxpipeSummary.savedPct };
+  }
+  if (tokenSaverEnabled && cavemanEnabled && cavemanLevel) saverLogParts.push(`CAVEMAN aktif (${cavemanLevel})`);
+  if (tokenSaverEnabled && ponytailEnabled && ponytailLevel) saverLogParts.push(`PONYTAIL aktif (${ponytailLevel})`);
+  if (saverLogParts.length) {
+    appendMitmConsoleLog({
+      level: "info",
+      source: "GATEWAY",
+      tool: clientTool || null,
+      event: "token-saver",
+      message: saverLogParts.join(" | "),
+      requestId: clientRawRequest?.requestId || null,
+      model,
+      mappedModel: `${provider}/${model}`,
+      route: "GATEWAY",
+      status: "TOKEN_SAVER",
+      meta: saverMeta,
+    }).catch(() => {});
+  }
 
   // Pin cache breakpoints to the final body — every saver above can reshape
   // system/tools/messages, and a stale anchor costs a full prefix rewrite.
