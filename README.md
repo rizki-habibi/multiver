@@ -10,23 +10,141 @@ Multiver Max menjalankan **semua model** dalam combo secara bersamaan, mempertah
 
 ---
 
-## Kiro MITM + 9Router V3 Online
+## MITM Kiro + 9Router V3 Online
 
-Multiver Kiro MITM now uses the online 9Router V3 gateway as its default upstream:
-`https://9router-new-production.up.railway.app`
+Multiver memakai MITM lokal untuk menangkap trafik Kiro, lalu meneruskan permintaan ke gateway 9Router V3 yang berjalan online di Railway.
 
-Alur:
-`Kiro → hosts file → 127.0.0.1:443 → Multiver MITM → 9Router V3 /v1/chat/completions → provider/model → Kiro`
+```text
+Kiro IDE
+  ↓
+Windows hosts
+  ↓
+127.0.0.1:443
+  ↓
+Multiver MITM lokal
+  ↓
+https://9router-new-production.up.railway.app
+  ↓
+/v1/chat/completions
+  ↓
+provider/model
+  ↓
+respons kembali ke Kiro
+```
 
-Pengaturan:
-- Default endpoint: `https://9router-new-production.up.railway.app`
-- Override endpoint dengan `NINE_ROUTER_V3_BASE_URL` atau `MITM_ROUTER_BASE`.
-- Endpoint API model: `/v1/models`
-- Jangan menaruh API key di source code; masukkan melalui pengaturan MITM.
-- Setelah server MITM berjalan, aktifkan DNS **Kiro** agar host Kiro diarahkan ke `127.0.0.1`.
-- Sertifikat Root CA harus dipercaya Windows sebelum Kiro digunakan.
+### Kenapa masih membutuhkan hosts dan sertifikat lokal?
 
-Diagnostik MITM memeriksa listener lokal, sertifikat, DNS Kiro, kesehatan gateway online, katalog `/v1/models`, dan jumlah request Kiro yang benar-benar terintercept.
+MITM tidak bisa sepenuhnya dipindahkan ke Railway karena Kiro menghubungi domain HTTPS milik Kiro/AWS. Agar trafik itu dapat dialihkan dan diterjemahkan, komputer pengguna tetap membutuhkan komponen lokal pada `127.0.0.1:443`.
+
+Railway digunakan sebagai **gateway online**, sedangkan sertifikat Root CA, listener port 443, dan pengalihan hosts tetap berjalan di komputer pengguna. Sertifikat publik Railway tetap ditangani HTTPS normal setelah MITM meneruskan request ke gateway online.
+
+### Pengaturan bawaan
+
+| Komponen | Nilai bawaan | Lokasi | Otomatis |
+|---|---|---|---|
+| Gateway online | `https://9router-new-production.up.railway.app` | Railway | Ya |
+| API model | `/v1/models` | Railway | Ya |
+| API chat | `/v1/chat/completions` | Railway | Ya |
+| MITM HTTPS | `127.0.0.1:443` | Komputer pengguna | Ya |
+| Root CA | `Multiver MITM Root CA` | Windows Trusted Root | Ya saat MITM dimulai |
+| DNS/hosts Kiro | tiga host Kiro → `127.0.0.1` | Windows hosts | Ya saat MITM dimulai |
+| Alias model | `aliases.json` | Data runtime Multiver | Ya, sinkron dari database |
+| Auto-start MITM | tersimpan di pengaturan | Database/KV Multiver | Ya setelah setup pertama |
+| Diagnostik | status gateway, CA, DNS, trafik | Dashboard MITM | Ya |
+
+Host Kiro yang diarahkan:
+
+```text
+127.0.0.1 runtime.us-east-1.kiro.dev
+127.0.0.1 q.us-east-1.amazonaws.com
+127.0.0.1 codewhisperer.us-east-1.amazonaws.com
+```
+
+### Setup otomatis Windows
+
+Jalankan CMD atau PowerShell sebagai pengguna biasa. Skrip akan meminta izin Administrator sendiri bila diperlukan.
+
+Dari folder repository:
+
+```bat
+scripts\mitm-online-windows.cmd
+```
+
+Atau melalui npm:
+
+```bat
+npm run mitm:online:windows
+```
+
+Skrip otomatis melakukan hal berikut:
+
+1. Memastikan Multiver lokal berjalan di port `20222`.
+2. Mengatur gateway MITM ke 9Router V3 Railway.
+3. Menjalankan server MITM HTTPS di port `443`.
+4. Membuat Root CA bila belum ada.
+5. Memasang dan mempercayai Root CA pada Windows.
+6. Menambahkan host Kiro ke file `hosts`.
+7. Melakukan flush DNS.
+8. Mengaktifkan auto-start MITM.
+9. Menjalankan diagnostik gateway, sertifikat, DNS, provider, dan trafik Kiro.
+10. Menyimpan pengaturan ke database/KV Multiver tanpa membutuhkan migrasi tabel baru.
+
+Untuk gateway lain:
+
+```bat
+scripts\mitm-online-windows.cmd -Gateway "https://gateway-contoh.example.com"
+```
+
+Jika gateway membutuhkan API key:
+
+```bat
+set NINE_ROUTER_V3_API_KEY=ISI_API_KEY
+scripts\mitm-online-windows.cmd
+```
+
+API key tidak ditulis ke source code dan tidak ditampilkan di README.
+
+### Setup melalui Dashboard
+
+Buka:
+
+```text
+http://localhost:20222/dashboard/mitm
+```
+
+Tekan **Mulai Server**. Mulai sekarang, proses start MITM juga mencoba otomatis:
+
+- memasang/mempercayai sertifikat Root CA;
+- mengaktifkan DNS Kiro;
+- menyimpan auto-start;
+- memakai gateway online yang sudah dikonfigurasi.
+
+Jika Windows tidak dijalankan dengan hak Administrator, perubahan sertifikat, port 443, atau file hosts dapat gagal. Jalankan Multiver atau skrip setup sebagai Administrator.
+
+### Status koneksi yang diharapkan
+
+| Pemeriksaan | Status normal | Jika gagal |
+|---|---|---|
+| Gateway online | PASS | cek Railway/Internet |
+| `/v1/models` | PASS dan jumlah model > 0 | cek service 9Router V3 |
+| MITM process | PASS | mulai server MITM |
+| MITM engine | PASS | cek port 443 |
+| Root CA | PASS / dipercaya | jalankan setup otomatis |
+| DNS Kiro | PASS | perbaiki hosts/Administrator |
+| Kiro traffic | PASS setelah mengirim prompt | tutup-buka Kiro lalu kirim prompt |
+| Alias model | tersedia | isi mapping model di Dashboard |
+| Log konsol | aktif | cek halaman Penggunaan/Konsol |
+
+### Variabel lingkungan
+
+| Variabel | Fungsi |
+|---|---|
+| `NINE_ROUTER_V3_BASE_URL` | mengganti gateway 9Router V3 bawaan |
+| `MITM_ROUTER_BASE` | override langsung gateway MITM |
+| `NINE_ROUTER_V3_API_KEY` | API key gateway bila dibutuhkan |
+| `MULTIVER_MITM_PORT` | port MITM lokal, bawaan `443` |
+| `MULTIVER_PORT` | port aplikasi Multiver lokal, bawaan `20222` |
+| `MITM_KIRO_STRICT` | hentikan request jika alias Kiro tidak ditemukan |
 
 ## 🚀 Instalasi
 
@@ -196,23 +314,16 @@ Catatan: daftar model, quota, kemampuan media, dan token usage bergantung pada k
 - **Cloud Sync** – backup ke Google Drive / WebDAV.
 - **MITM** – intersepsi traffic Kiro IDE (Windows).
 
-### MITM Kiro: startup dan routing
+### MITM Kiro: start, sertifikat, DNS, dan routing
 
-MITM Multiver ditujukan hanya untuk Kiro. Gateway default berada di port `20222`, sedangkan MITM berada di `443`.
-
-- `mitmEnabled`: mengizinkan MITM digunakan.
-- `mitmAutoStart`: mengatur apakah MITM otomatis dijalankan saat Multiver start. Default `false`.
-- `MULTIVER_MITM_PORT`: port MITM, default `443`.
-- `MULTIVER_PORT`: port gateway, default `20222`.
-- `MITM_KIRO_STRICT`: default `true`; jika alias Kiro tidak ditemukan, request dihentikan dengan `ALIAS_NOT_FOUND` agar tidak silent passthrough.
-
-Alur yang diharapkan:
+MITM Kiro memakai port lokal `443` dan gateway online yang tersimpan pada pengaturan. Saat MITM diaktifkan, Multiver akan mencoba memasang Root CA, mengaktifkan DNS Kiro, dan memulihkan konfigurasi tersebut pada startup berikutnya.
 
 ```text
-Kiro → MITM :443 → aliases.json → Gateway :20222 → provider → response Kiro
+Kiro → 127.0.0.1:443 → aliases.json → 9Router V3 Online → provider → Kiro
 ```
 
-Alias cache disinkronkan dari database sebelum auto-start MITM. Cache ditulis secara atomic menggunakan temporary file unik agar concurrent write tidak saling menimpa.
+Database tidak memerlukan tabel baru untuk fitur ini karena pengaturan MITM, URL gateway, status auto-start, dan status DNS disimpan melalui penyimpanan KV/pengaturan yang sudah ada. Alias model tetap disinkronkan ke `aliases.json` untuk proses MITM standalone.
+
 - **Riwayat Percakapan** – simpan prompt + respons + parameter per request.
 - **Konsol Log CMD** – monitoring realtime bergaya terminal hitam.
 - **Sidebar collapsible** – buka/tutup biar layar lega.
