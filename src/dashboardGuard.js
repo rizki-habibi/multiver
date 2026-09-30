@@ -25,6 +25,7 @@ const PUBLIC_API_PATHS = [
 ];
 const PUBLIC_PREFIXES = ["/v1","/v1beta","/api/v1","/api/v1beta","/codex","/responses"];
 const ALWAYS_PROTECTED = [
+  "/api/health/database",
   "/api/shutdown","/api/settings/database","/api/version/shutdown","/api/version/update",
   "/api/oauth/cursor/auto-import","/api/oauth/kiro/auto-import",
 ];
