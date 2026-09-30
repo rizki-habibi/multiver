@@ -357,7 +357,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   const userAgent = request?.headers?.get("user-agent") || "";
 
   // Try with available accounts (fallback on errors) – limit attempts
-  const MAX_RETRY_ATTEMPTS = 5;
+  const MAX_RETRY_ATTEMPTS = Math.max(5, Math.min(32, Number(process.env.MULTIVER_MAX_ACCOUNT_FALLBACKS) || 20));
   const excludeConnectionIds = new Set();
   let lastError = null;
   let lastStatus = null;
