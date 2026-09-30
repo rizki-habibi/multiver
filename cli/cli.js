@@ -718,7 +718,23 @@ function startServer(updatePromise) {
     return child;
   }
 
-  let server = spawnServer();
+  let server = null;
+
+  // Clear a stale Multiver listener before the first spawn. This prevents
+  // EADDRINUSE when an older CLI instance survived a terminal close/update.
+  // Only Multiver-owned processes are targeted by killAllAppProcesses().
+  async function spawnInitialServer() {
+    try {
+      await killAllAppProcesses(port);
+      await killProcessOnPort(port);
+    } catch { /* best effort; spawnServer() will report a real failure */ }
+    server = spawnServer();
+    attachServerEvents();
+  }
+
+  // Startup is intentionally asynchronous so port cleanup completes before
+  // Next.js binds to 20222.
+  spawnInitialServer();
 
   // Cleanup function - force kill server process
   let isCleaningUp = false;
