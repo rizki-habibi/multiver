@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev -p 20222",
     "build": "next build",
-    "start": "next start -p 20222",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "cli:dev": "npm --prefix cli run dev",
     "cli:build": "npm --prefix cli run build"
@@ -43,6 +43,7 @@
     "tailwindcss": "^4.3.3",
     "undici": "^8.11.0",
     "uuid": "^11.1.0",
+    "node-machine-id": "^1.1.12",
     "postgres": "^3.4.9"
   },
   "engines": {
