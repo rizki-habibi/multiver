@@ -1,11 +1,23 @@
+import crypto from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
+
+function hashApiKey(key) {
+  return `sha256:${crypto.createHash("sha256").update(String(key), "utf8").digest("hex")}`;
+}
+
+function maskApiKey(hashOrKey) {
+  if (!hashOrKey) return "";
+  if (String(hashOrKey).startsWith("sha256:")) return "sha256:stored";
+  const value = String(hashOrKey);
+  return value.length > 8 ? `${value.slice(0, 5)}…${value.slice(-4)}` : "stored";
+}
 
 function rowToKey(row) {
   if (!row) return null;
   return {
     id: row.id,
-    key: row.key,
+    key: maskApiKey(row.key),
     name: row.name,
     machineId: row.machineId,
     isActive: row.isActive === 1 || row.isActive === true,
@@ -40,25 +52,32 @@ export async function createApiKey(name, machineId) {
   };
   db.run(
     `INSERT INTO apiKeys(id, key, name, machineId, isActive, createdAt) VALUES(?, ?, ?, ?, ?, ?)`,
-    [apiKey.id, apiKey.key, apiKey.name, apiKey.machineId, 1, apiKey.createdAt]
+    [apiKey.id, hashApiKey(apiKey.key), apiKey.name, apiKey.machineId, 1, apiKey.createdAt]
   );
+  // The raw key is returned only at creation time; it is never read back from DB.
   return apiKey;
 }
 
 export async function updateApiKey(id, data) {
   const db = await getAdapter();
-  let result = null;
-  db.transaction(() => {
-    const row = db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]);
-    if (!row) return;
-    const merged = { ...rowToKey(row), ...data };
-    db.run(
-      `UPDATE apiKeys SET key = ?, name = ?, machineId = ?, isActive = ? WHERE id = ?`,
-      [merged.key, merged.name, merged.machineId, merged.isActive ? 1 : 0, id]
-    );
-    result = merged;
-  });
-  return result;
+  const row = db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]);
+  if (!row) return null;
+  const name = data?.name ?? row.name;
+  const machineId = data?.machineId ?? row.machineId;
+  const isActive = data?.isActive !== undefined ? Boolean(data.isActive) : (row.isActive === 1 || row.isActive === true);
+  const nextKey = data?.key ? hashApiKey(data.key) : row.key;
+  db.run(
+    `UPDATE apiKeys SET key = ?, name = ?, machineId = ?, isActive = ? WHERE id = ?`,
+    [nextKey, name, machineId, isActive ? 1 : 0, id]
+  );
+  return {
+    id,
+    key: maskApiKey(nextKey),
+    name,
+    machineId,
+    isActive,
+    createdAt: row.createdAt,
+  };
 }
 
 export async function deleteApiKey(id) {
@@ -68,8 +87,9 @@ export async function deleteApiKey(id) {
 }
 
 export async function validateApiKey(key) {
+  if (!key) return false;
   const db = await getAdapter();
-  const row = db.get(`SELECT isActive FROM apiKeys WHERE key = ?`, [key]);
-  if (!row) return false;
-  return row.isActive === 1 || row.isActive === true;
+  const hash = hashApiKey(key);
+  const row = db.get(`SELECT isActive FROM apiKeys WHERE key = ?`, [hash]);
+  return Boolean(row && (row.isActive === 1 || row.isActive === true));
 }
