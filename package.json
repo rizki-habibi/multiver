@@ -41,7 +41,7 @@
     "socks-proxy-agent": "^10.1.0",
     "sql.js": "^1.14.2",
     "tailwindcss": "^4.3.3",
-    "undici": "^8.11.0",
+    "undici": "^8.11.2",
     "uuid": "^11.1.0",
     "postgres": "^3.4.9"
   },
