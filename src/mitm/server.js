@@ -12,6 +12,7 @@ const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATT
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { generateCert, getCertForDomain } = require("./cert/generate");
 const { getMitmAlias } = require("./dbReader");
+const { DEFAULT_MITM_ROUTER_BASE } = require("../shared/constants/mitmRouter.js");
 const LOCAL_PORT = Number(process.env.MULTIVER_MITM_PORT || 443);
 if (!Number.isInteger(LOCAL_PORT) || LOCAL_PORT < 1 || LOCAL_PORT > 65535) {
   throw new Error("Invalid MULTIVER_MITM_PORT: " + process.env.MULTIVER_MITM_PORT);
@@ -344,6 +345,7 @@ const server = https.createServer(sslOptions, async (req, res) => {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ ok: true, pid: process.pid, stats: runtimeStats, target: "kiro",
         mitmPort: LOCAL_PORT, gatewayPort: Number(process.env.MULTIVER_PORT || 20222),
+        gateway: String(process.env.MITM_ROUTER_BASE || DEFAULT_MITM_ROUTER_BASE),
         strictKiro: STRICT_KIRO, aliasCache }));
       return;
     }
@@ -423,7 +425,7 @@ const server = https.createServer(sslOptions, async (req, res) => {
       model: model || null,
       alias: String(model || "").replace(/^models\//, "") || null,
       mappedModel,
-      route: "MULTIVER",
+      route: "GATEWAY",
       gateway,
     });
     log(`🛰 [mitm] kiro intercepted model=${model || "?"} → ${mappedModel}`);
