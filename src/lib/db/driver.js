@@ -57,6 +57,20 @@ async function trySqlJs() {
 }
 
 async function initAdapter() {
+  // Vercel/production uses Supabase PostgreSQL when a DB connection string is
+  // present. SQLite remains only as a local-development fallback.
+  const supabaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+  if (supabaseUrl) {
+    const { createSupabasePostgresAdapter } = await import("./adapters/supabasePostgresAdapter.js");
+    const adapter = createSupabasePostgresAdapter(supabaseUrl);
+    await adapter.checkpoint();
+    if (!state.logged) {
+      console.log("[DB] Driver: supabase-postgres | schema: multiver_runtime");
+      state.logged = true;
+    }
+    return adapter;
+  }
+
   ensureDirs();
   // Order per runtime:
   //   Bun:  bun:sqlite → sql.js
