@@ -58,12 +58,13 @@ export function createSupabasePostgresAdapter(connectionString) {
       return send("query", { sql, params });
     },
     get(sql, params = []) {
-      const rows = send("query", { sql, params });
-      return Array.isArray(rows) && rows.length ? rows[0] : undefined;
+      const result = send("query", { sql, params });
+      const rows = result?.rows || [];
+      return rows.length ? rows[0] : undefined;
     },
     all(sql, params = []) {
-      const rows = send("query", { sql, params });
-      return Array.isArray(rows) ? rows : [];
+      const result = send("query", { sql, params });
+      return Array.isArray(result?.rows) ? result.rows : [];
     },
     exec(sql) {
       return send("query", { sql, params: [] });
