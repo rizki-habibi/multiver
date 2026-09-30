@@ -46,7 +46,7 @@
     "postgres": "^3.4.9"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "24.x"
   },
   "license": "MIT",
   "repository": {
