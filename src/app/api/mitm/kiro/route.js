@@ -15,12 +15,11 @@ import {
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog";
 
-import { NETWORK_CONFIG, getMultiverBaseUrl } from "@/shared/constants/config";
+import { DEFAULT_MITM_ROUTER_BASE } from "@/shared/constants/mitmRouter.js";
 
 initDbHooks(getSettings, updateSettings);
 
-// canonical router base derived from the port SSOT (NETWORK_CONFIG)
-const DEFAULT_MITM_ROUTER_BASE = getMultiverBaseUrl("localhost");
+// Default to the online 9Router V3 gateway; local Multiver can still be selected in the UI.
 
 function normalizeMitmRouterBaseUrlInput(input) {
   if (input == null || String(input).trim() === "") {
