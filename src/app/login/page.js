@@ -1,29 +1,67 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, Button, Input } from "@/shared/components";
+import { useEffect, useState } from "react";
+import { Card, Button } from "@/shared/components";
 
 export default function LoginPage() {
-  const [password,setPassword]=useState(""),[error,setError]=useState(""),[resetHint,setResetHint]=useState(""),[retryAfter,setRetryAfter]=useState(0);
-  const [loading,setLoading]=useState(false),[hasPassword,setHasPassword]=useState(null),[authMode,setAuthMode]=useState("password"),[ssoType,setSsoType]=useState("oidc");
-  const [oidcConfigured,setOidcConfigured]=useState(false),[oidcLoginLabel,setOidcLoginLabel]=useState("Sign in with OIDC");
-  const [samlConfigured,setSamlConfigured]=useState(false),[samlLoginLabel,setSamlLoginLabel]=useState("Sign in with SAML SSO");
-  const [githubConfigured,setGithubConfigured]=useState(false),[mustChange,setMustChange]=useState(false),[newPassword,setNewPassword]=useState("");
+  const [loading, setLoading] = useState(false);
+  const [configured, setConfigured] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(()=>{if(retryAfter<=0)return;const id=setInterval(()=>setRetryAfter(s=>s>0?s-1:0),1000);return()=>clearInterval(id)},[retryAfter]);
-  useEffect(()=>{(async()=>{try{const res=await fetch("/api/auth/status",{cache:"no-store"});const data=await res.json();if(data.authenticated||data.requireLogin===false){window.location.assign(data.role==="user"&&data.authProvider==="github"?"/dashboard/office":"/dashboard");return;}setHasPassword(!!data.hasPassword);setAuthMode(data.authMode||"password");setSsoType(data.ssoType||"oidc");setOidcConfigured(data.oidcConfigured===true);setOidcLoginLabel(data.oidcLoginLabel||"Sign in with OIDC");setSamlConfigured(data.samlConfigured===true);setSamlLoginLabel(data.samlLoginLabel||"Sign in with SAML SSO");setGithubConfigured(data.githubConfigured===true)}catch{setHasPassword(true)}})()},[]);
-  const handleLogin=async e=>{e.preventDefault();setLoading(true);setError("");setResetHint("");try{const res=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})});const data=await res.json();if(res.ok){if(data.mustChangePassword){setMustChange(true);return}window.location.assign("/dashboard")}else{setError(data.error||"Invalid credentials.");if(data.resetHint)setResetHint(data.resetHint);if(data.retryAfter)setRetryAfter(Number(data.retryAfter))}}catch{setError("Authentication failed.")}finally{setLoading(false)}};
-  const handleSetNewPassword=async e=>{e.preventDefault();setLoading(true);setError("");try{const res=await fetch("/api/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({currentPassword:password,newPassword})});if(res.ok)window.location.assign("/dashboard");else{const data=await res.json();setError(data.error||"Failed to set password")}}catch{setError("Authentication failed.")}finally{setLoading(false)}};
-  const isSsoEnabled=["sso","oidc","saml","both"].includes(authMode),activeSsoType=ssoType||(authMode==="saml"?"saml":"oidc");
-  const samlAvailable=isSsoEnabled&&activeSsoType==="saml"&&samlConfigured,oidcAvailable=isSsoEnabled&&activeSsoType==="oidc"&&oidcConfigured,ssoAvailable=samlAvailable||oidcAvailable,passwordAvailable=authMode==="password"||authMode==="both"||!ssoAvailable;
-  if(hasPassword===null)return <div className="min-h-screen flex items-center justify-center bg-bg p-4"><div className="text-center"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"/><p className="text-text-muted mt-4">Loading...</p></div></div>;
-  return <div className="min-h-screen flex items-center justify-center bg-bg p-4 relative overflow-hidden"><div className="landing-grid absolute inset-0 pointer-events-none" aria-hidden="true"/><div className="relative z-10 w-full max-w-md"><div className="text-center mb-8"><h1 className="text-3xl font-bold text-primary mb-2">Multiver</h1><p className="text-text-muted">{samlAvailable?"Sign in with SAML 2.0 Single Sign-On":oidcAvailable?"Sign in with your OIDC provider to access the dashboard":"Sign in to access Multiver"}</p></div><Card><div className="flex flex-col gap-4">
-    {githubConfigured&&<Button type="button" variant="primary" className="w-full" onClick={()=>{window.location.href="/api/auth/github/start"}}>Masuk dengan GitHub</Button>}
-    {(samlAvailable||oidcAvailable)&&<div className="h-px bg-border/60"/>}
-    {mustChange?<form onSubmit={handleSetNewPassword} className="flex flex-col gap-4"><p className="text-sm text-amber-600 text-center">Set a new password before accessing the dashboard remotely.</p><Input type="password" placeholder="Enter new password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required autoFocus/><Button type="submit" variant="primary" className="w-full" loading={loading} disabled={!newPassword}>Set password</Button></form>:
-      <>{samlAvailable&&<Button type="button" variant="primary" className="w-full" onClick={()=>{window.location.href="/api/auth/saml/start"}}>{samlLoginLabel}</Button>}
-      {oidcAvailable&&<Button type="button" variant="primary" className="w-full" onClick={()=>{window.location.href="/api/auth/oidc/start"}}>{oidcLoginLabel}</Button>}
-      {passwordAvailable&&<form onSubmit={handleLogin} className="flex flex-col gap-4"><label className="text-sm font-medium">Kata Sandi</label><Input type="password" placeholder="Enter password" value={password} onChange={e=>setPassword(e.target.value)} required autoFocus={!ssoAvailable}/>{error&&<p className="text-xs text-red-500">{error}</p>}{retryAfter>0&&<p className="text-xs text-amber-600">Locked. Retry in {retryAfter}s.</p>}{resetHint&&<p className="text-xs text-text-muted">{resetHint}</p>}<Button type="submit" variant="primary" className="w-full" loading={loading} disabled={retryAfter>0}>{retryAfter>0?`Wait ${retryAfter}s`:"Login"}</Button><p className="text-xs text-center text-text-muted">Default password is <code className="bg-sidebar px-1 rounded">123456</code></p>{hasPassword===false&&<p className="text-xs text-center text-amber-600">Set a password locally before exposing this instance remotely.</p>}</form>}</>
-    }
-  </div></Card></div></div>;
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/status", { cache: "no-store" });
+        const data = await res.json();
+        if (data.authenticated) {
+          window.location.assign("/dashboard");
+          return;
+        }
+        setConfigured(data.githubConfigured === true);
+      } catch {
+        setConfigured(false);
+      }
+    })();
+  }, []);
+
+  const login = () => {
+    setLoading(true);
+    setError("");
+    window.location.href = "/api/auth/github/start";
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-bg p-4 relative overflow-hidden">
+      <div className="landing-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-primary mb-2">Multiver</h1>
+          <p className="text-text-muted">Masuk hanya dengan akun GitHub yang telah diizinkan.</p>
+        </div>
+        <Card>
+          <div className="flex flex-col gap-4">
+            {configured === false && (
+              <p className="text-sm text-red-500 text-center">
+                GitHub OAuth belum dikonfigurasi di Vercel.
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="primary"
+              className="w-full"
+              onClick={login}
+              loading={loading}
+              disabled={configured === false}
+            >
+              Masuk dengan GitHub
+            </Button>
+            {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+            <p className="text-xs text-center text-text-muted">
+              Tidak ada pendaftaran dan tidak ada login password.
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 }
