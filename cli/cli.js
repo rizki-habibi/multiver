@@ -653,7 +653,7 @@ async function showInterfaceMenu(latestVersion) {
 
   menuItems.push(
     { label: "Web UI (Open in Browser)", icon: "🌐" },
-    { label: "Data Pengguna & Konsol Log", icon: "💻" },
+    { label: "Konsol Log & Terminal", icon: "▣" },
     { label: "Hide to Tray (Background)", icon: "🔔" },
     { label: "Exit", icon: "🚪" }
   );
@@ -664,7 +664,7 @@ async function showInterfaceMenu(latestVersion) {
 
   if (latestVersion && selected === 0) return "update";
   if (selected === offset) return "web";
-  if (selected === offset + 1) return "data";
+  if (selected === offset + 1) return "terminal";
   if (selected === offset + 2) return "hide";
   return "exit";
 }
@@ -857,8 +857,9 @@ function startServer(updatePromise) {
           await pause("\nPress Enter to go back to menu...");
         } else if (choice === "terminal") {
           // Open Dashboard Usage > Console tab instead of Terminal UI
-          console.log("🔗 Buka: http://localhost:20222/dashboard/usage?tab=console");
-          openBrowser(`http://localhost:20222/dashboard/usage?tab=console`);
+          const consoleUrl = `http://${displayHost}:${port}/dashboard/usage?tab=console`;
+          console.log(`▣ Konsol: ${consoleUrl}`);
+          openBrowser(consoleUrl);
           // Loop continues, show menu again
         } else if (choice === "hide") {
           const { clearScreen } = require("./src/cli/utils/display");
