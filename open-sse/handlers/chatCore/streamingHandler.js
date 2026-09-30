@@ -8,6 +8,7 @@ import { buildAbortedResponsesTerminalBytes } from "../../utils/responsesStreamH
 import { buildStreamErrorBytes } from "../../utils/streamHelpers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
 import { saveRequestDetail } from "@/lib/usageDb.js";
+import { appendMitmConsoleLog } from "@/lib/mitmConsoleLog.js";
 import { SSE_HEADERS_CORS as SSE_HEADERS } from "../../utils/sseConstants.js";
 
 // Codex returns Responses API SSE → which client format to translate INTO, by request sourceFormat.
@@ -144,6 +145,23 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
     // Persist stream usage to DB (no console line; the "📊 done" line below is authoritative)
     saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, label: "STREAM USAGE", silent: true });
     if (log?.line) log.line(reqTag, log.SYMBOLS?.done, formatDoneLine({ usage, latency }));
+    const doneLine = formatDoneLine({ usage, latency });
+    const inTokens = Number(usage?.prompt_tokens ?? usage?.input_tokens ?? 0) || 0;
+    const outTokens = Number(usage?.completion_tokens ?? usage?.output_tokens ?? 0) || 0;
+    const totalTokens = Number(usage?.total_tokens ?? (inTokens + outTokens)) || 0;
+    const cacheRead = Number(usage?.cache_read_input_tokens ?? usage?.cached_tokens ?? usage?.prompt_tokens_details?.cached_tokens ?? 0) || 0;
+    const cacheCreate = Number(usage?.cache_creation_input_tokens ?? 0) || 0;
+    appendMitmConsoleLog({
+      level: "success",
+      source: "GATEWAY",
+      event: "usage.done",
+      message: doneLine,
+      model,
+      mappedModel: `${provider}/${model}`,
+      route: "GATEWAY",
+      status: "SUCCESS",
+      meta: { promptTokens: inTokens, completionTokens: outTokens, totalTokens, cacheRead, cacheCreate, estimated: usage?.estimated === true },
+    }).catch(() => {});
   };
 
   return { onStreamComplete, streamDetailId };
