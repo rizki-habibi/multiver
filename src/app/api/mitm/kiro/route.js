@@ -96,12 +96,12 @@ export async function GET() {
 // POST - Start MITM server (cert + server, no DNS)
 export async function POST(request) {
   try {
-    const { apiKey, sudoPassword, mitmRouterBaseUrl, forceKillPort443 } = await request.json();
+    const { apiKey, sudoPassword, mitmRouterBaseUrl, forceKillPort443, autoSetup = true } = await request.json();
     const pwd = getPassword(sudoPassword) || await loadEncryptedPassword() || "";
 
-    if (!apiKey || requiresSudoPassword(pwd)) {
+    if (requiresSudoPassword(pwd)) {
       return NextResponse.json(
-        { error: !apiKey ? "Missing apiKey" : "Missing sudoPassword" },
+        { error: "Missing sudoPassword" },
         { status: 400 }
       );
     }
@@ -125,7 +125,19 @@ export async function POST(request) {
       }
     }
 
-    const result = await startServer(apiKey, pwd, !!forceKillPort443);
+    const result = await startServer(apiKey || "", pwd, !!forceKillPort443);
+    let certTrusted = false;
+    let dnsKiro = false;
+    if (autoSetup) {
+      try { await trustCert(pwd); } catch (e) { console.log("MITM auto trust certificate failed:", e.message); }
+      try { await enableToolDNS("kiro", pwd); } catch (e) { console.log("MITM auto DNS Kiro failed:", e.message); }
+      try {
+        const after = await getMitmStatus();
+        certTrusted = !!after.certTrusted;
+        dnsKiro = !!after.dnsStatus?.kiro;
+      } catch { /* ignore status refresh */ }
+      await updateSettings({ mitmEnabled: true, mitmAutoStart: true });
+    }
     if (!isWin) setCachedPassword(pwd);
     try {
       appendMitmConsoleLog({
@@ -138,7 +150,7 @@ export async function POST(request) {
       });
     } catch { /* ignore log errors */ }
 
-    return NextResponse.json({ success: true, running: result.running, pid: result.pid });
+    return NextResponse.json({ success: true, running: result.running, pid: result.pid, autoSetup, certTrusted, dnsKiro });
   } catch (error) {
     console.log("Error starting MITM server:", error.message);
     if (error.code === "PORT_443_BUSY") {
@@ -188,8 +200,11 @@ export async function PATCH(request) {
     const { tool, action, sudoPassword } = await request.json();
     const pwd = getPassword(sudoPassword) || await loadEncryptedPassword() || "";
 
-    if (!tool || !action) {
-      return NextResponse.json({ error: "tool and action required" }, { status: 400 });
+    if (!action) {
+      return NextResponse.json({ error: "action required" }, { status: 400 });
+    }
+    if (action !== "trust-cert" && !tool) {
+      return NextResponse.json({ error: "tool required for DNS action" }, { status: 400 });
     }
     if (requiresSudoPassword(pwd)) {
       return NextResponse.json({ error: "Missing sudoPassword" }, { status: 400 });
