@@ -196,6 +196,39 @@ function extractAssistantText(raw, contentType = "") {
   return parts.join("").trim();
 }
 
+function extractUsage(raw, contentType = "") {
+  if (!raw) return null;
+  const pick = (usage) => {
+    if (!usage || typeof usage !== "object") return null;
+    const input = usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokens ?? usage.inputTokens;
+    const output = usage.completion_tokens ?? usage.output_tokens ?? usage.completionTokens ?? usage.outputTokens;
+    const total = usage.total_tokens ?? usage.totalTokens ?? (Number(input || 0) + Number(output || 0));
+    if (![input, output, total].some((value) => Number.isFinite(Number(value)))) return null;
+    return {
+      inputTokens: Number(input || 0),
+      outputTokens: Number(output || 0),
+      totalTokens: Number(total || 0),
+    };
+  };
+  try {
+    if (contentType.includes("application/json") || raw.trim().startsWith("{")) {
+      const data = JSON.parse(raw);
+      return pick(data?.usage);
+    }
+  } catch {}
+  for (const line of String(raw).split(/\r?\n/)) {
+    if (!line.startsWith("data:")) continue;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const data = JSON.parse(payload);
+      const usage = pick(data?.usage);
+      if (usage) return usage;
+    } catch {}
+  }
+  return null;
+}
+
 async function readResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   const raw = await response.text();
@@ -204,6 +237,7 @@ async function readResponse(response) {
     raw,
     contentType,
     assistantText,
+    usage: extractUsage(raw, contentType),
   };
 }
 
