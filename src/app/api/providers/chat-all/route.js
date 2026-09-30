@@ -311,26 +311,7 @@ async function resolveCompatibleModels(provider, connections) {
     }
   }));
 
-  const candidates = [];
-  const liveCandidates = [];
-  const seen = new Set();
-  const add = (model, target = candidates) => {
-    const normalized = normalizeModelId(model, provider);
-    if (!normalized) return;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    target.push(normalized);
-  };
-
-  for (const item of discovered) {
-    for (const model of item.live) {
-      const before = candidates.length;
-      add(model, liveCandidates);
-      if (candidates.length !== before) candidates.pop();
-    }
-  }
-  // Rebuild the ordering without sharing mutable state between parallel probes.
+  // Merge discovery results deterministically after the parallel probes finish.
   const orderedLive = [];
   const orderedSeen = new Set();
   for (const item of discovered) {
