@@ -401,54 +401,57 @@ function killProxyByPidFile() {
   } catch { }
 }
 
-// Kill any process on specific port
+// Kill a listener on the app port only when it belongs to Multiver.
+// Never terminate an unrelated application just because it uses the same port.
 function killProcessOnPort(port) {
   return new Promise((resolve) => {
     try {
       const platform = process.platform;
-      let pid;
+      let pid = null;
 
       if (platform === "win32") {
         try {
-          const output = execSync(`netstat -ano | findstr :${port}`, {
-            encoding: 'utf8',
-            shell: true,
-            windowsHide: true,
-            timeout: 5000
+          const output = execSync("netstat -ano | findstr :" + port, {
+            encoding: "utf8", shell: true, windowsHide: true, timeout: 5000
           }).trim();
-          const lines = output.split('\n').filter(l => l.includes('LISTENING'));
+          const lines = output.split("\n").filter(l => l.includes("LISTENING"));
           if (lines.length > 0) {
-            pid = lines[0].trim().split(/\s+/).pop();
-            execSync(`taskkill /F /PID ${pid} 2>nul`, { stdio: 'ignore', shell: true, windowsHide: true, timeout: 3000 });
+            const candidate = lines[0].trim().split(/\s+/).pop();
+            if (candidate && /^\d+$/.test(candidate)) {
+              const psCmd = "powershell -NonInteractive -WindowStyle Hidden -Command " +
+                "\"Get-WmiObject Win32_Process -Filter 'ProcessId=" + candidate + "' | Select-Object -ExpandProperty CommandLine\"";
+              const commandLine = execSync(psCmd, { encoding: "utf8", windowsHide: true, timeout: 5000 })
+                .trim().toLowerCase();
+              if (commandLine.includes("multiver") || commandLine.includes("next-server")) pid = candidate;
+            }
           }
-        } catch (e) {
-          // Port is free or error
-        }
+        } catch { /* port is free or unavailable */ }
       } else {
-        // macOS/Linux
         try {
-          const pidOutput = execSync(`lsof -ti:${port}`, {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'ignore']
-          }).trim();
+          const pidOutput = execSync("lsof -ti:" + port, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
           if (pidOutput) {
-            pid = pidOutput.split('\n')[0];
-            execSync(`kill -9 ${pid} 2>/dev/null`, { stdio: 'ignore', timeout: 3000 });
+            for (const candidate of pidOutput.split("\n")) {
+              if (!/^\d+$/.test(candidate)) continue;
+              try {
+                const commandLine = fs.readFileSync("/proc/" + candidate + "/cmdline", "utf8")
+                  .replace(/\0/g, " ").toLowerCase();
+                if (commandLine.includes("multiver") || commandLine.includes("next-server")) { pid = candidate; break; }
+              } catch { /* process exited */ }
+            }
           }
-        } catch (e) {
-          // Port is free or error
-        }
+        } catch { /* port is free or unavailable */ }
       }
 
-      // Wait for port to be released
-      setTimeout(() => resolve(), 500);
-    } catch (err) {
-      // Silent fail - continue anyway
-      resolve();
-    }
+      if (pid) {
+        try {
+          if (platform === "win32") execSync("taskkill /F /T /PID " + pid, { stdio: "ignore", windowsHide: true, timeout: 3000 });
+          else execSync("kill -9 " + pid, { stdio: "ignore", timeout: 3000 });
+        } catch { /* process already exited */ }
+      }
+      setTimeout(() => resolve(), pid ? 500 : 50);
+    } catch { resolve(); }
   });
 }
-
 
 // Detect if running in restricted environment (Codespaces, Docker)
 function isRestrictedEnvironment() {
