@@ -16,6 +16,7 @@ const { isCertExpired } = require("./cert/rootCA");
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { log, err } = require("./logger");
 const { LSOF_BIN } = require("./config");
+const { DEFAULT_MITM_ROUTER_BASE } = require("../shared/constants/mitmRouter.js");
 
 // Gateway port (SSOT). src/mitm is CommonJS and runs standalone outside Next,
 // so it reads the same env the CLI/parent sets rather than importing the ESM
@@ -23,8 +24,6 @@ const { LSOF_BIN } = require("./config");
 const MULTIVER_PORT = Number(process.env.MULTIVER_PORT || 20222);
 
 // Canonical router base: where intercepted traffic is forwarded (Multiver gateway).
-const DEFAULT_MITM_ROUTER_BASE = process.env.MITM_ROUTER_BASE
-  || `http://localhost:${MULTIVER_PORT}`;
 
 function shellQuoteSingle(str) {
   if (str == null || str === "") return "''";
