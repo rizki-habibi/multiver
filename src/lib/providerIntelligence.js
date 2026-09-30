@@ -286,6 +286,30 @@ export async function deleteZedData() {
   return { deletedConnections, deletedNodes };
 }
 
+export async function deleteInvalidOrSuspendedConnections(ids = []) {
+  const wanted = new Set(Array.isArray(ids) ? ids.filter(Boolean) : []);
+  // Re-scan before deleting so stale UI data cannot delete a connection that has
+  // recovered since the last scan. Only strong classifications are removable:
+  // 401/invalid credentials and explicit suspended/disabled accounts.
+  const scan = await scanProviderIntelligence({ deep: true });
+  const candidates = scan.providers.filter((provider) => {
+    if (wanted.size > 0 && !wanted.has(provider.connectionId)) return false;
+    return provider.classification === "INVALID_CREDENTIAL" || provider.classification === "SUSPENDED";
+  });
+  let deleted = 0;
+  for (const provider of candidates) {
+    if (await deleteProviderConnection(provider.connectionId)) deleted++;
+  }
+  return {
+    deleted,
+    candidates: candidates.map((provider) => ({
+      connectionId: provider.connectionId,
+      provider: provider.provider,
+      classification: provider.classification,
+    })),
+  };
+}
+
 export async function deleteOrphanConnections(ids = []) {
   const wanted = new Set(ids);
   const [connections, nodes] = await Promise.all([getProviderConnections(), getProviderNodes()]);
