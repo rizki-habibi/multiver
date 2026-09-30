@@ -112,7 +112,10 @@ export async function PATCH(request) {
     // ponytail: mitmSudoEncrypted is the encrypted sudo password for the MITM proxy —
     // same class as oidcClientSecret. Keep it out of every settings response body.
     const { password, oidcClientSecret, mitmSudoEncrypted, ...safeSettings } = settings;
-    safeSettings.oidcConfigured = !!(safeSettings.oidcIssuerUrl && safeSettings.oidcClientId && oidcClientSecret);
+    safeSettings.authMode = "github";
+    safeSettings.oidcConfigured = false;
+    safeSettings.hasPassword = false;
+    safeSettings.githubOnly = true;
     safeSettings.mitmSudoConfigured = !!mitmSudoEncrypted;
     return NextResponse.json(safeSettings, { headers: SETTINGS_RESPONSE_HEADERS });
   } catch (error) {
