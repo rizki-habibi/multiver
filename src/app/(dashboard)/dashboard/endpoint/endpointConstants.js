@@ -20,9 +20,6 @@ export const CAVEMAN_LEVELS = [
   { id: "lite", label: "Ringan", desc: "Hapus kata pengisi, pertahankan tata bahasa" },
   { id: "full", label: "Penuh", desc: "Hapus kata sandang, potongan kalimat diperbolehkan" },
   { id: "ultra", label: "Maksimal", desc: "Gaya singkat, kompresi maksimal" },
-  { id: "wenyan-lite", label: "文 Ringan", desc: "Bahasa Tionghoa klasik, kompresi ringan", wenyan: true },
-  { id: "wenyan", label: "文 Penuh", desc: "Bahasa Tionghoa klasik maksimal, pengurangan 80–90%", wenyan: true },
-  { id: "wenyan-ultra", label: "文 Maksimal", desc: "Kompresi bahasa klasik ekstrem", wenyan: true },
 ];
 
 export const PONYTAIL_LEVELS = [
