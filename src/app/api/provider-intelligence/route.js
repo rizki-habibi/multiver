@@ -4,6 +4,7 @@ import {
   disableProviderConnections,
   deleteZedData,
   deleteOrphanConnections,
+  deleteInvalidOrSuspendedConnections,
 } from "@/lib/providerIntelligence";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,14 @@ export async function POST(request) {
     if (action === "disable-invalid") {
       const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
       return NextResponse.json({ ok: true, changed: await disableProviderConnections(ids) });
+    }
+
+    if (action === "delete-invalid-suspended") {
+      const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
+      return NextResponse.json({
+        ok: true,
+        ...(await deleteInvalidOrSuspendedConnections(ids)),
+      });
     }
 
     if (action === "delete-orphans") {
