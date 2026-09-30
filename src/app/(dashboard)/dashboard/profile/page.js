@@ -840,13 +840,13 @@ export default function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm sm:text-base">Require login</p>
                 <p className="text-xs sm:text-sm text-text-muted">
-                  When ON, dashboard requires password. When OFF, access without login.
+                  Dashboard selalu memerlukan sesi GitHub pemilik yang diizinkan.
                 </p>
               </div>
               <Toggle
-                checked={settings.requireLogin === true}
-                onChange={() => updateRequireLogin(!settings.requireLogin)}
-                disabled={loading}
+                checked={true}
+                onChange={() => {}}
+                disabled={true}
               />
             </div>
             {settings.requireLogin === true && (
