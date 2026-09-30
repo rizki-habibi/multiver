@@ -920,20 +920,20 @@ export default function ProfilePage() {
               <span className="material-symbols-outlined text-[20px]">lock_open</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-semibold">Single Sign-On (SSO)</h3>
+              <h3 className="text-base sm:text-lg font-semibold">Login GitHub</h3>
               <p className="text-xs text-text-muted">
                 {settings.authMode === "sso" || settings.authMode === "oidc" || settings.authMode === "saml"
                   ? `${settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"} SSO active`
                   : settings.authMode === "both"
                     ? `Password + ${settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"} active`
-                    : "Optional SSO via Okta, Entra ID, Keycloak, or OIDC"}
+                    : "Hanya akun GitHub pemilik yang diizinkan"}
               </p>
             </div>
             <span className="material-symbols-outlined text-text-muted shrink-0">
               {oidcExpanded ? "expand_less" : "expand_more"}
             </span>
           </button>
-          {oidcExpanded && (
+          {false && oidcExpanded && (
             <div className="flex flex-col gap-4 mt-4">
               <p className="text-xs sm:text-sm text-text-muted">
                 Configure enterprise Single Sign-On (SSO) for dashboard access using SAML 2.0 or OIDC.
