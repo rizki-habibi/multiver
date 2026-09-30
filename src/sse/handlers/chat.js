@@ -470,7 +470,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       level: "error",
       source: "GATEWAY",
       event: "gateway.error",
-      message: `Provider error — ${provider}/${model} HTTP ${result.status}`,
+      message: `Gagal ${provider}/${model} HTTP ${result.status} — ${String(result.error || "Tidak ada detail upstream").slice(0, 360)}`,
       requestId,
       model: modelStr,
       mappedModel: `${provider}/${model}`,
