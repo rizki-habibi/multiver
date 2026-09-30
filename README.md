@@ -2,7 +2,7 @@
 
 **Advanced Multi-AI Fusion Router — semua model jalan, semua hasil ditampilkan.**
 
-![Version](https://img.shields.io/badge/version-12.1.0-0969DA)
+![Version](https://img.shields.io/github/package-json/v/rizki-habibi/multiver)
 [![License](https://img.shields.io/npm/l/multiver.svg)](https://github.com/rizki-habibi/multiver/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/rizki-habibi/multiver)](https://github.com/rizki-habibi/multiver/releases)
 
@@ -122,6 +122,51 @@ multiver --version
 ```
 
 ---
+
+## Diagnostik, Konsol Log, dan Token
+
+Multiver menyatukan status request, error provider, penggunaan token, dan aktivitas penghemat token ke satu Konsol Log. Error menampilkan status HTTP, provider/model, dan sebab upstream yang sudah disanitasi. Secret seperti API key, Bearer token, cookie, dan password tidak ditampilkan.
+
+### Sinkron token dan penghemat token
+
+- RTK: memadatkan hasil tool besar; log menampilkan byte yang berkurang dan perkiraan token.
+- Headroom: kompresi melalui proxy Headroom bila diaktifkan; log menampilkan token sebelum/sesudah yang dilaporkan proxy.
+- PXPIPE: memadatkan konteks Claude besar; angka penghematan diberi label estimasi.
+- CAVEMAN dan PONYTAIL: mode instruksi tambahan; dicatat sebagai mode aktif, bukan klaim penghematan token terukur.
+- Usage provider IN/OUT/TOTAL dan cache bila tersedia masuk ke Usage DB sekaligus Konsol Log.
+- Terminal internal dan dashboard memakai event log yang sama sehingga informasi tidak berjalan di jalur terpisah.
+
+### Chat Semua Layanan
+
+Chat Semua Layanan menemukan model dari koneksi aktif, menguji setiap model yang ditemukan dengan request nyata, lalu menampilkan hasil per model. Concurrency dibatasi agar pengujian tidak menembakkan semua model sekaligus. Jika akun/kunci gagal pada kondisi yang dapat di-fallback, routing melanjutkan ke akun/kunci berikutnya.
+
+Pengaturan yang tersedia melalui environment:
+- MULTIVER_CHAT_ALL_TIMEOUT_MS: timeout tiap pengujian provider.
+- MULTIVER_CHAT_ALL_MODEL_CONCURRENCY: jumlah model yang diuji paralel, default 2.
+- MULTIVER_CHAT_ALL_MODEL_DISCOVERY_TIMEOUT_MS: timeout discovery endpoint models.
+- MULTIVER_MAX_ACCOUNT_FALLBACKS: batas percobaan akun/kunci per model, default 20 dan dibatasi maksimum 32.
+
+### Kemampuan AI
+
+Multiver adalah gateway/router multi-provider. Kemampuan akhirnya mengikuti provider dan model yang aktif. Arsitektur saat ini mencakup:
+
+| Kemampuan | Keterangan |
+|---|---|
+| Chat teks | Single model, combo, MAX, Fusion, dan fallback |
+| Multi-model | Pengujian dan eksekusi banyak model dengan concurrency terkontrol |
+| Routing | Alias, mapping model, transport, dan fallback akun |
+| Token | IN/OUT/TOTAL, cache bila tersedia, riwayat dan statistik |
+| Penghemat token | RTK, Headroom, PXPIPE, CAVEMAN, PONYTAIL |
+| Tool calling | Translasi dan deduplikasi tool sesuai adapter |
+| Vision/media | Mengikuti capability provider/model |
+| Streaming | SSE dan JSON non-streaming |
+| Format API | OpenAI/Responses, Claude, Gemini/Antigravity, Kiro, dan format adapter lain |
+| MITM Kiro | Intersepsi dan routing traffic Kiro melalui alias ke gateway |
+| Diagnostik | Konsol log realtime, status MITM/Gateway/Kiro, dan detail error |
+| Data | Riwayat penggunaan, detail request, statistik provider/model/akun |
+| Integrasi | API-compatible, local/self-hosted, dan adapter provider yang tersedia |
+
+Catatan: daftar model, quota, kemampuan media, dan token usage bergantung pada konfigurasi, kredensial, endpoint, dan respons provider saat runtime.
 
 ## ✨ Fitur
 
