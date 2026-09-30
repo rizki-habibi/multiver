@@ -1054,6 +1054,8 @@ ApiKeyProviderCard.propTypes = {
 };
 
 function ProviderChatResultsView({ results, sortMode = "completion" }) {
+  const [modelFilter, setModelFilter] = useState("all");
+
   if (results.error && !results.results) {
     return (
       <div className="text-center py-6">
@@ -1077,8 +1079,19 @@ function ProviderChatResultsView({ results, sortMode = "completion" }) {
     }
     return 0;
   });
+  const modelOptions = [...new Set(
+    items.flatMap((item) => Array.isArray(item?.discoveredModels) ? item.discoveredModels : [])
+      .filter(Boolean)
+      .map(String),
+  )].sort((a, b) => a.localeCompare(b));
+  const filteredItems = modelFilter === "all"
+    ? sortedItems
+    : sortedItems.filter((item) =>
+        String(item?.model || "").toLowerCase() === modelFilter.toLowerCase() ||
+        (Array.isArray(item?.discoveredModels) && item.discoveredModels.some((m) => String(m).toLowerCase() === modelFilter.toLowerCase()))
+      );
   const maxVisible = 250;
-  const visibleItems = sortedItems.slice(0, maxVisible);
+  const visibleItems = filteredItems.slice(0, maxVisible);
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -1106,8 +1119,21 @@ function ProviderChatResultsView({ results, sortMode = "completion" }) {
             {summary.skipped} dilewati
           </span>
         )}
+        {modelOptions.length > 0 && (
+          <select
+            value={modelFilter}
+            onChange={(e) => setModelFilter(e.target.value)}
+            className="h-7 rounded-md border border-border bg-bg px-2 text-[11px] text-text-main outline-none"
+            aria-label="Saring hasil berdasarkan model"
+          >
+            <option value="all">Semua model ({modelOptions.length})</option>
+            {modelOptions.map((model) => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </select>
+        )}
         <span className="text-text-muted sm:ml-auto">
-          {summary.total || items.length} layanan diperiksa
+          {filteredItems.length} dari {summary.total || items.length} layanan ditampilkan
         </span>
       </div>
 
@@ -1166,14 +1192,36 @@ function ProviderChatResultsView({ results, sortMode = "completion" }) {
                     Rincian: {String(item.error)}
                   </p>
                 )}
+                {!ok && item.suggestion && (
+                  <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-2.5 py-2 text-amber-300">
+                    <span className="font-semibold">Saran perbaikan:</span>{" "}
+                    {String(item.suggestion)}
+                  </div>
+                )}
+                {!ok && Array.isArray(item.modelCandidates) && item.modelCandidates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-text-muted">Kandidat model:</span>
+                    <select
+                      value={String(item.model || item.modelCandidates[0] || "")}
+                      onChange={(e) => setModelFilter(e.target.value)}
+                      className="h-7 max-w-full rounded-md border border-border bg-bg px-2 text-[11px] text-text-main outline-none"
+                      aria-label={"Pilih model kandidat " + String(item.name || item.provider || "")}
+                    >
+                      {item.modelCandidates.slice(0, 30).map((model) => (
+                        <option key={String(model)} value={String(model)}>{String(model)}</option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-text-muted">menyaring hasil berdasarkan model</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
       })}
-      {sortedItems.length > maxVisible && (
+      {filteredItems.length > maxVisible && (
         <div className="rounded-lg border border-border px-3 py-2 text-center text-xs text-text-muted">
-          Menampilkan {maxVisible} dari {sortedItems.length} hasil. Semua hasil tetap tersimpan; urutan hanya mengubah tampilan.
+          Menampilkan {maxVisible} dari {filteredItems.length} hasil. Semua hasil tetap tersimpan; saringan hanya mengubah tampilan.
         </div>
       )}
     </div>
