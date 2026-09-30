@@ -1,12 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { DATA_DIR } from "@/lib/dataDir";
-import { getSettings } from "@/lib/localDb";
 
-const DEFAULT_PASSWORD = "123456";
 const SESSION_MAX_AGE_SEC = 24 * 60 * 60;
 
 function loadJwtSecret() {
@@ -83,11 +80,8 @@ export function clearDashboardAuthCookie(cookieStore) {
   cookieStore.delete("auth_token");
 }
 
-export async function verifyDashboardPassword(password) {
-  if (typeof password !== "string" || !password) return false;
-  const settings = await getSettings();
-  const storedHash = settings?.password;
-  if (storedHash) return bcrypt.compare(password, storedHash);
-  const initialPassword = process.env.INITIAL_PASSWORD || DEFAULT_PASSWORD;
-  return password === initialPassword;
+export async function verifyDashboardPassword() {
+  // Password authentication is intentionally disabled in cloud mode.
+  // Multiver accepts GitHub owner login only.
+  return false;
 }
