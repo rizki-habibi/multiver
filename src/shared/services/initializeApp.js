@@ -13,7 +13,7 @@ import {
   RESTART_COOLDOWN_MS, NETWORK_SETTLE_MS,
   WATCHDOG_INTERVAL_MS, NETWORK_CHECK_INTERVAL_MS, VIRTUAL_IFACE_REGEX,
 } from "@/lib/tunnel";
-import { getMitmStatus, startMitm, loadEncryptedPassword, initDbHooks, restoreToolDNS, removeAllDNSEntriesSync } from "@/mitm/manager";
+import { getMitmStatus, startMitm, loadEncryptedPassword, initDbHooks, restoreToolDNS, removeAllDNSEntriesSync, trustCert, enableToolDNS } from "@/mitm/manager";
 import { syncToJson as syncMitmAliasCache } from "@/lib/mitmAliasCache";
 import { killAllBridges } from "@/lib/mcp/stdioSseBridge";
 
@@ -149,10 +149,17 @@ async function autoStartMitm(settings) {
     await startMitm(activeKey?.key || "sk_Multiver", password);
     console.log("[InitApp] MITM auto-started");
     try {
-      await restoreToolDNS(password);
-      console.log("[InitApp] DNS restored from saved state");
+      await trustCert(password);
+      console.log("[InitApp] Sertifikat MITM dipasang/dipercaya otomatis");
     } catch (e) {
-      console.log("[InitApp] DNS restore failed:", e.message);
+      console.log("[InitApp] Pemasangan sertifikat otomatis gagal:", e.message);
+    }
+    try {
+      await restoreToolDNS(password);
+      await enableToolDNS("kiro", password);
+      console.log("[InitApp] DNS Kiro dipulihkan/diaktifkan otomatis");
+    } catch (e) {
+      console.log("[InitApp] DNS restore/enable gagal:", e.message);
     }
   } catch (err) {
     console.log("[InitApp] MITM auto-start failed:", err.message);
