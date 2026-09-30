@@ -1181,7 +1181,51 @@ function ProviderChatResultsView({ results, sortMode = "completion" }) {
                 </div>
                 {item.model && (
                   <div className="mt-1 text-text-muted">
-                    Model: <span className="font-mono">{item.model}</span>
+                    Model merespons: <span className="font-mono">{item.model}</span>
+                    {item.usage && (
+                      <span className="ml-2 font-mono">
+                        Token {Number(item.usage.totalTokens || 0).toLocaleString("id-ID")}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {item.modelSummary && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span className="text-text-muted">Model diuji:</span>
+                    <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400">
+                      {item.modelSummary.passed} merespons
+                    </span>
+                    {item.modelSummary.failed > 0 && (
+                      <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-400">
+                        {item.modelSummary.failed} tidak merespons
+                      </span>
+                    )}
+                    <span className="text-text-muted">
+                      dari {item.modelSummary.total}
+                    </span>
+                  </div>
+                )}
+                {Array.isArray(item.modelTests) && item.modelTests.length > 0 && (
+                  <div className="mt-2 grid max-h-40 grid-cols-1 gap-1 overflow-auto pr-1 sm:grid-cols-2">
+                    {item.modelTests.map((test) => (
+                      <div
+                        key={String(test.model)}
+                        className={`flex min-w-0 items-center gap-1.5 rounded border px-2 py-1 ${test.status === "ok"
+                          ? "border-emerald-500/15 bg-emerald-500/5 text-emerald-400"
+                          : "border-red-500/15 bg-red-500/5 text-red-400"}`}
+                        title={String(test.message || test.code || "")}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {test.status === "ok" ? "check_circle" : "error"}
+                        </span>
+                        <span className="min-w-0 truncate font-mono">{String(test.model)}</span>
+                        {test.usage?.totalTokens > 0 && (
+                          <span className="ml-auto shrink-0 text-[9px] opacity-80">
+                            {Number(test.usage.totalTokens).toLocaleString("id-ID")} tok
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <p className={`mt-1 break-words ${ok ? "text-text-main" : "text-red-400"}`}>
