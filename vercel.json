@@ -1,1 +1,16 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","functions":{"src/app/api/office/chat/route.js":{"maxDuration":300,"supportsCancellation":true},"src/app/api/v1/**/*.js":{"supportsCancellation":true},"src/app/api/v1beta/**/*.js":{"supportsCancellation":true}}}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/office/chat/route.js": {
+      "maxDuration": 300,
+      "supportsCancellation": true
+    },
+    "src/app/api/v1/**/*.js": {
+      "supportsCancellation": true
+    },
+    "src/app/api/v1beta/**/*.js": {
+      "supportsCancellation": true
+    }
+  },
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh"
+}
