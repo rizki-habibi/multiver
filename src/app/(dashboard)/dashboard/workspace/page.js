@@ -27,7 +27,7 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/v1/models", { cache: "no-store" })
+    fetch("/api/workspace/models", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!alive) return;
