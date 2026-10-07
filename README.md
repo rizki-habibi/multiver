@@ -527,3 +527,16 @@ MIT — lihat file LICENSE.
 - Combo MAX 4× lebih cepat (timeout 120s→30s, concurrency 6→12).
 - Terjemahan label EN→ID di seluruh halaman Penggunaan.
 - CI/CD auto-version + npm publish otomatis.
+
+
+## Ruang Kerja AI
+
+Multiver sekarang menyediakan **Ruang Kerja AI** di `/dashboard/workspace`. Semua model yang dipilih melalui Max Router dapat digunakan untuk menyusun jawaban sekaligus menghasilkan berkas dari percakapan.
+
+Format keluaran yang didukung tanpa dependensi kantor tambahan:
+- **Word** — `.doc` yang kompatibel dengan Microsoft Word/LibreOffice.
+- **Excel** — `.xls` berbasis HTML tabel yang dapat dibuka Microsoft Excel/LibreOffice.
+- **CSV**, **Markdown**, **TXT**, **JSON**, dan **HTML**.
+- Mode **Otomatis** mendeteksi permintaan seperti "buat Word" atau "buat Excel".
+
+Berkas sementara disimpan di `DATA_DIR/workspace-artifacts` dan disajikan melalui `/api/workspace/files/:id`. Pada deployment Railway, arahkan `DATA_DIR` ke volume persisten jika ingin berkas tetap tersedia setelah restart.
