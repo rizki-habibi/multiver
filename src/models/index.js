@@ -33,6 +33,7 @@ export {
   getApiKeys,
   createApiKey,
   deleteApiKey,
+  getApiKeyAccess,
   validateApiKey,
   isCloudEnabled,
 } from "@/lib/localDb";
