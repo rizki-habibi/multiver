@@ -19,21 +19,38 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name } = body;
+    const { name, scopeType, scopeProvider } = body;
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    const existingKeys = await getApiKeys();
+    // The first router key is the master/global key. Subsequent keys default to private.
+    const normalizedScopeType = existingKeys.length === 0
+      ? "global"
+      : (scopeType === "global" ? "global" : "private");
+
+    if (normalizedScopeType === "private" && !String(scopeProvider || "").trim()) {
+      return NextResponse.json({ error: "Provider wajib dipilih untuk key pribadi" }, { status: 400 });
+    }
+
     // Always get machineId from server
     const machineId = await getConsistentMachineId();
-    const apiKey = await createApiKey(name, machineId);
+    const apiKey = await createApiKey(
+      name,
+      machineId,
+      normalizedScopeType,
+      normalizedScopeType === "private" ? String(scopeProvider).trim() : null
+    );
 
     return NextResponse.json({
       key: apiKey.key,
       name: apiKey.name,
       id: apiKey.id,
       machineId: apiKey.machineId,
+      scopeType: apiKey.scopeType,
+      scopeProvider: apiKey.scopeProvider,
     }, { status: 201 });
   } catch (error) {
     console.log("Error creating key:", error);
