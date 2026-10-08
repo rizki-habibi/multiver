@@ -21,6 +21,8 @@ function rowToKey(row) {
     name: row.name,
     machineId: row.machineId,
     isActive: row.isActive === 1 || row.isActive === true,
+    scopeType: row.scopeType || "global",
+    scopeProvider: row.scopeProvider || null,
     createdAt: row.createdAt,
   };
 }
@@ -37,8 +39,15 @@ export async function getApiKeyById(id) {
   return rowToKey(row);
 }
 
-export async function createApiKey(name, machineId) {
+export async function createApiKey(name, machineId, scopeType = "private", scopeProvider = null) {
   if (!machineId) throw new Error("machineId is required");
+  const normalizedScope = scopeType === "global" ? "global" : "private";
+  const normalizedProvider = normalizedScope === "private" && scopeProvider
+    ? String(scopeProvider).trim()
+    : null;
+  if (normalizedScope === "private" && !normalizedProvider) {
+    throw new Error("scopeProvider is required for private API keys");
+  }
   const db = await getAdapter();
   const { generateApiKeyWithMachine } = await import("@/shared/utils/apiKey");
   const result = generateApiKeyWithMachine(machineId);
@@ -48,11 +57,13 @@ export async function createApiKey(name, machineId) {
     key: result.key,
     machineId,
     isActive: true,
+    scopeType: normalizedScope,
+    scopeProvider: normalizedProvider,
     createdAt: new Date().toISOString(),
   };
   db.run(
-    `INSERT INTO apiKeys(id, key, name, machineId, isActive, createdAt) VALUES(?, ?, ?, ?, ?, ?)`,
-    [apiKey.id, hashApiKey(apiKey.key), apiKey.name, apiKey.machineId, 1, apiKey.createdAt]
+    `INSERT INTO apiKeys(id, key, name, machineId, isActive, scopeType, scopeProvider, createdAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+    [apiKey.id, hashApiKey(apiKey.key), apiKey.name, apiKey.machineId, 1, apiKey.scopeType, apiKey.scopeProvider, apiKey.createdAt]
   );
   // The raw key is returned only at creation time; it is never read back from DB.
   return apiKey;
@@ -65,10 +76,15 @@ export async function updateApiKey(id, data) {
   const name = data?.name ?? row.name;
   const machineId = data?.machineId ?? row.machineId;
   const isActive = data?.isActive !== undefined ? Boolean(data.isActive) : (row.isActive === 1 || row.isActive === true);
+  const scopeType = data?.scopeType !== undefined ? (data.scopeType === "global" ? "global" : "private") : (row.scopeType || "global");
+  const scopeProvider = scopeType === "private"
+    ? (data?.scopeProvider !== undefined ? String(data.scopeProvider || "").trim() : (row.scopeProvider || null))
+    : null;
+  if (scopeType === "private" && !scopeProvider) throw new Error("scopeProvider is required for private API keys");
   const nextKey = data?.key ? hashApiKey(data.key) : row.key;
   db.run(
-    `UPDATE apiKeys SET key = ?, name = ?, machineId = ?, isActive = ? WHERE id = ?`,
-    [nextKey, name, machineId, isActive ? 1 : 0, id]
+    `UPDATE apiKeys SET key = ?, name = ?, machineId = ?, isActive = ?, scopeType = ?, scopeProvider = ? WHERE id = ?`,
+    [nextKey, name, machineId, isActive ? 1 : 0, scopeType, scopeProvider, id]
   );
   return {
     id,
@@ -76,6 +92,8 @@ export async function updateApiKey(id, data) {
     name,
     machineId,
     isActive,
+    scopeType,
+    scopeProvider,
     createdAt: row.createdAt,
   };
 }
@@ -86,10 +104,23 @@ export async function deleteApiKey(id) {
   return (res?.changes ?? 0) > 0;
 }
 
-export async function validateApiKey(key) {
-  if (!key) return false;
+export async function getApiKeyAccess(key) {
+  if (!key) return null;
   const db = await getAdapter();
   const hash = hashApiKey(key);
-  const row = db.get(`SELECT isActive FROM apiKeys WHERE key = ?`, [hash]);
-  return Boolean(row && (row.isActive === 1 || row.isActive === true));
+  const row = db.get(
+    `SELECT id, isActive, scopeType, scopeProvider FROM apiKeys WHERE key = ?`,
+    [hash]
+  );
+  if (!row || !(row.isActive === 1 || row.isActive === true)) return null;
+  const scopeType = row.scopeType === "private" ? "private" : "global";
+  return {
+    id: row.id,
+    scopeType,
+    scopeProvider: scopeType === "private" ? (row.scopeProvider || null) : null,
+  };
+}
+
+export async function validateApiKey(key) {
+  return Boolean(await getApiKeyAccess(key));
 }
