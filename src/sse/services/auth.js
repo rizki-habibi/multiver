@@ -1,4 +1,5 @@
-import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
+import { getProviderConnections, validateApiKey, getApiKeyAccess, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
+import { headers } from "next/headers";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
 import { MAX_RATE_LIMIT_COOLDOWN_MS } from "open-sse/config/errorConfig.js";
@@ -70,7 +71,31 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     }
 
     const connections = await getProviderConnections({ provider: providerId, isActive: true });
-    log.debug("AUTH", `${provider} | total connections: ${connections.length}, excludeIds: ${excludeSet.size > 0 ? [...excludeSet].join(",") : "none"}, model: ${model || "any"}`);
+
+    // Router API-key scope:
+    // - global: may use every configured provider/account
+    // - private: may use only the provider assigned to that key
+    // Dashboard/admin and internal/background calls have no router-key scope.
+    let apiKeyAccess = null;
+    try {
+      const requestHeaders = await headers();
+      const authorization = requestHeaders.get("authorization");
+      const xApiKey = requestHeaders.get("x-api-key");
+      const googleApiKey = requestHeaders.get("x-goog-api-key");
+      const rawRouterKey = authorization?.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : (xApiKey || googleApiKey || null);
+      if (rawRouterKey) apiKeyAccess = await getApiKeyAccess(rawRouterKey);
+    } catch {
+      // No request context (background/internal invocation); keep existing behavior.
+    }
+
+    if (apiKeyAccess?.scopeType === "private" && apiKeyAccess.scopeProvider !== providerId) {
+      log.warn("AUTH", `Scoped API key ${apiKeyAccess.id?.slice(0, 8) || "unknown"} blocked provider ${providerId}; allowed=${apiKeyAccess.scopeProvider}`);
+      return null;
+    }
+
+    log.debug("AUTH", `${provider} | total connections: ${connections.length}, scope: ${apiKeyAccess?.scopeType || "internal"}, excludeIds: ${excludeSet.size > 0 ? [...excludeSet].join(",") : "none"}, model: ${model || "any"}`);
 
     if (connections.length === 0) {
       log.warn("AUTH", `No credentials for ${provider}`);
