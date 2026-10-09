@@ -22,6 +22,9 @@ export default function APIPageClient({ machineId }) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
+  const [keyScopeType, setKeyScopeType] = useState("private");
+  const [keyScopeProvider, setKeyScopeProvider] = useState("");
+  const [providerChoices, setProviderChoices] = useState([]);
   const [createdKey, setCreatedKey] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
 
@@ -263,6 +266,37 @@ export default function APIPageClient({ machineId }) {
       };
 
       let existing = await fetchKeys();
+
+      try {
+        const [providersRes, nodesRes] = await Promise.all([
+          fetch("/api/providers", { cache: "no-store" }),
+          fetch("/api/provider-nodes", { cache: "no-store" }),
+        ]);
+        const providerMap = new Map();
+        if (providersRes.ok) {
+          const data = await providersRes.json();
+          for (const item of data.connections || []) {
+            if (item.provider && !providerMap.has(item.provider)) {
+              providerMap.set(item.provider, item.name || item.provider);
+            }
+          }
+        }
+        if (nodesRes.ok) {
+          const data = await nodesRes.json();
+          for (const item of data.nodes || []) {
+            if (item.id && !providerMap.has(item.id)) {
+              providerMap.set(item.id, item.name || item.id);
+            }
+          }
+        }
+        setProviderChoices(
+          [...providerMap.entries()]
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+      } catch {
+        setProviderChoices([]);
+      }
       // Auto-provision a default key for first-time users so the endpoint works out of the box.
       if (existing.length === 0) {
         try {
@@ -629,7 +663,11 @@ export default function APIPageClient({ machineId }) {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newKeyName }),
+        body: JSON.stringify({
+          name: newKeyName,
+          scopeType: keyScopeType,
+          scopeProvider: keyScopeType === "private" ? keyScopeProvider : null,
+        }),
       });
       const data = await res.json();
 
@@ -637,6 +675,8 @@ export default function APIPageClient({ machineId }) {
         setCreatedKey(data.key);
         await fetchData();
         setNewKeyName("");
+        setKeyScopeType("private");
+        setKeyScopeProvider("");
         setShowAddModal(false);
       }
     } catch (error) {
@@ -1011,7 +1051,12 @@ export default function APIPageClient({ machineId }) {
                 className={`group flex items-center justify-between py-3 border-b border-black/[0.03] dark:border-white/[0.03] last:border-b-0 ${key.isActive === false ? "opacity-60" : ""}`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{key.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{key.name}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-border text-text-muted">
+                      {key.scopeType === "private" ? "Pribadi" : "Global"}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="text-xs text-text-muted font-mono">
                       {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
@@ -1035,7 +1080,12 @@ export default function APIPageClient({ machineId }) {
                     </button>
                   </div>
                   <p className="text-xs text-text-muted mt-1">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
+                    {key.scopeType === "private"
+                      ? `Akses: ${key.scopeProvider || "provider belum dipilih"}`
+                      : "Akses: semua AI dan layanan"}
+                  </p>
+                  <p className="text-xs text-text-muted mt-1">
+                    Dibuat {new Date(key.createdAt).toLocaleDateString()}
                   </p>
                   {key.isActive === false && (
                     <p className="text-xs text-orange-500 mt-1">Paused</p>
@@ -1081,17 +1131,63 @@ export default function APIPageClient({ machineId }) {
         onClose={() => {
           setShowAddModal(false);
           setNewKeyName("");
+          setKeyScopeType("private");
+          setKeyScopeProvider("");
         }}
       >
         <div className="flex flex-col gap-4">
           <Input
-            label="Key Name"
+            label="Nama Key"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
-            placeholder="Production Key"
+            placeholder="Key Atria Pribadi"
           />
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Jenis akses</label>
+            <select
+              value={keyScopeType}
+              onChange={(e) => {
+                setKeyScopeType(e.target.value);
+                if (e.target.value === "global") setKeyScopeProvider("");
+              }}
+              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-text-main"
+            >
+              <option value="private">Pribadi — hanya satu AI/provider</option>
+              <option value="global">Global — semua AI/provider</option>
+            </select>
+            <p className="text-xs text-text-muted">
+              Global dapat memakai seluruh layanan. Pribadi hanya dapat memakai provider yang dipilih.
+            </p>
+          </div>
+
+          {keyScopeType === "private" && (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">AI / provider yang diizinkan</label>
+              <select
+                value={keyScopeProvider}
+                onChange={(e) => setKeyScopeProvider(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-text-main"
+              >
+                <option value="">Pilih AI/provider</option>
+                {providerChoices.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name} ({provider.id})
+                  </option>
+                ))}
+              </select>
+              {providerChoices.length === 0 && (
+                <p className="text-xs text-orange-500">Belum ada provider terkonfigurasi.</p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
+            <Button
+              onClick={handleCreateKey}
+              fullWidth
+              disabled={!newKeyName.trim() || (keyScopeType === "private" && !keyScopeProvider)}
+            >
               Create
             </Button>
             <Button
