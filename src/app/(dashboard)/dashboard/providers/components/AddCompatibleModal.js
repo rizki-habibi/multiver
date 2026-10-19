@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Badge, Button, Input, Modal, Select } from "@/shared/components";
+import ProviderIcon from "@/shared/components/ProviderIcon";
 
 const API_TYPE_OPTIONS = [
   { value: "chat", label: "Chat Completions" },
@@ -22,6 +23,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
     apiStyle: "openai",
     apiType: "chat",
     baseUrl: "https://api.openai.com/v1",
+    iconUrl: "",
   });
 
   const [formData, setFormData] = useState(initialFormData);
@@ -97,6 +99,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           type: isAnthropic ? "anthropic-compatible" : "openai-compatible",
           ...(isAnthropic ? {} : { apiType: formData.apiType }),
           baseUrl: formData.baseUrl,
+          iconUrl: formData.iconUrl.trim(),
         }),
       });
       const data = await res.json();
@@ -199,6 +202,27 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
           placeholder="https://api.example.com/v1"
           hint={STYLE_HINT[formData.apiStyle]}
+        />
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-bg/40 p-3">
+          <ProviderIcon
+            providerId={formData.prefix || formData.name || "provider"}
+            baseUrl={formData.baseUrl}
+            iconUrl={formData.iconUrl}
+            alt={formData.name || "Pratinjau ikon penyedia"}
+            size={40}
+            fallbackText={(formData.name || formData.prefix || "AI").slice(0, 2).toUpperCase()}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Pratinjau ikon</p>
+            <p className="text-xs text-text-muted">Otomatis dari domain Base URL, dengan opsi ikon manual.</p>
+          </div>
+        </div>
+        <Input
+          label="URL Ikon Kustom (opsional)"
+          value={formData.iconUrl}
+          onChange={(e) => setFormData({ ...formData, iconUrl: e.target.value })}
+          placeholder="https://example.com/favicon.png"
+          hint="Kosongkan untuk memakai favicon domain Base URL. Gunakan URL gambar HTTPS/HTTP."
         />
         <Input
           label="API Key"
