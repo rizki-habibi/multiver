@@ -55,7 +55,7 @@ export function getProviderIconCandidates(providerId, baseUrl, customIconUrl) {
   // Gunakan origin Base URL yang diisi pengguna; path API seperti /v1 tidak ikut.
   const configured = safeUrl(baseUrl);
   const id = resolveProviderIconId(providerId);
-  const origin = configured?.origin || OFFICIAL_PROVIDER_ORIGINS[id];
+  const origin = OFFICIAL_PROVIDER_ORIGINS[id] || configured?.origin;
   if (origin) {
     add(`${origin}/favicon.ico`);
     add(`${origin}/favicon.svg`);
