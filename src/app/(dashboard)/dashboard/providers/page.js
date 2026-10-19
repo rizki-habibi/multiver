@@ -408,6 +408,7 @@ export default function ProvidersPage() {
       color: "#10A37F",
       textIcon: "OC",
       apiType: node.apiType,
+      baseUrl: node.baseUrl,
     }))
     .filter(
       (p) => matchSearch(p.name) && matchStatus(getProviderStats(p.id, "apikey")),
@@ -420,6 +421,7 @@ export default function ProvidersPage() {
       name: node.name || "Anthropic Compatible",
       color: "#D97757",
       textIcon: "AC",
+      baseUrl: node.baseUrl,
     }))
     .filter(
       (p) => matchSearch(p.name) && matchStatus(getProviderStats(p.id, "apikey")),
@@ -872,6 +874,8 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
             >
               <ProviderIcon
                 alt={provider.name}
+                providerId={providerId}
+                baseUrl={provider.baseUrl}
                 size={30}
                 className="object-contain rounded-lg max-w-[32px] max-h-[32px]"
                 fallbackText={
