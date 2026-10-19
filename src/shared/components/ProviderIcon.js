@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import PropTypes from "prop-types";
 import { getProviderIconCandidates } from "@/shared/utils/providerIcon";
 
@@ -20,10 +20,10 @@ export default function ProviderIcon({
     if (src && /^https?:\/\//i.test(src) && !resolved.includes(src)) resolved.unshift(src);
     return resolved;
   }, [src, iconUrl, providerId, baseUrl]);
-  const [candidateIndex, setCandidateIndex] = useState(0);
+  const candidateKey = candidates.join("|");
+  const [failedState, setFailedState] = useState({ key: "", index: 0 });
+  const candidateIndex = failedState.key === candidateKey ? failedState.index : 0;
   const resolvedSrc = candidates[candidateIndex] || null;
-
-  useEffect(() => setCandidateIndex(0), [candidates.join("|")]);
 
   if (resolvedSrc) {
     return (
@@ -34,7 +34,7 @@ export default function ProviderIcon({
         height={size}
         loading="lazy"
         referrerPolicy="no-referrer"
-        onError={() => setCandidateIndex((index) => Math.min(index + 1, candidates.length))}
+        onError={() => setFailedState((previous) => ({ key: candidateKey, index: Math.min((previous.key === candidateKey ? previous.index : 0) + 1, candidates.length) }))}
         className={`inline-flex shrink-0 rounded-lg object-contain ${className}`.trim()}
         style={{ width: size, height: size }}
       />
