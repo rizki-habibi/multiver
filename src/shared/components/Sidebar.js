@@ -13,6 +13,7 @@ import { ConfirmModal } from "./Modal";
 const navItems = [
   { href: "/dashboard/endpoint", label: "Titik Akhir & Kunci", icon: "api" },
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
+  { href: "/dashboard/service-login", label: "Layanan Masuk", icon: "login" },
   { href: "/dashboard/combos", label: "Kombinasi & Adaptor Vision", icon: "layers" },
   { href: "/dashboard/conversations", label: "Riwayat Percakapan", icon: "chat" },
   { href: "/dashboard/workspace", label: "Ruang Kerja AI", icon: "edit_document" },
