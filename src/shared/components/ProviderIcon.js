@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
-import { getProviderIconSrc } from "@/shared/utils/providerIcon";
+import { getProviderIconCandidates } from "@/shared/utils/providerIcon";
 
 export default function ProviderIcon({
   src,
+  iconUrl,
   providerId,
   baseUrl,
   alt,
@@ -14,12 +15,17 @@ export default function ProviderIcon({
   fallbackText = "?",
   fallbackColor,
 }) {
-  const resolvedSrc = src || getProviderIconSrc(providerId, baseUrl);
-  const [failedSrc, setFailedSrc] = useState(null);
+  const candidates = useMemo(() => {
+    const resolved = getProviderIconCandidates(providerId, baseUrl, iconUrl);
+    if (src && /^https?:\/\//i.test(src) && !resolved.includes(src)) resolved.unshift(src);
+    return resolved;
+  }, [src, iconUrl, providerId, baseUrl]);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const resolvedSrc = candidates[candidateIndex] || null;
 
-  useEffect(() => setFailedSrc(null), [resolvedSrc]);
+  useEffect(() => setCandidateIndex(0), [candidates.join("|")]);
 
-  if (resolvedSrc && failedSrc !== resolvedSrc) {
+  if (resolvedSrc) {
     return (
       <img
         src={resolvedSrc}
@@ -28,7 +34,7 @@ export default function ProviderIcon({
         height={size}
         loading="lazy"
         referrerPolicy="no-referrer"
-        onError={() => setFailedSrc(resolvedSrc)}
+        onError={() => setCandidateIndex((index) => Math.min(index + 1, candidates.length))}
         className={`inline-flex shrink-0 rounded-lg object-contain ${className}`.trim()}
         style={{ width: size, height: size }}
       />
@@ -37,6 +43,7 @@ export default function ProviderIcon({
 
   return (
     <span
+      role="img"
       aria-label={alt || providerId || "Ikon penyedia"}
       className={`inline-flex shrink-0 items-center justify-center rounded-lg font-bold ${className}`.trim()}
       style={{ width: size, height: size, color: fallbackColor, fontSize: Math.max(10, Math.floor(size * 0.38)) }}
@@ -48,6 +55,7 @@ export default function ProviderIcon({
 
 ProviderIcon.propTypes = {
   src: PropTypes.string,
+  iconUrl: PropTypes.string,
   providerId: PropTypes.string,
   baseUrl: PropTypes.string,
   alt: PropTypes.string,
