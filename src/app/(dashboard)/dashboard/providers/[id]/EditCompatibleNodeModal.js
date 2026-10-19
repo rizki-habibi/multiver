@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Button, Badge, Input, Modal, Select } from "@/shared/components";
+import ProviderIcon from "@/shared/components/ProviderIcon";
 
 export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose, isAnthropic }) {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
     prefix: "",
     apiType: "chat",
     baseUrl: "https://api.openai.com/v1",
+    iconUrl: "",
   });
   const [saving, setSaving] = useState(false);
   const [checkKey, setCheckKey] = useState("");
@@ -24,6 +26,7 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
         prefix: node.prefix || "",
         apiType: node.apiType || "chat",
         baseUrl: node.baseUrl || (isAnthropic ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"),
+        iconUrl: node.iconUrl || "",
       });
     }
   }, [node, isAnthropic]);
@@ -41,6 +44,7 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
         name: formData.name,
         prefix: formData.prefix,
         baseUrl: formData.baseUrl,
+        iconUrl: formData.iconUrl.trim(),
       };
       if (!isAnthropic) {
         payload.apiType = formData.apiType;
@@ -107,6 +111,24 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
           placeholder={isAnthropic ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"}
           hint={`Use the base URL (ending in /v1) for your ${isAnthropic ? "Anthropic" : "OpenAI"}-compatible API.`}
         />
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-bg/40 p-3">
+          <ProviderIcon
+            providerId={node.id}
+            baseUrl={formData.baseUrl}
+            iconUrl={formData.iconUrl}
+            alt={formData.name || "Pratinjau ikon penyedia"}
+            size={40}
+            fallbackText={(formData.name || "AI").slice(0, 2).toUpperCase()}
+          />
+          <p className="text-sm text-text-muted">Ikon otomatis dari domain Base URL atau URL kustom.</p>
+        </div>
+        <Input
+          label="URL Ikon Kustom (opsional)"
+          value={formData.iconUrl}
+          onChange={(e) => setFormData({ ...formData, iconUrl: e.target.value })}
+          placeholder="https://example.com/favicon.png"
+          hint="Kosongkan untuk kembali memakai favicon otomatis."
+        />
         <div className="flex gap-2">
           <Input
             label="API Key (for Check)"
@@ -154,6 +176,7 @@ EditCompatibleNodeModal.propTypes = {
     prefix: PropTypes.string,
     apiType: PropTypes.string,
     baseUrl: PropTypes.string,
+    iconUrl: PropTypes.string,
   }),
   onSave: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
