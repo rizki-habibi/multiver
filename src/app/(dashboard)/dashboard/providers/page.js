@@ -423,6 +423,7 @@ export default function ProvidersPage() {
       color: "#D97757",
       textIcon: "AC",
       baseUrl: node.baseUrl,
+      iconUrl: node.iconUrl,
     }))
     .filter(
       (p) => matchSearch(p.name) && matchStatus(getProviderStats(p.id, "apikey")),
