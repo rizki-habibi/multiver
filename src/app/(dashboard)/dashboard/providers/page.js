@@ -601,6 +601,14 @@ export default function ProvidersPage() {
             >
               Tambah API Keys Kompatibel
             </Button>
+            <Link
+              href="/dashboard/service-login"
+              className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 sm:w-auto"
+              title="Buka halaman masuk dan registrasi layanan AI"
+            >
+              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">login</span>
+              Layanan Masuk AI
+            </Link>
             <button
               onClick={() => handleBatchTest("compatible")}
               disabled={!!testingMode}
