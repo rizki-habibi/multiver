@@ -6,7 +6,7 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, prefix, apiType, baseUrl } = body;
+    const { name, prefix, apiType, baseUrl, iconUrl } = body;
     const node = await getProviderNodeById(id);
 
     if (!node) {
@@ -53,6 +53,20 @@ export async function PUT(request, { params }) {
       prefix: prefix.trim(),
       baseUrl: sanitizedBaseUrl,
     };
+
+    if (iconUrl !== undefined) {
+      if (typeof iconUrl !== "string" || !iconUrl.trim()) {
+        updates.iconUrl = "";
+      } else {
+        try {
+          const parsedIconUrl = new URL(iconUrl.trim());
+          if (!["http:", "https:"].includes(parsedIconUrl.protocol)) throw new Error("Invalid protocol");
+          updates.iconUrl = parsedIconUrl.href;
+        } catch {
+          return NextResponse.json({ error: "URL ikon harus berupa URL HTTP atau HTTPS yang valid" }, { status: 400 });
+        }
+      }
+    }
 
     if (node.type === "openai-compatible") {
       updates.apiType = apiType;
