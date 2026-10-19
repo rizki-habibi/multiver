@@ -32,7 +32,18 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, prefix, apiType, baseUrl, type } = body;
+    const { name, prefix, apiType, baseUrl, type, iconUrl } = body;
+
+    let sanitizedIconUrl = "";
+    if (typeof iconUrl === "string" && iconUrl.trim()) {
+      try {
+        const parsedIconUrl = new URL(iconUrl.trim());
+        if (!["http:", "https:"].includes(parsedIconUrl.protocol)) throw new Error("Invalid protocol");
+        sanitizedIconUrl = parsedIconUrl.href;
+      } catch {
+        return NextResponse.json({ error: "URL ikon harus berupa URL HTTP atau HTTPS yang valid" }, { status: 400 });
+      }
+    }
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -57,6 +68,7 @@ export async function POST(request) {
         apiType,
         baseUrl: (baseUrl || OPENAI_COMPATIBLE_DEFAULTS.baseUrl).trim(),
         name: name.trim(),
+        iconUrl: sanitizedIconUrl,
       });
       return NextResponse.json({ node }, { status: 201 });
     }
