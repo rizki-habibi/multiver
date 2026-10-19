@@ -409,6 +409,7 @@ export default function ProvidersPage() {
       textIcon: "OC",
       apiType: node.apiType,
       baseUrl: node.baseUrl,
+      iconUrl: node.iconUrl,
     }))
     .filter(
       (p) => matchSearch(p.name) && matchStatus(getProviderStats(p.id, "apikey")),
@@ -876,6 +877,7 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                 alt={provider.name}
                 providerId={providerId}
                 baseUrl={provider.baseUrl}
+                iconUrl={provider.iconUrl}
                 size={30}
                 className="object-contain rounded-lg max-w-[32px] max-h-[32px]"
                 fallbackText={
