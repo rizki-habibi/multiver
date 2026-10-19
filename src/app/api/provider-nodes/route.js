@@ -105,6 +105,7 @@ export async function POST(request) {
         prefix: prefix.trim(),
         baseUrl: sanitizedBaseUrl,
         name: name.trim(),
+        iconUrl: sanitizedIconUrl,
       });
       return NextResponse.json({ node }, { status: 201 });
     }
